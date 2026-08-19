@@ -1,0 +1,22 @@
+# Local secrets
+infra/.env
+backend/src/main/resources/application-local.properties
+
+# Backend
+backend/.gradle/
+backend/build/
+backend/out/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

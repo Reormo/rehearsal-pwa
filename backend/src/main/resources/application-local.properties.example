@@ -1,0 +1,8 @@
+spring.datasource.url=jdbc:postgresql://localhost:5432/rehearsal
+spring.datasource.username=rehearsal_app
+spring.datasource.password=rehearsal_local_dev
+
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.open-in-view=false
+
+spring.flyway.enabled=true

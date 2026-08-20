@@ -3,12 +3,11 @@
 > 문서 목적: `REHEARSAL_PWA_POLICY.md`에서 확정된 정책을 PostgreSQL 테이블, 컬럼, FK, Unique, Index, 상태값, Transaction/Lock 전략으로 구체화한다.
 > 정책 자체를 변경할 경우 먼저 정책 문서를 갱신한 뒤 이 문서를 동기화한다.
 
-- 기준일: **2026-08-20**
+- 기준일: **2026-08-21**
 - DB: **PostgreSQL**
 - 상태: **4번 ERD / DB 설계 완료**
 
 ---
-
 # 1. ERD / DB 설계 — 확정안
 
 > 이 섹션은 앞의 확정 정책을 실제 PostgreSQL 테이블 구조로 옮긴 1차 ERD이다.
@@ -21,7 +20,9 @@
 - 날짜/시간:
   - 절대 시각은 `TIMESTAMPTZ`
   - 날짜만 필요한 값은 `DATE`
-  - 시간만 필요한 값은 `TIME`
+  - 일반적인 시간만 필요한 값은 `TIME`
+  - `24:00` 경계를 표현해야 하는 운영시간/사용 불가 시간은 자정 기준 분(minute-of-day) `SMALLINT`를 사용
+    - `00:00 = 0`, `10:00 = 600`, `22:00 = 1320`, `24:00 = 1440`
 - 서버/표시 기본 타임존: `Asia/Seoul`
 - DB에는 절대 시각을 `TIMESTAMPTZ`로 저장하고 애플리케이션에서 한국 시간으로 표시
 - 상태값은 PostgreSQL Native ENUM 대신 `VARCHAR + CHECK`를 우선 사용
@@ -32,7 +33,6 @@
 - 시간표의 최소 단위는 항상 30분
 
 ---
-
 ## 39.2 전체 관계 개요
 
 ```mermaid
@@ -57,6 +57,7 @@ erDiagram
     CLUBS ||--o{ BOOKING_ROUNDS : has
     BOOKING_ROUNDS ||--o{ RESERVATION_SLOTS : generates
 
+    CLUBS ||--o{ ROOM_OPERATING_HOURS : overrides
     CLUBS ||--o{ ROOM_EXCEPTIONS : has
 
     SONGS ||--o{ RESERVATIONS : books
@@ -76,7 +77,6 @@ erDiagram
 ```
 
 ---
-
 # 2. 핵심 테이블
 
 ## 40.1 `clubs`
@@ -468,21 +468,52 @@ CLOSED
 
 ---
 
-# 6. 동아리방 사용 불가 시간 예외
+# 6. 동아리방 운영시간 / 사용 불가 시간
 
-## 44.1 `room_exceptions`
+## 44.1 `room_operating_hours`
 
-기본 운영시간 `10:00~22:00`에서 사용할 수 없는 시간 구간만 저장한다.
+기본 운영시간은 애플리케이션 정책으로 `10:00~22:00`을 사용하고, 관리자 날짜별 Override가 있는 날만 행을 저장한다.
 
-같은 날짜에 여러 행을 둘 수 있다.
+| 컬럼 | 타입 | 제약/설명 |
+|---|---|---|
+| id | BIGINT | PK |
+| club_id | BIGINT | FK → clubs |
+| operating_date | DATE | NOT NULL |
+| open_minute | SMALLINT | 0~1410, 30분 단위 |
+| close_minute | SMALLINT | 30~1440, 30분 단위 |
+| reason | VARCHAR(500) | NOT NULL |
+| updated_by | BIGINT | FK → users |
+| created_at | TIMESTAMPTZ | NOT NULL |
+| updated_at | TIMESTAMPTZ | NOT NULL |
+
+### Constraint / Index
+
+```text
+CHECK(0 <= open_minute AND open_minute < close_minute AND close_minute <= 1440)
+CHECK(open_minute % 30 = 0 AND close_minute % 30 = 0)
+UNIQUE(club_id, operating_date)
+INDEX(club_id, operating_date)
+```
+
+`24:00`을 정확하게 표현하기 위해 PostgreSQL `TIME` 대신 자정 기준 분을 저장한다.
+
+Override 행이 없으면 해당 날짜는 `10:00~22:00`으로 계산한다. Override 삭제는 기본 운영시간 복원을 의미한다.
+
+운영시간 단축으로 새 범위 밖이 되는 ACTIVE 예약은 같은 Transaction에서 Lock 후 취소하고 점유 슬롯을 해제한다. 해당 곡의 팀장 포함 `song_members` 전원에게 취소 알림을 생성하며 관리자 감사 로그를 남긴다.
+
+---
+
+## 44.2 `room_exceptions`
+
+해당 날짜의 실제 운영시간 안에서 사용할 수 없는 시간 구간을 저장한다. 같은 날짜에 여러 행을 둘 수 있다.
 
 | 컬럼 | 타입 | 제약/설명 |
 |---|---|---|
 | id | BIGINT | PK |
 | club_id | BIGINT | FK → clubs |
 | exception_date | DATE | NOT NULL |
-| blocked_start_time | TIME | NOT NULL |
-| blocked_end_time | TIME | NOT NULL |
+| blocked_start_minute | SMALLINT | 0~1410, 30분 단위 |
+| blocked_end_minute | SMALLINT | 30~1440, 30분 단위 |
 | reason | VARCHAR(500) | NOT NULL |
 | created_by | BIGINT | FK → users |
 | created_at | TIMESTAMPTZ | NOT NULL |
@@ -491,20 +522,19 @@ CLOSED
 ### Constraint / Index
 
 ```text
-CHECK(blocked_start_time < blocked_end_time)
-UNIQUE(club_id, exception_date, blocked_start_time, blocked_end_time)
-INDEX(club_id, exception_date, blocked_start_time)
+CHECK(0 <= blocked_start_minute AND blocked_start_minute < blocked_end_minute AND blocked_end_minute <= 1440)
+CHECK(blocked_start_minute % 30 = 0 AND blocked_end_minute % 30 = 0)
+UNIQUE(club_id, exception_date, blocked_start_minute, blocked_end_minute)
+INDEX(club_id, exception_date, blocked_start_minute)
 ```
 
-시작/종료는 30분 경계여야 하며 `10:00~22:00` 범위 안에 있어야 한다.
+구간은 해당 날짜의 실제 운영시간 안에 있어야 하고, 서로 겹치는 예외는 Service Layer에서 거절한다.
 
-서로 겹치는 구간은 Service Layer에서 거절하며 관리자 동시 수정은 club 단위 provisioning lock으로 직렬화한다.
-
-하루 전체 사용 불가는 별도 enum 없이 `10:00~22:00` 한 행으로 표현한다.
+하루 전체 사용 불가는 그날의 실제 운영시간 전체를 한 행으로 표현한다.
 
 ### 기존 예약과 겹치는 사용 불가 시간 추가
 
-예약 기능 구현 이후 새 예외 구간 저장 Transaction에서:
+새 예외 구간 저장 Transaction에서:
 
 ```text
 1. 새 구간과 겹치는 ACTIVE Reservation 조회/Lock
@@ -514,27 +544,26 @@ INDEX(club_id, exception_date, blocked_start_time)
 5. 각 예약에 cancellation_reason 기록
 6. RoomException 시간 구간 저장
 7. AdminActionLog 기록
-8. COMMIT
-9. Commit 이후 취소 알림/WebSocket 이벤트 발행
+8. 해당 곡의 팀장 포함 song_members 전원에게 취소 알림 생성
+9. COMMIT
 ```
-
-`10:00~22:00` 전체 구간이면 결과적으로 해당 날짜의 모든 ACTIVE 예약이 취소된다.
 
 기존 예약을 다른 날짜로 자동 이동하지 않는다.
 
----
+기존 V1~V8 migration은 수정하지 않고, 실제 스키마 전환은 V9 forward migration에서 처리한다.
 
+---
 # 7. 30분 예약 슬롯
 
 ## 45.1 `reservation_slots`
 
-각 회차가 준비될 때 해당 주의 30분 단위 슬롯을 생성한다.
-
-기본 월~일, 10:00~22:00:
+각 회차가 준비될 때 해당 주의 하루 전체 `00:00~24:00`에 대해 30분 단위 원자 슬롯을 생성한다.
 
 ```text
-24 slots/day × 7 days = 168 slots/round
+48 slots/day × 7 days = 336 slots/round
 ```
+
+실제 예약 가능 여부는 날짜별 운영시간과 사용 불가 시간을 적용해 결정한다. 기본 날짜에는 `10:00~22:00` 범위만 활성 예약 시간이다.
 
 50명 규모에서는 매우 작은 데이터량이다.
 
@@ -554,14 +583,16 @@ UNIQUE(booking_round_id, slot_start_at)
 
 ### 화면 예약 슬롯 계산
 
-`reservation_slots` 30분 행은 설정 변경과 관계없이 그대로 유지한다.
+`reservation_slots` 30분 행은 운영시간/최대 예약 시간 설정 변경과 관계없이 그대로 유지한다.
 
-사용자에게 보여주는 일반 예약 슬롯은 해당 회차 `max_reservation_minutes`만큼 연속된 빈 30분 행을 묶어서 동적으로 계산한다.
+먼저 날짜별 실제 운영시간과 `room_exceptions`로 예약 가능한 원자 슬롯을 필터링한 뒤, 해당 회차 `max_reservation_minutes`를 기준으로 연속된 빈 구간을 일반 슬롯과 잔여 슬롯으로 계산한다.
+
+기본 운영시간 `10:00~22:00`의 빈 하루라면:
 
 ```text
-max_reservation_minutes = 30  → 빈 하루 24개
-max_reservation_minutes = 60  → 빈 하루 12개
-max_reservation_minutes = 90  → 빈 하루 8개
+max_reservation_minutes = 30  → 일반 슬롯 24개
+max_reservation_minutes = 60  → 일반 슬롯 12개
+max_reservation_minutes = 90  → 일반 슬롯 8개
 ```
 
 예약 또는 `room_exceptions` 때문에 연속 빈 구간이 최대 길이로 나누어지지 않으면 남는 30분 배수 구간을 `remainder slot`으로 별도 노출한다.
@@ -575,6 +606,8 @@ max_reservation_minutes = 90
 10:00~11:00  → remainder 60분
 11:30 이후   → 연속 빈 구간 시작부터 90분 단위 재분할
 ```
+
+기술적인 일반/잔여 구간과 실제 예약 시작 시각은 구분한다. 사용자가 특정 예약 길이를 고르면 30분 경계의 sliding start 중 실제로 점유 가능한 시작 시각을 반환한다.
 
 설정 변경은 기존 ReservationSlot 행이나 기존 Reservation을 재생성하지 않는다.
 
@@ -590,12 +623,13 @@ max_reservation_minutes = 90
 
 3개의 Slot Row를 `SELECT ... FOR UPDATE`로 잠근다.
 
-모두 `reservation_id IS NULL`일 때만 예약을 생성/점유한다.
+모두 `reservation_id IS NULL`이고 실제 운영시간/사용 불가 시간 검증을 통과할 때만 예약을 생성/점유한다.
 
 동시 요청 시 같은 Slot Row에 대한 Lock 경쟁으로 선착순 정확성을 보장한다.
 
----
+기존 회차에 아직 `10:00~22:00` 슬롯만 존재하는 경우 V9 forward migration에서 누락된 `00:00~10:00`, `22:00~24:00` 슬롯만 추가하고 기존 슬롯/예약은 유지한다.
 
+---
 # 8. 합주 예약
 
 ## 46.1 `reservations`
@@ -645,45 +679,69 @@ INDEX(start_at, end_at)
 6. COMMIT
 ```
 
-Song Lock은 `복수 예약 불허` 상황에서 같은 팀의 동시 신규 예약 2건이 모두 성공하는 것을 막기 위해 사용한다.
+Song Lock은 `복수 예약 불허` 상황에서 같은 팀의 같은 대상 회차 동시 신규 예약 2건이 모두 성공하는 것을 막기 위해 사용한다.
 
 ADMIN이 복수 예약 정책을 Override하는 경우에도 슬롯 Lock은 반드시 수행한다.
 
-ADMIN / SUPER_ADMIN의 강제 예약 생성/이동/연장도 해당 시점의 `max_reservation_minutes`를 초과할 수 없다.
+ADMIN / SUPER_ADMIN의 신규 예약 생성과 연장 결과도 해당 시점의 `max_reservation_minutes`를 초과할 수 없다.
+
+단, 최대 예약 시간이 낮아지기 전에 만들어진 더 긴 기존 예약은 이동 시 원래 길이를 유지할 수 있다.
 
 ---
+# 9. 예약 이동 / 연장 / 단축 / 취소
 
-# 9. 예약 이동 / 연장 / 단축
-
-별도 테이블을 만들지 않고 `reservations` + `reservation_slots`를 Transaction으로 수정한다.
+별도 이력 테이블을 추가하지 않고 `reservations` + `reservation_slots`를 Transaction으로 수정한다. 관리자 강제 작업은 기존 `admin_action_logs`에 사유와 변경 전후 Snapshot을 남긴다.
 
 ## 이동
 
 ```text
 Reservation Row Lock
-→ 기존/새 Slot 전체를 정렬된 순서로 Lock
-→ 새 Slot 검증
+→ 기존/새 Slot 전체를 시각 오름차순 Lock
+→ 새 위치가 실제 운영시간 안인지 검증
+→ RoomException / 다른 예약 충돌 검증
 → 기존 Slot 해제
 → 새 Slot 점유
 → Reservation start_at/end_at 변경
+→ 알림 생성
 → COMMIT
 ```
 
-예약 이동 시 원래 길이를 유지한다.
+예약 이동 시 원래 길이를 유지한다. 현재 최대 예약 시간이 기존 예약 길이보다 짧아졌더라도 이동은 가능하다.
 
 ## 연장
 
 - 앞/뒤 모두 가능
+- 30분 단위
 - 새로 추가되는 슬롯 Lock
-- 최대 예약 가능 시간 검증
+- 연장 결과는 현재 최대 예약 가능 시간 이내
+- 실제 운영시간 / 사용 불가 시간 / 다른 예약 충돌 검증
 
 ## 단축
 
 - 앞/뒤 모두 가능
+- 30분 단위
+- 최소 30분 유지
 - 해제되는 Slot의 `reservation_id`를 NULL 처리
 
----
+## 취소
 
+```text
+Reservation Row Lock
+→ 점유 Slot Lock
+→ Reservation ACTIVE → CANCELED
+→ Slot reservation_id 해제
+→ canceled_by / cancellation_reason / canceled_at 기록
+→ 알림 생성
+→ COMMIT
+```
+
+팀장이 수행한 이동/연장/단축/취소와 관리자의 강제 변경/취소 모두 알림 대상은 해당 예약의 `song_id`에 속한 **팀장 포함 `song_members` 전원**이다.
+
+행동한 팀장 본인도 제외하지 않는다. 다른 팀/일반 동아리 회원/해당 곡 팀원이 아닌 관리자는 해당 예약 변경 알림을 받지 않는다.
+
+ADMIN / SUPER_ADMIN의 강제 이동/연장/단축/취소는 사유가 필수이며 `admin_action_logs`에 기록한다.
+
+---
 # 10. 일정 교환
 
 ## 48.1 `swap_requests`
@@ -794,7 +852,7 @@ responded_at = 현재 시각
 | after_data | JSONB | NULL 가능 |
 | created_at | TIMESTAMPTZ | NOT NULL |
 
-`before_data`, `after_data`는 관리자 강제 일정 이동/교환/권한 변경 등의 상태 비교용 Snapshot이다.
+`before_data`, `after_data`는 관리자 강제 일정 이동/연장/단축/취소/교환/권한 변경 등의 상태 비교용 Snapshot이다.
 
 주요 Index:
 
@@ -805,7 +863,6 @@ INDEX(target_type, target_id)
 ```
 
 ---
-
 # 13. 예약/동시성 핵심 무결성 규칙
 
 ## 51.1 슬롯 중복 예약

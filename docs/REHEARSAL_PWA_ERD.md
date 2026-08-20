@@ -313,7 +313,8 @@ Push 실패가 반복되거나 Web Push API에서 만료 응답이 오면 `disab
 | body | TEXT | NOT NULL |
 | link_path | VARCHAR(500) | 클릭 시 이동할 PWA 경로 |
 | dedupe_key | VARCHAR(200) | NULL 가능, 중복 발송 방지 |
-| read_at | TIMESTAMPTZ | NULL 가능 |
+| read_at | TIMESTAMPTZ | NULL 가능, 사용자가 알림 창고를 열어 확인한 시각 |
+| dismissed_at | TIMESTAMPTZ | NULL 가능, X로 알림 창고에서 숨긴 시각 |
 | created_at | TIMESTAMPTZ | NOT NULL |
 
 대표 `type`:
@@ -331,6 +332,8 @@ REHEARSAL_REMINDER
 ```
 
 `dedupe_key`가 존재할 경우 UNIQUE 처리하여 Scheduler 중복 실행에도 동일 알림이 여러 번 만들어지지 않도록 한다.
+
+하단 `알림` 메뉴의 미확인 숫자는 `read_at IS NULL AND dismissed_at IS NULL`인 알림 수다. 사용자가 알림 메뉴/알림 창고를 열면 보관 중인 미확인 알림의 `read_at`을 현재 시각으로 일괄 기록하여 숫자를 0으로 만든다. 읽음 처리된 알림도 창고에는 계속 남고, 오른쪽 X를 누른 알림만 `dismissed_at`을 기록하여 목록에서 숨긴다. 알림 행은 물리 삭제하지 않는다.
 
 ---
 

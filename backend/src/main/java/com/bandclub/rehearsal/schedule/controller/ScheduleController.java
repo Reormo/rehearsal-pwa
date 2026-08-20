@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 @RestController
@@ -142,14 +141,18 @@ public class ScheduleController {
             Instant startAt,
             Instant endAt,
             ScheduleService.SlotState state,
-            Long reservationId
+            Long reservationId,
+            Long songId,
+            String songTitle
     ) {
         static UnavailableSlotResponse from(ScheduleService.UnavailableSlotView view) {
             return new UnavailableSlotResponse(
                     view.startAt(),
                     view.endAt(),
                     view.state(),
-                    view.reservationId()
+                    view.reservationId(),
+                    view.songId(),
+                    view.songTitle()
             );
         }
     }

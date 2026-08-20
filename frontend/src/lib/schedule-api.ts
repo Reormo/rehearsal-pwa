@@ -8,6 +8,8 @@ export type BookingRoundState =
 
 export type SlotState = "OPEN" | "CLOSED" | "RESERVED";
 export type RoomStatus = "OPEN" | "PARTIAL_BLOCKED" | "CLOSED";
+export type ReservationStatus = "ACTIVE" | "CANCELED";
+export type ReservationSource = "TEAM" | "ADMIN";
 
 export type ScheduleSettings = {
   allowMultipleReservations: boolean;
@@ -54,6 +56,8 @@ export type UnavailableScheduleSlot = {
   endAt: string;
   state: Exclude<SlotState, "OPEN">;
   reservationId: number | null;
+  songId: number | null;
+  songTitle: string | null;
 };
 
 export type DaySchedule = {
@@ -77,6 +81,36 @@ export type RoomException = {
   updatedAt: string;
 };
 
+export type BookingTimeOption = {
+  startAt: string;
+  endAt: string;
+};
+
+export type BookingOptions = {
+  date: string;
+  durationMinutes: number;
+  maxReservationMinutes: number;
+  acceptingReservations: boolean;
+  options: BookingTimeOption[];
+};
+
+export type Reservation = {
+  id: number;
+  bookingRoundId: number;
+  songId: number;
+  songTitle: string;
+  startAt: string;
+  endAt: string;
+  status: ReservationStatus;
+  source: ReservationSource;
+  createdBy: number;
+  canceledBy: number | null;
+  cancellationReason: string | null;
+  canceledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export const scheduleApi = {
   calendar(from: string, to: string) {
     return request<ScheduleCalendar>(
@@ -86,6 +120,27 @@ export const scheduleApi = {
 
   day(date: string) {
     return request<DaySchedule>(`/api/schedule/days/${encodeURIComponent(date)}`);
+  },
+
+  bookingOptions(date: string, durationMinutes: number) {
+    return request<BookingOptions>(
+      `/api/reservations/options?date=${encodeURIComponent(date)}&durationMinutes=${encodeURIComponent(durationMinutes)}`,
+    );
+  },
+
+  createReservation(input: {
+    songId: number;
+    startAt: string;
+    durationMinutes: number;
+  }) {
+    return request<Reservation>("/api/reservations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  myReservations() {
+    return request<Reservation[]>("/api/reservations/mine");
   },
 };
 

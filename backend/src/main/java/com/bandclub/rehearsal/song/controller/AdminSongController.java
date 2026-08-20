@@ -1,5 +1,6 @@
 package com.bandclub.rehearsal.song.controller;
 
+import com.bandclub.rehearsal.admin.service.AdminActionLogService;
 import com.bandclub.rehearsal.song.service.SongService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -16,9 +17,11 @@ import java.util.List;
 public class AdminSongController {
 
     private final SongService songService;
+    private final AdminActionLogService actionLogService;
 
-    public AdminSongController(SongService songService) {
+    public AdminSongController(SongService songService, AdminActionLogService actionLogService) {
         this.songService = songService;
+        this.actionLogService = actionLogService;
     }
 
     @GetMapping
@@ -33,12 +36,23 @@ public class AdminSongController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateSongRequest request
     ) {
-        return SongController.SongResponse.from(songService.createSong(
-                userId(jwt),
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(songService.createSong(
+                actorUserId,
                 request.title(),
                 request.leaderUserId(),
                 request.leaderSessionName()
         ));
+        actionLogService.record(
+                actorUserId,
+                "SONG_CREATE",
+                "SONG",
+                response.id(),
+                null,
+                null,
+                java.util.Map.of("title", response.title())
+        );
+        return response;
     }
 
     @PatchMapping("/{songId}")
@@ -47,9 +61,20 @@ public class AdminSongController {
             @PathVariable Long songId,
             @Valid @RequestBody RenameSongRequest request
     ) {
-        return SongController.SongResponse.from(
-                songService.renameSong(userId(jwt), songId, request.title())
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(
+                songService.renameSong(actorUserId, songId, request.title())
         );
+        actionLogService.record(
+                actorUserId,
+                "SONG_RENAME",
+                "SONG",
+                songId,
+                null,
+                null,
+                java.util.Map.of("title", response.title())
+        );
+        return response;
     }
 
     @PostMapping("/{songId}/archive")
@@ -57,7 +82,10 @@ public class AdminSongController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long songId
     ) {
-        return SongController.SongResponse.from(songService.archiveSong(userId(jwt), songId));
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(songService.archiveSong(actorUserId, songId));
+        actionLogService.record(actorUserId, "SONG_ARCHIVE", "SONG", songId, null, null, java.util.Map.of("status", response.status().name()));
+        return response;
     }
 
     @PostMapping("/{songId}/restore")
@@ -65,7 +93,10 @@ public class AdminSongController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long songId
     ) {
-        return SongController.SongResponse.from(songService.restoreSong(userId(jwt), songId));
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(songService.restoreSong(actorUserId, songId));
+        actionLogService.record(actorUserId, "SONG_RESTORE", "SONG", songId, null, null, java.util.Map.of("status", response.status().name()));
+        return response;
     }
 
     @PostMapping("/{songId}/members")
@@ -74,12 +105,23 @@ public class AdminSongController {
             @PathVariable Long songId,
             @Valid @RequestBody AddMemberRequest request
     ) {
-        return SongController.SongResponse.from(songService.addMember(
-                userId(jwt),
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(songService.addMember(
+                actorUserId,
                 songId,
                 request.userId(),
                 request.sessionName()
         ));
+        actionLogService.record(
+                actorUserId,
+                "SONG_MEMBER_ADD",
+                "SONG",
+                songId,
+                null,
+                null,
+                java.util.Map.of("userId", request.userId(), "sessionName", request.sessionName())
+        );
+        return response;
     }
 
     @PatchMapping("/{songId}/members/{userId}")
@@ -89,12 +131,23 @@ public class AdminSongController {
             @PathVariable Long userId,
             @Valid @RequestBody ChangeSessionRequest request
     ) {
-        return SongController.SongResponse.from(songService.changeMemberSession(
-                userId(jwt),
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(songService.changeMemberSession(
+                actorUserId,
                 songId,
                 userId,
                 request.sessionName()
         ));
+        actionLogService.record(
+                actorUserId,
+                "SONG_MEMBER_SESSION_CHANGE",
+                "SONG",
+                songId,
+                null,
+                null,
+                java.util.Map.of("userId", userId, "sessionName", request.sessionName())
+        );
+        return response;
     }
 
     @DeleteMapping("/{songId}/members/{userId}")
@@ -103,9 +156,20 @@ public class AdminSongController {
             @PathVariable Long songId,
             @PathVariable Long userId
     ) {
-        return SongController.SongResponse.from(
-                songService.removeMember(userId(jwt), songId, userId)
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(
+                songService.removeMember(actorUserId, songId, userId)
         );
+        actionLogService.record(
+                actorUserId,
+                "SONG_MEMBER_REMOVE",
+                "SONG",
+                songId,
+                null,
+                null,
+                java.util.Map.of("userId", userId)
+        );
+        return response;
     }
 
     @PostMapping("/{songId}/leader")
@@ -114,9 +178,20 @@ public class AdminSongController {
             @PathVariable Long songId,
             @Valid @RequestBody ChangeLeaderRequest request
     ) {
-        return SongController.SongResponse.from(
-                songService.changeLeader(userId(jwt), songId, request.userId())
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(
+                songService.changeLeader(actorUserId, songId, request.userId())
         );
+        actionLogService.record(
+                actorUserId,
+                "SONG_LEADER_CHANGE",
+                "SONG",
+                songId,
+                null,
+                null,
+                java.util.Map.of("leaderUserId", request.userId())
+        );
+        return response;
     }
 
     private long userId(Jwt jwt) {

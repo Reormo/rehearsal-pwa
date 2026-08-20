@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { AppShell, roleLabel } from "@/components/app-shell";
@@ -105,11 +106,29 @@ function AdminContent({
       <section>
         <p className="eyebrow">ADMIN</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-          회원 관리
+          관리자
         </h1>
         <p className="mt-3 text-sm text-slate-500">
-          가입 신청, 초대코드와 회원 권한을 관리합니다.
+          회원, 곡, 공지와 관리자 작업 이력을 한곳에서 관리합니다.
         </p>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <AdminMenuCard
+          href="/admin/songs"
+          title="곡 / 팀 관리"
+          description="곡, 참여자, 세션과 팀장을 관리합니다."
+        />
+        <AdminMenuCard
+          href="/admin/announcements"
+          title="공지 관리"
+          description="공지 작성, 수정, 고정과 삭제를 관리합니다."
+        />
+        <AdminMenuCard
+          href="/admin/logs"
+          title="작업 이력"
+          description="관리자 변경 작업의 감사 로그를 확인합니다."
+        />
       </section>
 
       {mutationError && <p className="error-box">{errorMessage(mutationError)}</p>}
@@ -352,6 +371,26 @@ function MemberRow({
         </div>
       )}
     </div>
+  );
+}
+
+function AdminMenuCard({
+  href,
+  title,
+  description,
+}: {
+  href: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="app-card block transition hover:-translate-y-0.5 hover:border-slate-300"
+    >
+      <p className="font-bold text-slate-950">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+    </Link>
   );
 }
 

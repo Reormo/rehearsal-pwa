@@ -109,15 +109,20 @@ function AdminContent({
           관리자
         </h1>
         <p className="mt-3 text-sm text-slate-500">
-          회원, 곡, 공지와 관리자 작업 이력을 한곳에서 관리합니다.
+          회원, 곡, 공지, 합주 운영과 관리자 작업 이력을 한곳에서 관리합니다.
         </p>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <AdminMenuCard
           href="/admin/songs"
           title="곡 / 팀 관리"
           description="곡, 참여자, 세션과 팀장을 관리합니다."
+        />
+        <AdminMenuCard
+          href="/admin/schedule"
+          title="합주 운영"
+          description="예약 기본값, 회차와 동아리방 예외 날짜를 관리합니다."
         />
         <AdminMenuCard
           href="/admin/announcements"

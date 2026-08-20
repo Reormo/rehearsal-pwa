@@ -414,6 +414,14 @@ ACTIVE 곡이 정확히 1명의 팀장을 가지는지는 Service Layer에서 �
 30 / 60 / 90 / 120 / 150 / 180
 ```
 
+MVP 최초 기본값:
+
+```text
+allow_multiple_reservations           FALSE
+default_booking_open_lead_minutes     1680
+default_max_reservation_minutes       90
+```
+
 ---
 
 ## 43.2 `booking_rounds`
@@ -457,46 +465,57 @@ CLOSED
 
 ---
 
-# 6. 동아리방 예외
+# 6. 동아리방 사용 불가 시간 예외
 
 ## 44.1 `room_exceptions`
+
+기본 운영시간 `10:00~22:00`에서 사용할 수 없는 시간 구간만 저장한다.
+
+같은 날짜에 여러 행을 둘 수 있다.
 
 | 컬럼 | 타입 | 제약/설명 |
 |---|---|---|
 | id | BIGINT | PK |
 | club_id | BIGINT | FK → clubs |
 | exception_date | DATE | NOT NULL |
-| type | VARCHAR(20) | `CLOSED`, `CUSTOM_HOURS` |
-| open_time | TIME | CUSTOM_HOURS인 경우 |
-| close_time | TIME | CUSTOM_HOURS인 경우 |
+| blocked_start_time | TIME | NOT NULL |
+| blocked_end_time | TIME | NOT NULL |
 | reason | VARCHAR(500) | NOT NULL |
 | created_by | BIGINT | FK → users |
 | created_at | TIMESTAMPTZ | NOT NULL |
 | updated_at | TIMESTAMPTZ | NOT NULL |
 
-### Unique
+### Constraint / Index
 
 ```text
-UNIQUE(club_id, exception_date)
+CHECK(blocked_start_time < blocked_end_time)
+UNIQUE(club_id, exception_date, blocked_start_time, blocked_end_time)
+INDEX(club_id, exception_date, blocked_start_time)
 ```
 
-CUSTOM_HOURS는 30분 경계에 맞아야 한다.
+시작/종료는 30분 경계여야 하며 `10:00~22:00` 범위 안에 있어야 한다.
 
-### 기존 예약이 있는 날짜를 CLOSED로 변경
+서로 겹치는 구간은 Service Layer에서 거절하며 관리자 동시 수정은 club 단위 provisioning lock으로 직렬화한다.
 
-관리자가 `CLOSED` 예외를 저장하는 Transaction에서:
+하루 전체 사용 불가는 별도 enum 없이 `10:00~22:00` 한 행으로 표현한다.
+
+### 기존 예약과 겹치는 사용 불가 시간 추가
+
+예약 기능 구현 이후 새 예외 구간 저장 Transaction에서:
 
 ```text
-1. 해당 날짜의 ACTIVE Reservation 조회/Lock
+1. 새 구간과 겹치는 ACTIVE Reservation 조회/Lock
 2. 해당 예약들이 점유 중인 ReservationSlot Lock
-3. 모든 Reservation을 CANCELED 처리
-4. Slot reservation_id 해제
+3. 겹치는 Reservation만 CANCELED 처리
+4. 해당 Slot reservation_id 해제
 5. 각 예약에 cancellation_reason 기록
-6. RoomException CLOSED 저장
+6. RoomException 시간 구간 저장
 7. AdminActionLog 기록
 8. COMMIT
 9. Commit 이후 취소 알림/WebSocket 이벤트 발행
 ```
+
+`10:00~22:00` 전체 구간이면 결과적으로 해당 날짜의 모든 ACTIVE 예약이 취소된다.
 
 기존 예약을 다른 날짜로 자동 이동하지 않는다.
 
@@ -529,6 +548,32 @@ CUSTOM_HOURS는 30분 경계에 맞아야 한다.
 ```text
 UNIQUE(booking_round_id, slot_start_at)
 ```
+
+### 화면 예약 슬롯 계산
+
+`reservation_slots` 30분 행은 설정 변경과 관계없이 그대로 유지한다.
+
+사용자에게 보여주는 일반 예약 슬롯은 해당 회차 `max_reservation_minutes`만큼 연속된 빈 30분 행을 묶어서 동적으로 계산한다.
+
+```text
+max_reservation_minutes = 30  → 빈 하루 24개
+max_reservation_minutes = 60  → 빈 하루 12개
+max_reservation_minutes = 90  → 빈 하루 8개
+```
+
+예약 또는 `room_exceptions` 때문에 연속 빈 구간이 최대 길이로 나누어지지 않으면 남는 30분 배수 구간을 `remainder slot`으로 별도 노출한다.
+
+예:
+
+```text
+max_reservation_minutes = 90
+11:00~11:30 예약됨
+
+10:00~11:00  → remainder 60분
+11:30 이후   → 연속 빈 구간 시작부터 90분 단위 재분할
+```
+
+설정 변경은 기존 ReservationSlot 행이나 기존 Reservation을 재생성하지 않는다.
 
 ### 예약 처리
 
@@ -848,13 +893,6 @@ TEAM
 ADMIN
 ```
 
-## RoomException
-
-```text
-CLOSED
-CUSTOM_HOURS
-```
-
 ## SwapRequest
 
 ```text
@@ -895,7 +933,8 @@ booking_rounds
 - unique(club_id, start_date)
 
 room_exceptions
-- unique(club_id, exception_date)
+- unique(club_id, exception_date, blocked_start_time, blocked_end_time)
+- index(club_id, exception_date, blocked_start_time)
 
 reservation_slots
 - unique(booking_round_id, slot_start_at)
@@ -959,17 +998,19 @@ ADMIN / SUPER_ADMIN은 전체 교환 신청 목록을 조회하고 허가/반려
 
 예약이 이동/연장/단축/취소되면 관련 `PENDING` 교환은 자동 `EXPIRED`.
 
-## 17.2 동아리방 CLOSED 예외
+## 17.2 동아리방 사용 불가 시간 예외
 
-이미 예약이 있는 날짜를 `CLOSED`로 변경하면 해당 날짜의 기존 ACTIVE 예약을 전부 관리자 강제 취소한다.
+사용 불가 시간 구간을 추가하면 그 구간과 겹치는 기존 ACTIVE 예약만 관리자 강제 취소한다.
 
 ```text
-기존 예약 전체 취소
-→ Slot 반환
-→ CLOSED 적용
+겹치는 예약만 취소
+→ 해당 Slot 반환
+→ 사용 불가 구간 저장
 → 취소 알림
 → 관리자 로그
 ```
+
+`10:00~22:00` 전체 구간을 등록한 경우에만 결과적으로 해당 날짜 예약 전체가 취소된다.
 
 자동 재예약/재배치는 하지 않는다.
 

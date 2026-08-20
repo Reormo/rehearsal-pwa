@@ -122,7 +122,7 @@ async function parseError(response: Response): Promise<ApiError> {
   );
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   init: RequestInit = {},
   retryAfterRefresh = true,

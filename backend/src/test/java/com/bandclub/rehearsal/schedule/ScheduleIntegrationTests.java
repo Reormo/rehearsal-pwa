@@ -3,8 +3,11 @@ package com.bandclub.rehearsal.schedule;
 import com.bandclub.rehearsal.admin.service.AdminActionLogService;
 import com.bandclub.rehearsal.auth.repository.UserRepository;
 import com.bandclub.rehearsal.common.exception.AppException;
+import com.bandclub.rehearsal.schedule.domain.Reservation;
+import com.bandclub.rehearsal.schedule.repository.ReservationRepository;
 import com.bandclub.rehearsal.schedule.repository.ReservationSlotRepository;
 import com.bandclub.rehearsal.schedule.service.ScheduleService;
+import com.bandclub.rehearsal.song.service.SongService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -45,6 +48,12 @@ class ScheduleIntegrationTests {
     @Autowired
     ReservationSlotRepository slotRepository;
 
+    @Autowired
+    ReservationRepository reservationRepository;
+
+    @Autowired
+    SongService songService;
+
     @Test
     @Transactional
     void atomicSlotsStayAtThirtyMinutesWhileDisplayedSlotsFollowMaxMinutes() {
@@ -83,8 +92,22 @@ class ScheduleIntegrationTests {
         );
         assertEquals(12, scheduleService.day(superAdminId, today).standardSlots().size());
 
-        atomicSlots.get(0).occupy(1001L);
-        atomicSlots.get(1).occupy(1001L);
+        var testSong = songService.createSong(
+                superAdminId,
+                "슬롯 계산 테스트",
+                superAdminId,
+                "기타"
+        );
+        Reservation sixtyMinuteReservation = reservationRepository.saveAndFlush(Reservation.team(
+                round.id(),
+                testSong.id(),
+                atomicSlots.get(0).getSlotStartAt(),
+                atomicSlots.get(0).getSlotStartAt().plusSeconds(60 * 60L),
+                superAdminId,
+                Instant.now()
+        ));
+        atomicSlots.get(0).occupy(sixtyMinuteReservation.getId());
+        atomicSlots.get(1).occupy(sixtyMinuteReservation.getId());
         slotRepository.flush();
 
         scheduleService.updateRound(
@@ -103,7 +126,15 @@ class ScheduleIntegrationTests {
 
         atomicSlots.get(0).release();
         atomicSlots.get(1).release();
-        atomicSlots.get(2).occupy(1002L);
+        Reservation thirtyMinuteReservation = reservationRepository.saveAndFlush(Reservation.team(
+                round.id(),
+                testSong.id(),
+                atomicSlots.get(2).getSlotStartAt(),
+                atomicSlots.get(2).getSlotStartAt().plusSeconds(30 * 60L),
+                superAdminId,
+                Instant.now()
+        ));
+        atomicSlots.get(2).occupy(thirtyMinuteReservation.getId());
         slotRepository.flush();
 
         scheduleService.updateRound(

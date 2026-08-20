@@ -4,14 +4,18 @@ import com.bandclub.rehearsal.admin.service.AdminActionLogService;
 import com.bandclub.rehearsal.auth.service.MembershipService;
 import com.bandclub.rehearsal.common.exception.AppException;
 import com.bandclub.rehearsal.schedule.domain.BookingRound;
+import com.bandclub.rehearsal.schedule.domain.Reservation;
 import com.bandclub.rehearsal.schedule.domain.ReservationSettings;
 import com.bandclub.rehearsal.schedule.domain.ReservationSlot;
+import com.bandclub.rehearsal.schedule.domain.ReservationStatus;
 import com.bandclub.rehearsal.schedule.domain.RoomException;
 import com.bandclub.rehearsal.schedule.repository.BookingRoundRepository;
+import com.bandclub.rehearsal.schedule.repository.ReservationRepository;
 import com.bandclub.rehearsal.schedule.repository.ReservationSettingsRepository;
 import com.bandclub.rehearsal.schedule.repository.ReservationSlotRepository;
 import com.bandclub.rehearsal.schedule.repository.RoomExceptionRepository;
 import com.bandclub.rehearsal.schedule.repository.ScheduleProvisioningLock;
+import com.bandclub.rehearsal.song.repository.SongRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +30,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +56,8 @@ public class ScheduleService {
     private final BookingRoundRepository roundRepository;
     private final RoomExceptionRepository exceptionRepository;
     private final ReservationSlotRepository slotRepository;
+    private final ReservationRepository reservationRepository;
+    private final SongRepository songRepository;
     private final ScheduleProvisioningLock provisioningLock;
     private final AdminActionLogService actionLogService;
     private final Clock clock;
@@ -63,6 +68,8 @@ public class ScheduleService {
             BookingRoundRepository roundRepository,
             RoomExceptionRepository exceptionRepository,
             ReservationSlotRepository slotRepository,
+            ReservationRepository reservationRepository,
+            SongRepository songRepository,
             ScheduleProvisioningLock provisioningLock,
             AdminActionLogService actionLogService,
             Clock clock
@@ -72,6 +79,8 @@ public class ScheduleService {
         this.roundRepository = roundRepository;
         this.exceptionRepository = exceptionRepository;
         this.slotRepository = slotRepository;
+        this.reservationRepository = reservationRepository;
+        this.songRepository = songRepository;
         this.provisioningLock = provisioningLock;
         this.actionLogService = actionLogService;
         this.clock = clock;
@@ -158,6 +167,9 @@ public class ScheduleService {
                 atomicSlots,
                 round.getMaxReservationMinutes()
         );
+        List<UnavailableSlotView> unavailableSlots = enrichUnavailableSlots(
+                groupUnavailableSlots(atomicSlots)
+        );
 
         return new DayScheduleView(
                 date,
@@ -166,7 +178,7 @@ public class ScheduleService {
                 exceptions.stream().map(this::toExceptionView).toList(),
                 groupedSlots.standardSlots(),
                 groupedSlots.remainderSlots(),
-                groupUnavailableSlots(atomicSlots)
+                unavailableSlots
         );
     }
 
@@ -311,6 +323,15 @@ public class ScheduleService {
             );
         }
 
+        List<Long> canceledReservationIds = cancelReservationsOverlappingBlockedPeriod(
+                userId,
+                membership.getClubId(),
+                date,
+                blockedStartTime,
+                blockedEndTime,
+                reason
+        );
+
         Instant now = clock.instant();
         RoomException saved = exceptionRepository.save(RoomException.create(
                 membership.getClubId(),
@@ -322,6 +343,8 @@ public class ScheduleService {
                 now
         ));
 
+        Map<String, Object> after = exceptionSnapshot(saved);
+        after.put("canceledReservationIds", canceledReservationIds);
         actionLogService.record(
                 userId,
                 "ROOM_EXCEPTION_CREATE",
@@ -329,7 +352,7 @@ public class ScheduleService {
                 saved.getId(),
                 reason,
                 null,
-                exceptionSnapshot(saved)
+                after
         );
 
         return toExceptionView(saved);
@@ -368,7 +391,7 @@ public class ScheduleService {
                 ));
     }
 
-    private void ensureCurrentAndNext(Long clubId) {
+    public void ensureCurrentAndNext(Long clubId) {
         LocalDate currentMonday = weekStart(koreanToday());
         LocalDate requiredMonday = currentMonday.plusWeeks(1);
 
@@ -625,11 +648,135 @@ public class ScheduleService {
                     first.startAt(),
                     last.endAt(),
                     state,
-                    reservationId
+                    reservationId,
+                    null,
+                    null
             ));
         }
 
         return unavailable;
+    }
+
+    private List<UnavailableSlotView> enrichUnavailableSlots(
+            List<UnavailableSlotView> unavailableSlots
+    ) {
+        List<Long> reservationIds = unavailableSlots.stream()
+                .map(UnavailableSlotView::reservationId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (reservationIds.isEmpty()) {
+            return unavailableSlots;
+        }
+
+        Map<Long, Reservation> reservationsById = new LinkedHashMap<>();
+        reservationRepository.findAllById(reservationIds)
+                .forEach(reservation -> reservationsById.put(
+                        reservation.getId(),
+                        reservation
+                ));
+
+        List<Long> songIds = reservationsById.values().stream()
+                .map(Reservation::getSongId)
+                .distinct()
+                .toList();
+        Map<Long, String> songTitlesById = new LinkedHashMap<>();
+        songRepository.findAllById(songIds)
+                .forEach(song -> songTitlesById.put(song.getId(), song.getTitle()));
+
+        return unavailableSlots.stream()
+                .map(slot -> {
+                    if (slot.reservationId() == null) {
+                        return slot;
+                    }
+                    Reservation reservation = reservationsById.get(slot.reservationId());
+                    if (reservation == null) {
+                        return slot;
+                    }
+                    return new UnavailableSlotView(
+                            slot.startAt(),
+                            slot.endAt(),
+                            slot.state(),
+                            slot.reservationId(),
+                            reservation.getSongId(),
+                            songTitlesById.get(reservation.getSongId())
+                    );
+                })
+                .toList();
+    }
+
+    private List<Long> cancelReservationsOverlappingBlockedPeriod(
+            Long actorUserId,
+            Long clubId,
+            LocalDate date,
+            LocalTime blockedStartTime,
+            LocalTime blockedEndTime,
+            String reason
+    ) {
+        Optional<BookingRound> roundOptional =
+                roundRepository.findByClubIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        clubId,
+                        date,
+                        date
+                );
+        if (roundOptional.isEmpty()) {
+            return List.of();
+        }
+
+        BookingRound round = roundOptional.get();
+        Instant blockedFrom = ZonedDateTime.of(
+                date,
+                blockedStartTime,
+                SERVICE_ZONE
+        ).toInstant();
+        Instant blockedTo = ZonedDateTime.of(
+                date,
+                blockedEndTime,
+                SERVICE_ZONE
+        ).toInstant();
+
+        // Existing reservations are locked before their slots. After the blocked slot
+        // rows are locked, query once more to catch a booking that committed while
+        // this transaction was waiting for those same slot rows.
+        reservationRepository.findOverlappingForUpdate(
+                round.getId(),
+                ReservationStatus.ACTIVE,
+                blockedFrom,
+                blockedTo
+        );
+        slotRepository.findRangeForUpdate(round.getId(), blockedFrom, blockedTo);
+        List<Reservation> reservations = reservationRepository.findOverlappingForUpdate(
+                round.getId(),
+                ReservationStatus.ACTIVE,
+                blockedFrom,
+                blockedTo
+        );
+        if (reservations.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> reservationIds = reservations.stream()
+                .map(Reservation::getId)
+                .sorted()
+                .toList();
+        List<ReservationSlot> occupiedSlots =
+                slotRepository.findAllByReservationIdInForUpdate(reservationIds);
+
+        Instant now = clock.instant();
+        String cancellationReason = roomExceptionCancellationReason(reason);
+        reservations.forEach(reservation ->
+                reservation.cancel(actorUserId, cancellationReason, now));
+        Set<Long> canceledIds = Set.copyOf(reservationIds);
+        occupiedSlots.stream()
+                .filter(slot -> canceledIds.contains(slot.getReservationId()))
+                .forEach(ReservationSlot::release);
+
+        return reservationIds;
+    }
+
+    private String roomExceptionCancellationReason(String reason) {
+        String value = "동아리방 사용 불가 시간 등록: " + reason.trim();
+        return value.length() <= 500 ? value : value.substring(0, 500);
     }
 
     private boolean isBlockedByRoom(
@@ -935,7 +1082,9 @@ public class ScheduleService {
             Instant startAt,
             Instant endAt,
             SlotState state,
-            Long reservationId
+            Long reservationId,
+            Long songId,
+            String songTitle
     ) {
     }
 

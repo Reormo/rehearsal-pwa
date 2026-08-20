@@ -1,8 +1,10 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AuthUser } from "@/lib/api";
+import { notificationApi } from "@/lib/notification-api";
 
 export function AppShell({
   user,
@@ -12,16 +14,35 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  const unreadCountQuery = useQuery({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: notificationApi.unreadCount,
+    refetchInterval: 30_000,
+  });
+  const unreadCount = unreadCountQuery.data?.count ?? 0;
 
   const navItems = [
     { href: "/", label: "홈" },
     { href: "/schedule", label: "일정" },
     { href: "/songs", label: "곡" },
     { href: "/announcements", label: "공지" },
+    { href: "/notifications", label: "알림" },
     ...(isAdmin ? [{ href: "/admin", label: "관리자" }] : []),
     { href: "/my", label: "MY" },
   ];
+
+  function acknowledgeNotifications() {
+    if (unreadCount <= 0) return;
+
+    queryClient.setQueryData(["notifications", "unread-count"], { count: 0 });
+    void notificationApi.markAllRead().catch(() => {
+      void queryClient.invalidateQueries({
+        queryKey: ["notifications", "unread-count"],
+      });
+    });
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -49,15 +70,24 @@ export function AppShell({
               item.href === "/"
                 ? pathname === "/"
                 : pathname.startsWith(item.href);
+            const notificationItem = item.href === "/notifications";
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={notificationItem ? acknowledgeNotifications : undefined}
                 className={`flex items-center justify-center text-sm font-semibold transition ${
                   active ? "text-slate-950" : "text-slate-400"
                 }`}
               >
-                {item.label}
+                <span className="inline-flex items-center gap-1">
+                  {item.label}
+                  {notificationItem && unreadCount > 0 && (
+                    <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </span>
               </Link>
             );
           })}

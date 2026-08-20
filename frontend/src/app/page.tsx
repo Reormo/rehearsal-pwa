@@ -1,69 +1,72 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { AuthGate } from "@/components/auth-gate";
+import { AppShell, roleLabel } from "@/components/app-shell";
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <AuthGate>
+      {(user) => {
+        const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+        return (
+          <AppShell user={user}>
+            <section>
+              <p className="eyebrow">WELCOME</p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                {user.name}님, 안녕하세요.
+              </h1>
+              <p className="mt-3 text-sm text-slate-500">
+                인증과 권한 연동이 완료됐어요. 다음 기능부터 실제 합주 일정이 이곳에 들어옵니다.
+              </p>
+            </section>
+
+            <div className="mt-7 grid gap-4 md:grid-cols-2">
+              <section className="app-card">
+                <p className="card-label">내 계정</p>
+                <dl className="mt-4 space-y-3 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate-500">아이디</dt>
+                    <dd className="font-semibold text-slate-900">{user.loginId}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate-500">권한</dt>
+                    <dd className="font-semibold text-slate-900">{roleLabel(user.role)}</dd>
+                  </div>
+                </dl>
+                <Link href="/my" className="secondary-button mt-5 w-full">
+                  내 계정 관리
+                </Link>
+              </section>
+
+              {isAdmin ? (
+                <section className="app-card">
+                  <p className="card-label">관리자 기능</p>
+                  <h2 className="mt-3 text-lg font-bold text-slate-950">
+                    가입 신청과 회원을 관리하세요.
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    초대코드 재발급, 가입 승인·거절, 권한 변경과 회원 관리가 가능합니다.
+                  </p>
+                  <Link href="/admin" className="primary-button mt-5 w-full">
+                    관리자 화면
+                  </Link>
+                </section>
+              ) : (
+                <section className="app-card">
+                  <p className="card-label">합주 예약</p>
+                  <h2 className="mt-3 text-lg font-bold text-slate-950">
+                    다음 단계에서 곡과 팀을 연결합니다.
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    현재는 로그인·회원가입·권한 기능까지 실제 서버와 연결된 상태입니다.
+                  </p>
+                </section>
+              )}
+            </div>
+          </AppShell>
+        );
+      }}
+    </AuthGate>
   );
 }

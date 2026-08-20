@@ -16,6 +16,7 @@ export function AppShell({
 
   const navItems = [
     { href: "/", label: "홈" },
+    { href: "/songs", label: "곡" },
     ...(isAdmin ? [{ href: "/admin", label: "관리자" }] : []),
     { href: "/my", label: "MY" },
   ];
@@ -37,7 +38,10 @@ export function AppShell({
       <main className="mx-auto w-full max-w-5xl px-5 py-7 pb-24">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white">
-        <div className="mx-auto grid h-16 max-w-md grid-cols-3 px-2">
+        <div
+          className="mx-auto grid h-16 max-w-md px-2"
+          style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+        >
           {navItems.map((item) => {
             const active =
               item.href === "/"

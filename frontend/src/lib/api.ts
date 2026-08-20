@@ -1,5 +1,6 @@
 export type ClubRole = "MEMBER" | "ADMIN" | "SUPER_ADMIN";
 export type SignupStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type SongStatus = "ACTIVE" | "ARCHIVED";
 
 export type AuthUser = {
   id: number;
@@ -30,6 +31,24 @@ export type Member = {
 export type InviteCode = {
   code: string;
   createdAt: string;
+};
+
+export type SongMember = {
+  userId: number;
+  loginId: string | null;
+  name: string;
+  sessionName: string;
+  leader: boolean;
+};
+
+export type Song = {
+  id: number;
+  title: string;
+  status: SongStatus;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  members: SongMember[];
 };
 
 type ErrorPayload = {
@@ -232,6 +251,77 @@ export const adminApi = {
     return request<void>(`/api/admin/members/${userId}`, {
       method: "DELETE",
     });
+  },
+
+  songs() {
+    return request<Song[]>("/api/admin/songs");
+  },
+
+  createSong(input: {
+    title: string;
+    leaderUserId: number;
+    leaderSessionName: string;
+  }) {
+    return request<Song>("/api/admin/songs", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  renameSong(songId: number, title: string) {
+    return request<Song>(`/api/admin/songs/${songId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    });
+  },
+
+  archiveSong(songId: number) {
+    return request<Song>(`/api/admin/songs/${songId}/archive`, {
+      method: "POST",
+    });
+  },
+
+  restoreSong(songId: number) {
+    return request<Song>(`/api/admin/songs/${songId}/restore`, {
+      method: "POST",
+    });
+  },
+
+  addSongMember(songId: number, userId: number, sessionName: string) {
+    return request<Song>(`/api/admin/songs/${songId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId, sessionName }),
+    });
+  },
+
+  changeSongMemberSession(songId: number, userId: number, sessionName: string) {
+    return request<Song>(`/api/admin/songs/${songId}/members/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ sessionName }),
+    });
+  },
+
+  removeSongMember(songId: number, userId: number) {
+    return request<Song>(`/api/admin/songs/${songId}/members/${userId}`, {
+      method: "DELETE",
+    });
+  },
+
+  changeSongLeader(songId: number, userId: number) {
+    return request<Song>(`/api/admin/songs/${songId}/leader`, {
+      method: "POST",
+      body: JSON.stringify({ userId }),
+    });
+  },
+};
+
+export const songApi = {
+  mine() {
+    return request<Song[]>("/api/songs");
+  },
+
+  detail(songId: number) {
+    return request<Song>(`/api/songs/${songId}`);
   },
 };
 

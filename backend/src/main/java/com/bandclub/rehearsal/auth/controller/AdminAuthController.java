@@ -1,5 +1,6 @@
 package com.bandclub.rehearsal.auth.controller;
 
+import com.bandclub.rehearsal.admin.service.AdminActionLogService;
 import com.bandclub.rehearsal.auth.domain.ClubRole;
 import com.bandclub.rehearsal.auth.domain.SignupStatus;
 import com.bandclub.rehearsal.auth.service.InviteCodeService;
@@ -23,15 +24,18 @@ public class AdminAuthController {
     private final SignupAdminService signupAdminService;
     private final InviteCodeService inviteCodeService;
     private final MemberAdminService memberAdminService;
+    private final AdminActionLogService actionLogService;
 
     public AdminAuthController(
             SignupAdminService signupAdminService,
             InviteCodeService inviteCodeService,
-            MemberAdminService memberAdminService
+            MemberAdminService memberAdminService,
+            AdminActionLogService actionLogService
     ) {
         this.signupAdminService = signupAdminService;
         this.inviteCodeService = inviteCodeService;
         this.memberAdminService = memberAdminService;
+        this.actionLogService = actionLogService;
     }
 
     @GetMapping("/signup-applications")
@@ -49,7 +53,18 @@ public class AdminAuthController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long applicationId
     ) {
-        return MemberResponse.from(signupAdminService.approve(userId(jwt), applicationId));
+        long actorUserId = userId(jwt);
+        MemberResponse response = MemberResponse.from(signupAdminService.approve(actorUserId, applicationId));
+        actionLogService.record(
+                actorUserId,
+                "SIGNUP_APPROVE",
+                "SIGNUP_APPLICATION",
+                applicationId,
+                null,
+                null,
+                java.util.Map.of("approvedUserId", response.userId(), "role", response.role().name())
+        );
+        return response;
     }
 
     @PostMapping("/signup-applications/{applicationId}/reject")
@@ -58,7 +73,17 @@ public class AdminAuthController {
             @PathVariable Long applicationId,
             @Valid @RequestBody RejectSignupRequest request
     ) {
-        signupAdminService.reject(userId(jwt), applicationId, request.reason());
+        long actorUserId = userId(jwt);
+        signupAdminService.reject(actorUserId, applicationId, request.reason());
+        actionLogService.record(
+                actorUserId,
+                "SIGNUP_REJECT",
+                "SIGNUP_APPLICATION",
+                applicationId,
+                request.reason(),
+                null,
+                java.util.Map.of("rejected", true)
+        );
         return ResponseEntity.noContent().build();
     }
 
@@ -69,7 +94,18 @@ public class AdminAuthController {
 
     @PostMapping("/invite-code/rotate")
     public InviteCodeResponse rotateInviteCode(@AuthenticationPrincipal Jwt jwt) {
-        return InviteCodeResponse.from(inviteCodeService.rotate(userId(jwt)));
+        long actorUserId = userId(jwt);
+        InviteCodeResponse response = InviteCodeResponse.from(inviteCodeService.rotate(actorUserId));
+        actionLogService.record(
+                actorUserId,
+                "INVITE_CODE_ROTATE",
+                "INVITE_CODE",
+                null,
+                null,
+                null,
+                java.util.Map.of("rotated", true)
+        );
+        return response;
     }
 
     @GetMapping("/members")
@@ -85,7 +121,23 @@ public class AdminAuthController {
             @PathVariable Long userId,
             @Valid @RequestBody ChangeRoleRequest request
     ) {
-        return MemberResponse.from(memberAdminService.changeRole(userId(jwt), userId, request.role()));
+        long actorUserId = userId(jwt);
+        ClubRole beforeRole = memberAdminService.list(actorUserId).stream()
+                .filter(member -> member.userId().equals(userId))
+                .findFirst()
+                .map(MemberAdminService.MemberView::role)
+                .orElse(null);
+        MemberResponse response = MemberResponse.from(memberAdminService.changeRole(actorUserId, userId, request.role()));
+        actionLogService.record(
+                actorUserId,
+                "MEMBER_ROLE_CHANGE",
+                "USER",
+                userId,
+                null,
+                beforeRole == null ? null : java.util.Map.of("role", beforeRole.name()),
+                java.util.Map.of("role", response.role().name())
+        );
+        return response;
     }
 
 
@@ -95,7 +147,17 @@ public class AdminAuthController {
             @PathVariable Long userId,
             @Valid @RequestBody ResetPasswordRequest request
     ) {
-        memberAdminService.resetPassword(userId(jwt), userId, request.newPassword());
+        long actorUserId = userId(jwt);
+        memberAdminService.resetPassword(actorUserId, userId, request.newPassword());
+        actionLogService.record(
+                actorUserId,
+                "MEMBER_PASSWORD_RESET",
+                "USER",
+                userId,
+                null,
+                null,
+                java.util.Map.of("passwordReset", true)
+        );
         return ResponseEntity.noContent().build();
     }
 
@@ -104,7 +166,17 @@ public class AdminAuthController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long userId
     ) {
-        memberAdminService.deleteMember(userId(jwt), userId);
+        long actorUserId = userId(jwt);
+        memberAdminService.deleteMember(actorUserId, userId);
+        actionLogService.record(
+                actorUserId,
+                "MEMBER_DELETE",
+                "USER",
+                userId,
+                null,
+                null,
+                java.util.Map.of("deleted", true)
+        );
         return ResponseEntity.noContent().build();
     }
 

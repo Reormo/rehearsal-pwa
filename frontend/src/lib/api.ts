@@ -51,6 +51,30 @@ export type Song = {
   members: SongMember[];
 };
 
+export type Announcement = {
+  id: number;
+  title: string;
+  content: string;
+  pinned: boolean;
+  authorUserId: number | null;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminActionLog = {
+  id: number;
+  actorUserId: number | null;
+  actorName: string;
+  actionType: string;
+  targetType: string;
+  targetId: number | null;
+  reason: string | null;
+  beforeData: Record<string, unknown> | null;
+  afterData: Record<string, unknown> | null;
+  createdAt: string;
+};
+
 type ErrorPayload = {
   code?: string;
   message?: string;
@@ -253,6 +277,39 @@ export const adminApi = {
     });
   },
 
+  announcements() {
+    return request<Announcement[]>("/api/admin/announcements");
+  },
+
+  createAnnouncement(input: { title: string; content: string; pinned: boolean }) {
+    return request<Announcement>("/api/admin/announcements", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  updateAnnouncement(
+    announcementId: number,
+    input: { title: string; content: string; pinned: boolean },
+  ) {
+    return request<Announcement>(`/api/admin/announcements/${announcementId}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  },
+
+  deleteAnnouncement(announcementId: number) {
+    return request<void>(`/api/admin/announcements/${announcementId}`, {
+      method: "DELETE",
+    });
+  },
+
+  actionLogs(limit = 100) {
+    return request<AdminActionLog[]>(
+      `/api/admin/action-logs?limit=${encodeURIComponent(limit)}`,
+    );
+  },
+
   songs() {
     return request<Song[]>("/api/admin/songs");
   },
@@ -312,6 +369,12 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ userId }),
     });
+  },
+};
+
+export const announcementApi = {
+  list() {
+    return request<Announcement[]>("/api/announcements");
   },
 };
 

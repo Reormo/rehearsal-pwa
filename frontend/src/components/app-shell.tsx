@@ -17,6 +17,7 @@ export function AppShell({
   const navItems = [
     { href: "/", label: "홈" },
     { href: "/songs", label: "곡" },
+    { href: "/announcements", label: "공지" },
     ...(isAdmin ? [{ href: "/admin", label: "관리자" }] : []),
     { href: "/my", label: "MY" },
   ];

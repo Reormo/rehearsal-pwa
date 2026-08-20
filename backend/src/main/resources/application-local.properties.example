@@ -6,3 +6,14 @@ spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.open-in-view=false
 
 spring.flyway.enabled=true
+
+# Local auth settings. Keep real values only in application-local.properties, which is gitignored.
+app.auth.jwt-secret=replace_me
+app.auth.cookie-secure=false
+app.auth.frontend-origin=http://localhost:3000
+
+# Initial SUPER_ADMIN. Used only when no SUPER_ADMIN exists yet.
+app.bootstrap.club-name=밴드 동아리
+app.bootstrap.initial-admin-login-id=admin
+app.bootstrap.initial-admin-password=replace_with_a_strong_password
+app.bootstrap.initial-admin-name=관리자

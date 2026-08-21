@@ -110,7 +110,7 @@ function MySwapsContent({ userId }: { userId: number }) {
           </p>
         </div>
         <Link href="/my/reservations" className="secondary-button">
-          예정 합주로
+          합주 관리
         </Link>
       </section>
 

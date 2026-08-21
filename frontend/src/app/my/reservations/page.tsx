@@ -92,7 +92,7 @@ function ReservationsContent({ userId }: { userId: number }) {
         <div>
           <p className="eyebrow">MY · REHEARSALS</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-            예정된 합주
+            합주 관리
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">
             참여 중인 곡의 예정 예약을 확인합니다. 수정과 취소는 해당 곡 팀장만 가능하고,

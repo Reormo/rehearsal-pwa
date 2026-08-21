@@ -93,7 +93,7 @@ export function NotificationSettingsCard() {
       }
 
       await navigator.serviceWorker.register(
-        "/push-sw.js",
+        "/sw.js",
         { scope: "/" },
       );
       const registration = await navigator.serviceWorker.ready;

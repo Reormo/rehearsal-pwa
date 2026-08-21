@@ -4,8 +4,11 @@ import com.bandclub.rehearsal.admin.service.AdminActionLogService;
 import com.bandclub.rehearsal.auth.repository.UserRepository;
 import com.bandclub.rehearsal.common.exception.AppException;
 import com.bandclub.rehearsal.schedule.domain.Reservation;
+import com.bandclub.rehearsal.schedule.domain.RoomOperatingHours;
+import com.bandclub.rehearsal.schedule.repository.BookingRoundRepository;
 import com.bandclub.rehearsal.schedule.repository.ReservationRepository;
 import com.bandclub.rehearsal.schedule.repository.ReservationSlotRepository;
+import com.bandclub.rehearsal.schedule.repository.RoomOperatingHoursRepository;
 import com.bandclub.rehearsal.schedule.service.ScheduleService;
 import com.bandclub.rehearsal.song.service.SongService;
 import org.junit.jupiter.api.Test;
@@ -21,7 +24,6 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,6 +54,12 @@ class ScheduleIntegrationTests {
     ReservationRepository reservationRepository;
 
     @Autowired
+    BookingRoundRepository roundRepository;
+
+    @Autowired
+    RoomOperatingHoursRepository operatingHoursRepository;
+
+    @Autowired
     SongService songService;
 
     @Test
@@ -78,7 +86,7 @@ class ScheduleIntegrationTests {
                         from,
                         to
                 );
-        assertEquals(24, atomicSlots.size());
+        assertEquals(48, atomicSlots.size());
 
         var initialDay = scheduleService.day(superAdminId, today);
         assertEquals(8, initialDay.standardSlots().size());
@@ -101,13 +109,13 @@ class ScheduleIntegrationTests {
         Reservation sixtyMinuteReservation = reservationRepository.saveAndFlush(Reservation.team(
                 round.id(),
                 testSong.id(),
-                atomicSlots.get(0).getSlotStartAt(),
-                atomicSlots.get(0).getSlotStartAt().plusSeconds(60 * 60L),
+                atomicSlots.get(20).getSlotStartAt(),
+                atomicSlots.get(20).getSlotStartAt().plusSeconds(60 * 60L),
                 superAdminId,
                 Instant.now()
         ));
-        atomicSlots.get(0).occupy(sixtyMinuteReservation.getId());
-        atomicSlots.get(1).occupy(sixtyMinuteReservation.getId());
+        atomicSlots.get(20).occupy(sixtyMinuteReservation.getId());
+        atomicSlots.get(21).occupy(sixtyMinuteReservation.getId());
         slotRepository.flush();
 
         scheduleService.updateRound(
@@ -124,17 +132,17 @@ class ScheduleIntegrationTests {
                 thirtyMinuteDay.unavailableSlots().getFirst().endAt()
         ).toMinutes());
 
-        atomicSlots.get(0).release();
-        atomicSlots.get(1).release();
+        atomicSlots.get(20).release();
+        atomicSlots.get(21).release();
         Reservation thirtyMinuteReservation = reservationRepository.saveAndFlush(Reservation.team(
                 round.id(),
                 testSong.id(),
-                atomicSlots.get(2).getSlotStartAt(),
-                atomicSlots.get(2).getSlotStartAt().plusSeconds(30 * 60L),
+                atomicSlots.get(22).getSlotStartAt(),
+                atomicSlots.get(22).getSlotStartAt().plusSeconds(30 * 60L),
                 superAdminId,
                 Instant.now()
         ));
-        atomicSlots.get(2).occupy(thirtyMinuteReservation.getId());
+        atomicSlots.get(22).occupy(thirtyMinuteReservation.getId());
         slotRepository.flush();
 
         scheduleService.updateRound(
@@ -159,15 +167,15 @@ class ScheduleIntegrationTests {
         scheduleService.createException(
                 superAdminId,
                 date,
-                LocalTime.of(13, 0),
-                LocalTime.of(14, 0),
+                "13:00",
+                "14:00",
                 "장비 점검"
         );
         scheduleService.createException(
                 superAdminId,
                 date,
-                LocalTime.of(16, 0),
-                LocalTime.of(17, 0),
+                "16:00",
+                "17:00",
                 "수업"
         );
 
@@ -189,8 +197,8 @@ class ScheduleIntegrationTests {
         scheduleService.createException(
                 superAdminId,
                 date,
-                LocalTime.of(10, 0),
-                LocalTime.of(22, 0),
+                "10:00",
+                "22:00",
                 "학교 행사"
         );
 
@@ -204,8 +212,8 @@ class ScheduleIntegrationTests {
                 scheduleService.createException(
                         superAdminId,
                         date,
-                        LocalTime.of(13, 0),
-                        LocalTime.of(14, 0),
+                        "13:00",
+                        "14:00",
                         "겹치는 예외"
                 )
         );
@@ -231,8 +239,8 @@ class ScheduleIntegrationTests {
         var exception = scheduleService.createException(
                 superAdminId,
                 exceptionDate,
-                LocalTime.of(15, 0),
-                LocalTime.of(16, 30),
+                "15:00",
+                "16:30",
                 "테스트 예외"
         );
         scheduleService.deleteException(superAdminId, exception.id());
@@ -242,6 +250,45 @@ class ScheduleIntegrationTests {
         assertTrue(logs.stream().anyMatch(log -> "BOOKING_ROUND_UPDATE".equals(log.actionType())));
         assertTrue(logs.stream().anyMatch(log -> "ROOM_EXCEPTION_CREATE".equals(log.actionType())));
         assertTrue(logs.stream().anyMatch(log -> "ROOM_EXCEPTION_DELETE".equals(log.actionType())));
+    }
+
+    @Test
+    @Transactional
+    void operatingHoursOverrideSupportsTwentyFourHourBoundary() {
+        long superAdminId = superAdminId();
+        LocalDate date = LocalDate.now(ZoneId.of("Asia/Seoul")).plusDays(1);
+        var round = scheduleService.adminRounds(superAdminId).stream()
+                .filter(candidate ->
+                        !date.isBefore(candidate.startDate())
+                                && !date.isAfter(candidate.endDate()))
+                .findFirst()
+                .orElseThrow();
+        Long clubId = roundRepository.findById(round.id())
+                .orElseThrow()
+                .getClubId();
+
+        operatingHoursRepository.save(RoomOperatingHours.create(
+                clubId,
+                date,
+                480,
+                1440,
+                "공연 준비",
+                superAdminId,
+                Instant.now()
+        ));
+
+        var day = scheduleService.day(superAdminId, date);
+        assertEquals(480, day.operatingHours().openMinute());
+        assertEquals(1440, day.operatingHours().closeMinute());
+        assertTrue(day.operatingHours().overridden());
+        assertEquals(
+                date.atTime(8, 0).atZone(ScheduleService.SERVICE_ZONE).toInstant(),
+                day.standardSlots().getFirst().startAt()
+        );
+        assertEquals(
+                date.plusDays(1).atStartOfDay(ScheduleService.SERVICE_ZONE).toInstant(),
+                day.remainderSlots().getLast().endAt()
+        );
     }
 
     private long superAdminId() {

@@ -1,5 +1,6 @@
 package com.bandclub.rehearsal.schedule.controller;
 
+import com.bandclub.rehearsal.schedule.service.RoomOperatingHoursPolicy;
 import com.bandclub.rehearsal.schedule.service.ScheduleService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 @RestController
@@ -120,8 +120,8 @@ public class AdminScheduleController {
 
     public record CreateExceptionRequest(
             @NotNull LocalDate date,
-            @NotNull LocalTime blockedStartTime,
-            @NotNull LocalTime blockedEndTime,
+            @NotBlank String blockedStartTime,
+            @NotBlank String blockedEndTime,
             @NotBlank @Size(max = 500) String reason
     ) {
     }
@@ -147,8 +147,8 @@ public class AdminScheduleController {
     public record ExceptionResponse(
             Long id,
             LocalDate date,
-            LocalTime blockedStartTime,
-            LocalTime blockedEndTime,
+            String blockedStartTime,
+            String blockedEndTime,
             String reason,
             Long createdBy,
             Instant createdAt,
@@ -158,8 +158,8 @@ public class AdminScheduleController {
             return new ExceptionResponse(
                     view.id(),
                     view.date(),
-                    view.blockedStartTime(),
-                    view.blockedEndTime(),
+                    RoomOperatingHoursPolicy.formatBoundary(view.blockedStartMinute()),
+                    RoomOperatingHoursPolicy.formatBoundary(view.blockedEndMinute()),
                     view.reason(),
                     view.createdBy(),
                     view.createdAt(),

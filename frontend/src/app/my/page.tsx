@@ -1,11 +1,12 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { AppShell, roleLabel } from "@/components/app-shell";
-import { authApi, errorMessage } from "@/lib/api";
+import { authApi, errorMessage, songApi } from "@/lib/api";
 
 export default function MyPage() {
   return (
@@ -13,6 +14,7 @@ export default function MyPage() {
       {(user) => (
         <AppShell user={user}>
           <MyContent
+            userId={user.id}
             userName={user.name}
             loginId={user.loginId}
             role={user.role}
@@ -24,10 +26,12 @@ export default function MyPage() {
 }
 
 function MyContent({
+  userId,
   userName,
   loginId,
   role,
 }: {
+  userId: number;
   userName: string;
   loginId: string;
   role: "MEMBER" | "ADMIN" | "SUPER_ADMIN";
@@ -35,6 +39,10 @@ function MyContent({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [currentPassword, setCurrentPassword] = useState("");
+  const teamsQuery = useQuery({
+    queryKey: ["songs", "mine"],
+    queryFn: songApi.mine,
+  });
 
   const logoutMutation = useMutation({
     mutationFn: authApi.logout,
@@ -93,6 +101,75 @@ function MyContent({
         {logoutMutation.isError && (
           <p className="error-box mt-3">{errorMessage(logoutMutation.error)}</p>
         )}
+      </section>
+
+      <section className="app-card">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="card-label">내 팀</p>
+            <h2 className="mt-2 text-lg font-bold text-slate-950">
+              참여 중인 팀
+            </h2>
+          </div>
+          <Link
+            href="/songs"
+            className="shrink-0 text-xs font-bold text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline"
+          >
+            전체보기
+          </Link>
+        </div>
+
+        {teamsQuery.isPending && (
+          <p className="mt-5 text-sm text-slate-400">팀 정보를 불러오는 중...</p>
+        )}
+        {teamsQuery.isError && (
+          <p className="error-box mt-5">{errorMessage(teamsQuery.error)}</p>
+        )}
+        {teamsQuery.data?.length === 0 && (
+          <p className="mt-5 rounded-2xl bg-slate-50 px-4 py-7 text-center text-sm text-slate-500">
+            현재 참여 중인 팀이 없습니다.
+          </p>
+        )}
+        {teamsQuery.data && teamsQuery.data.length > 0 && (
+          <div className="mt-5 space-y-3">
+            {teamsQuery.data.map((team) => {
+              const me = team.members.find((member) => member.userId === userId);
+              const leader = team.members.find((member) => member.leader);
+              return (
+                <div
+                  key={team.id}
+                  className="rounded-2xl border border-slate-200 px-4 py-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-slate-950">
+                        {team.title}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        팀장 {leader?.name ?? "미지정"}
+                        {me ? ` · 내 세션 ${me.sessionName}` : ""}
+                      </p>
+                    </div>
+                    <span className="count-badge shrink-0">
+                      {team.members.length}명
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="app-card">
+        <p className="card-label">합주 예약</p>
+        <h2 className="mt-2 text-lg font-bold text-slate-950">예정된 합주 관리</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          참여 중인 곡의 예정 예약을 확인하고, 팀장이라면 이동·연장·단축·취소할 수 있습니다.
+        </p>
+        <Link href="/my/reservations" className="primary-button mt-4 inline-flex">
+          예정 합주 보기
+        </Link>
       </section>
 
       <section className="app-card border-red-100">

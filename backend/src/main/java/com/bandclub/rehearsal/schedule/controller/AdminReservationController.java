@@ -1,44 +1,39 @@
 package com.bandclub.rehearsal.schedule.controller;
 
+import com.bandclub.rehearsal.schedule.domain.Reservation;
 import com.bandclub.rehearsal.schedule.domain.ReservationBoundary;
 import com.bandclub.rehearsal.schedule.domain.ReservationSource;
 import com.bandclub.rehearsal.schedule.domain.ReservationStatus;
-import com.bandclub.rehearsal.schedule.service.BookingService;
+import com.bandclub.rehearsal.schedule.service.AdminReservationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.format.annotation.DateTimeFormat;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/reservations")
-public class BookingController {
+@RequestMapping("/api/admin/reservations")
+public class AdminReservationController {
 
-    private final BookingService bookingService;
+    private final AdminReservationService adminReservationService;
 
-    public BookingController(BookingService bookingService) {
-        this.bookingService = bookingService;
+    public AdminReservationController(AdminReservationService adminReservationService) {
+        this.adminReservationService = adminReservationService;
     }
 
-    @GetMapping("/options")
-    public BookingOptionsResponse options(
-            @AuthenticationPrincipal Jwt jwt,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam @Min(30) @Max(180) int durationMinutes
-    ) {
-        return BookingOptionsResponse.from(bookingService.options(
-                userId(jwt),
-                date,
-                durationMinutes
-        ));
+    @GetMapping
+    public List<ReservationResponse> upcoming(@AuthenticationPrincipal Jwt jwt) {
+        return adminReservationService.upcoming(userId(jwt)).stream()
+                .map(ReservationResponse::from)
+                .toList();
     }
 
     @PostMapping
@@ -47,19 +42,13 @@ public class BookingController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateReservationRequest request
     ) {
-        return ReservationResponse.from(bookingService.create(
+        return ReservationResponse.from(adminReservationService.create(
                 userId(jwt),
                 request.songId(),
                 request.startAt(),
-                request.durationMinutes()
+                request.durationMinutes(),
+                request.reason()
         ));
-    }
-
-    @GetMapping("/mine")
-    public List<ReservationResponse> mine(@AuthenticationPrincipal Jwt jwt) {
-        return bookingService.myUpcoming(userId(jwt)).stream()
-                .map(ReservationResponse::from)
-                .toList();
     }
 
     @PatchMapping("/{reservationId}/move")
@@ -68,10 +57,11 @@ public class BookingController {
             @PathVariable Long reservationId,
             @Valid @RequestBody MoveReservationRequest request
     ) {
-        return ReservationResponse.from(bookingService.move(
+        return ReservationResponse.from(adminReservationService.move(
                 userId(jwt),
                 reservationId,
-                request.startAt()
+                request.startAt(),
+                request.reason()
         ));
     }
 
@@ -81,10 +71,11 @@ public class BookingController {
             @PathVariable Long reservationId,
             @Valid @RequestBody AdjustReservationRequest request
     ) {
-        return ReservationResponse.from(bookingService.extend(
+        return ReservationResponse.from(adminReservationService.extend(
                 userId(jwt),
                 reservationId,
-                request.boundary()
+                request.boundary(),
+                request.reason()
         ));
     }
 
@@ -94,20 +85,26 @@ public class BookingController {
             @PathVariable Long reservationId,
             @Valid @RequestBody AdjustReservationRequest request
     ) {
-        return ReservationResponse.from(bookingService.shorten(
+        return ReservationResponse.from(adminReservationService.shorten(
                 userId(jwt),
                 reservationId,
-                request.boundary()
+                request.boundary(),
+                request.reason()
         ));
     }
 
-    @DeleteMapping("/{reservationId}")
+    @PostMapping("/{reservationId}/cancel")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancel(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long reservationId
+            @PathVariable Long reservationId,
+            @Valid @RequestBody ReasonRequest request
     ) {
-        bookingService.cancel(userId(jwt), reservationId);
+        adminReservationService.cancel(
+                userId(jwt),
+                reservationId,
+                request.reason()
+        );
     }
 
     private long userId(Jwt jwt) {
@@ -117,45 +114,26 @@ public class BookingController {
     public record CreateReservationRequest(
             @NotNull Long songId,
             @NotNull Instant startAt,
-            @Min(30) @Max(180) int durationMinutes
+            @Min(30) @Max(180) int durationMinutes,
+            @NotBlank @Size(max = 500) String reason
     ) {
     }
 
     public record MoveReservationRequest(
-            @NotNull Instant startAt
+            @NotNull Instant startAt,
+            @NotBlank @Size(max = 500) String reason
     ) {
     }
 
     public record AdjustReservationRequest(
-            @NotNull ReservationBoundary boundary
+            @NotNull ReservationBoundary boundary,
+            @NotBlank @Size(max = 500) String reason
     ) {
     }
 
-    public record BookingTimeOptionResponse(
-            Instant startAt,
-            Instant endAt
+    public record ReasonRequest(
+            @NotBlank @Size(max = 500) String reason
     ) {
-        static BookingTimeOptionResponse from(BookingService.BookingTimeOptionView view) {
-            return new BookingTimeOptionResponse(view.startAt(), view.endAt());
-        }
-    }
-
-    public record BookingOptionsResponse(
-            LocalDate date,
-            int durationMinutes,
-            int maxReservationMinutes,
-            boolean acceptingReservations,
-            List<BookingTimeOptionResponse> options
-    ) {
-        static BookingOptionsResponse from(BookingService.BookingOptionsView view) {
-            return new BookingOptionsResponse(
-                    view.date(),
-                    view.durationMinutes(),
-                    view.maxReservationMinutes(),
-                    view.acceptingReservations(),
-                    view.options().stream().map(BookingTimeOptionResponse::from).toList()
-            );
-        }
     }
 
     public record ReservationResponse(
@@ -174,7 +152,7 @@ public class BookingController {
             Instant createdAt,
             Instant updatedAt
     ) {
-        static ReservationResponse from(BookingService.ReservationView view) {
+        static ReservationResponse from(AdminReservationService.ReservationView view) {
             return new ReservationResponse(
                     view.id(),
                     view.bookingRoundId(),

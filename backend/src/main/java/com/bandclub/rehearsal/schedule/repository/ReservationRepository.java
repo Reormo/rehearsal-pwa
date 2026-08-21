@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
@@ -24,6 +25,16 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             Collection<Long> songIds,
             ReservationStatus status,
             Instant after
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select r
+            from Reservation r
+            where r.id = :reservationId
+            """)
+    Optional<Reservation> findByIdForUpdate(
+            @Param("reservationId") Long reservationId
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

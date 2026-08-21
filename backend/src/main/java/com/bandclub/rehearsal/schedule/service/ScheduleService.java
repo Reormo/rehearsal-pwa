@@ -42,9 +42,10 @@ import java.util.stream.Collectors;
 public class ScheduleService {
 
     public static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
-    public static final LocalTime DEFAULT_OPEN_TIME = LocalTime.of(10, 0);
     public static final LocalTime DEFAULT_CLOSE_TIME = LocalTime.of(22, 0);
     public static final int SLOT_MINUTES = 30;
+    public static final int DEFAULT_OPEN_MINUTE = RoomOperatingHoursPolicy.DEFAULT_OPEN_MINUTE;
+    public static final int DEFAULT_CLOSE_MINUTE = RoomOperatingHoursPolicy.DEFAULT_CLOSE_MINUTE;
     public static final int DEFAULT_BOOKING_OPEN_LEAD_MINUTES = 1680;
     public static final int DEFAULT_MAX_RESERVATION_MINUTES = 90;
 
@@ -59,6 +60,7 @@ public class ScheduleService {
     private final ReservationRepository reservationRepository;
     private final SongRepository songRepository;
     private final ScheduleProvisioningLock provisioningLock;
+    private final RoomOperatingHoursPolicy roomOperatingHoursPolicy;
     private final AdminActionLogService actionLogService;
     private final Clock clock;
 
@@ -71,6 +73,7 @@ public class ScheduleService {
             ReservationRepository reservationRepository,
             SongRepository songRepository,
             ScheduleProvisioningLock provisioningLock,
+            RoomOperatingHoursPolicy roomOperatingHoursPolicy,
             AdminActionLogService actionLogService,
             Clock clock
     ) {
@@ -82,6 +85,7 @@ public class ScheduleService {
         this.reservationRepository = reservationRepository;
         this.songRepository = songRepository;
         this.provisioningLock = provisioningLock;
+        this.roomOperatingHoursPolicy = roomOperatingHoursPolicy;
         this.actionLogService = actionLogService;
         this.clock = clock;
     }
@@ -100,7 +104,7 @@ public class ScheduleService {
                         to
                 );
         Map<LocalDate, List<RoomException>> exceptionsByDate =
-                exceptionRepository.findAllByClubIdAndExceptionDateBetweenOrderByExceptionDateAscBlockedStartTimeAsc(
+                exceptionRepository.findAllByClubIdAndExceptionDateBetweenOrderByExceptionDateAscBlockedStartMinuteAsc(
                                 membership.getClubId(),
                                 from,
                                 to
@@ -121,7 +125,13 @@ public class ScheduleService {
                     .findFirst()
                     .orElse(null);
             List<RoomException> exceptions = exceptionsByDate.getOrDefault(date, List.of());
-            days.add(toDaySummary(date, round, exceptions));
+            var operatingHours = roomOperatingHoursPolicy.effective(
+                    membership.getClubId(),
+                    date
+            );
+            days.add(toDaySummary(
+                    date, round, exceptions, operatingHours
+            ));
             cursor = cursor.plusDays(1);
         }
 
@@ -146,10 +156,14 @@ public class ScheduleService {
                 ));
 
         List<RoomException> exceptions = exceptionRepository
-                .findAllByClubIdAndExceptionDateOrderByBlockedStartTimeAsc(
+                .findAllByClubIdAndExceptionDateOrderByBlockedStartMinuteAsc(
                         membership.getClubId(),
                         date
                 );
+        var operatingHours = roomOperatingHoursPolicy.effective(
+                membership.getClubId(),
+                date
+        );
 
         Instant from = date.atStartOfDay(SERVICE_ZONE).toInstant();
         Instant to = date.plusDays(1).atStartOfDay(SERVICE_ZONE).toInstant();
@@ -159,8 +173,13 @@ public class ScheduleService {
                         from,
                         to
                 );
+        List<ReservationSlot> visibleSlots = reservationSlots.stream()
+                .filter(slot -> roomOperatingHoursPolicy.containsAtomicSlot(
+                        date, slot.getSlotStartAt(), operatingHours
+                ))
+                .toList();
 
-        List<AtomicSlot> atomicSlots = reservationSlots.stream()
+        List<AtomicSlot> atomicSlots = visibleSlots.stream()
                 .map(slot -> toAtomicSlot(slot, exceptions))
                 .toList();
         GroupedSlots groupedSlots = groupBookableSlots(
@@ -174,7 +193,8 @@ public class ScheduleService {
         return new DayScheduleView(
                 date,
                 toRoundView(round),
-                roomStatus(exceptions),
+                roomStatus(operatingHours, exceptions),
+                toOperatingHoursView(operatingHours),
                 exceptions.stream().map(this::toExceptionView).toList(),
                 groupedSlots.standardSlots(),
                 groupedSlots.remainderSlots(),
@@ -205,7 +225,7 @@ public class ScheduleService {
         var membership = membershipService.requireAdmin(userId);
         validateDateRange(from, to, 370);
         return exceptionRepository
-                .findAllByClubIdAndExceptionDateBetweenOrderByExceptionDateAscBlockedStartTimeAsc(
+                .findAllByClubIdAndExceptionDateBetweenOrderByExceptionDateAscBlockedStartMinuteAsc(
                         membership.getClubId(),
                         from,
                         to
@@ -297,24 +317,35 @@ public class ScheduleService {
     public ExceptionView createException(
             Long userId,
             LocalDate date,
-            LocalTime blockedStartTime,
-            LocalTime blockedEndTime,
+            String blockedStartTime,
+            String blockedEndTime,
             String reason
     ) {
         var membership = membershipService.requireAdmin(userId);
-        validateException(blockedStartTime, blockedEndTime, reason);
+        int blockedStartMinute = RoomOperatingHoursPolicy.parseBoundary(blockedStartTime);
+        int blockedEndMinute = RoomOperatingHoursPolicy.parseBoundary(blockedEndTime);
 
         provisioningLock.lockClub(membership.getClubId());
+        var operatingHours = roomOperatingHoursPolicy.effective(
+                membership.getClubId(),
+                date
+        );
+        validateException(
+                blockedStartMinute,
+                blockedEndMinute,
+                reason,
+                operatingHours
+        );
         List<RoomException> existing = exceptionRepository
-                .findAllByClubIdAndExceptionDateOrderByBlockedStartTimeAsc(
+                .findAllByClubIdAndExceptionDateOrderByBlockedStartMinuteAsc(
                         membership.getClubId(),
                         date
                 );
         if (existing.stream().anyMatch(exception -> rangesOverlap(
-                blockedStartTime,
-                blockedEndTime,
-                exception.getBlockedStartTime(),
-                exception.getBlockedEndTime()
+                blockedStartMinute,
+                blockedEndMinute,
+                exception.getBlockedStartMinute(),
+                exception.getBlockedEndMinute()
         ))) {
             throw new AppException(
                     HttpStatus.CONFLICT,
@@ -327,8 +358,8 @@ public class ScheduleService {
                 userId,
                 membership.getClubId(),
                 date,
-                blockedStartTime,
-                blockedEndTime,
+                blockedStartMinute,
+                blockedEndMinute,
                 reason
         );
 
@@ -336,8 +367,8 @@ public class ScheduleService {
         RoomException saved = exceptionRepository.save(RoomException.create(
                 membership.getClubId(),
                 date,
-                blockedStartTime,
-                blockedEndTime,
+                blockedStartMinute,
+                blockedEndMinute,
                 reason.trim(),
                 userId,
                 now
@@ -500,15 +531,15 @@ public class ScheduleService {
         }
 
         Instant now = clock.instant();
-        List<ReservationSlot> slots = new ArrayList<>(168);
+        List<ReservationSlot> slots = new ArrayList<>(336);
         LocalDate date = round.getStartDate();
 
         while (!date.isAfter(round.getEndDate())) {
-            LocalTime time = DEFAULT_OPEN_TIME;
-            while (time.isBefore(DEFAULT_CLOSE_TIME)) {
-                Instant slotStart = ZonedDateTime.of(date, time, SERVICE_ZONE).toInstant();
+            int minute = 0;
+            while (minute < RoomOperatingHoursPolicy.DAY_MINUTES) {
+                Instant slotStart = roomOperatingHoursPolicy.atMinute(date, minute);
                 slots.add(ReservationSlot.empty(round.getId(), slotStart, now));
-                time = time.plusMinutes(SLOT_MINUTES);
+                minute += SLOT_MINUTES;
             }
             date = date.plusDays(1);
         }
@@ -519,14 +550,16 @@ public class ScheduleService {
     private DaySummary toDaySummary(
             LocalDate date,
             BookingRound round,
-            List<RoomException> exceptions
+            List<RoomException> exceptions,
+            RoomOperatingHoursPolicy.Window operatingHours
     ) {
         return new DaySummary(
                 date,
                 round == null ? null : round.getId(),
                 round == null ? null : round.getRoundNo(),
                 round == null ? null : roundState(round),
-                roomStatus(exceptions),
+                roomStatus(operatingHours, exceptions),
+                toOperatingHoursView(operatingHours),
                 exceptions.size()
         );
     }
@@ -536,8 +569,8 @@ public class ScheduleService {
             List<RoomException> exceptions
     ) {
         ZonedDateTime localStart = slot.getSlotStartAt().atZone(SERVICE_ZONE);
-        LocalTime start = localStart.toLocalTime();
-        LocalTime end = start.plusMinutes(SLOT_MINUTES);
+        int start = localStart.getHour() * 60 + localStart.getMinute();
+        int end = start + SLOT_MINUTES;
 
         SlotState state;
         if (isBlockedByRoom(exceptions, start, end)) {
@@ -709,8 +742,8 @@ public class ScheduleService {
             Long actorUserId,
             Long clubId,
             LocalDate date,
-            LocalTime blockedStartTime,
-            LocalTime blockedEndTime,
+            int blockedStartMinute,
+            int blockedEndMinute,
             String reason
     ) {
         Optional<BookingRound> roundOptional =
@@ -724,16 +757,8 @@ public class ScheduleService {
         }
 
         BookingRound round = roundOptional.get();
-        Instant blockedFrom = ZonedDateTime.of(
-                date,
-                blockedStartTime,
-                SERVICE_ZONE
-        ).toInstant();
-        Instant blockedTo = ZonedDateTime.of(
-                date,
-                blockedEndTime,
-                SERVICE_ZONE
-        ).toInstant();
+        Instant blockedFrom = roomOperatingHoursPolicy.atMinute(date, blockedStartMinute);
+        Instant blockedTo = roomOperatingHoursPolicy.atMinute(date, blockedEndMinute);
 
         // Existing reservations are locked before their slots. After the blocked slot
         // rows are locked, query once more to catch a booking that committed while
@@ -781,25 +806,28 @@ public class ScheduleService {
 
     private boolean isBlockedByRoom(
             List<RoomException> exceptions,
-            LocalTime slotStart,
-            LocalTime slotEnd
+            int slotStart,
+            int slotEnd
     ) {
         return exceptions.stream().anyMatch(exception -> rangesOverlap(
                 slotStart,
                 slotEnd,
-                exception.getBlockedStartTime(),
-                exception.getBlockedEndTime()
+                exception.getBlockedStartMinute(),
+                exception.getBlockedEndMinute()
         ));
     }
 
-    private RoomStatus roomStatus(List<RoomException> exceptions) {
+    private RoomStatus roomStatus(
+            RoomOperatingHoursPolicy.Window operatingHours,
+            List<RoomException> exceptions
+    ) {
         if (exceptions.isEmpty()) {
             return RoomStatus.OPEN;
         }
 
-        LocalTime cursor = DEFAULT_OPEN_TIME;
-        while (cursor.isBefore(DEFAULT_CLOSE_TIME)) {
-            LocalTime end = cursor.plusMinutes(SLOT_MINUTES);
+        int cursor = operatingHours.openMinute();
+        while (cursor < operatingHours.closeMinute()) {
+            int end = cursor + SLOT_MINUTES;
             if (!isBlockedByRoom(exceptions, cursor, end)) {
                 return RoomStatus.PARTIAL_BLOCKED;
             }
@@ -809,12 +837,12 @@ public class ScheduleService {
     }
 
     private boolean rangesOverlap(
-            LocalTime startA,
-            LocalTime endA,
-            LocalTime startB,
-            LocalTime endB
+            int startA,
+            int endA,
+            int startB,
+            int endB
     ) {
-        return startA.isBefore(endB) && endA.isAfter(startB);
+        return startA < endB && endA > startB;
     }
 
     private RoundView toRoundView(BookingRound round) {
@@ -830,12 +858,23 @@ public class ScheduleService {
         );
     }
 
+    private OperatingHoursView toOperatingHoursView(
+            RoomOperatingHoursPolicy.Window operatingHours
+    ) {
+        return new OperatingHoursView(
+                operatingHours.openMinute(),
+                operatingHours.closeMinute(),
+                operatingHours.overridden(),
+                operatingHours.reason()
+        );
+    }
+
     private ExceptionView toExceptionView(RoomException exception) {
         return new ExceptionView(
                 exception.getId(),
                 exception.getExceptionDate(),
-                exception.getBlockedStartTime(),
-                exception.getBlockedEndTime(),
+                exception.getBlockedStartMinute(),
+                exception.getBlockedEndMinute(),
                 exception.getReason(),
                 exception.getCreatedBy(),
                 exception.getCreatedAt(),
@@ -918,9 +957,10 @@ public class ScheduleService {
     }
 
     private void validateException(
-            LocalTime blockedStartTime,
-            LocalTime blockedEndTime,
-            String reason
+            int blockedStartMinute,
+            int blockedEndMinute,
+            String reason,
+            RoomOperatingHoursPolicy.Window operatingHours
     ) {
         if (reason == null || reason.isBlank() || reason.trim().length() > 500) {
             throw new AppException(
@@ -929,35 +969,15 @@ public class ScheduleService {
                     "예외 사유는 1~500자로 입력해주세요."
             );
         }
-        if (blockedStartTime == null || blockedEndTime == null) {
-            throw new AppException(
-                    HttpStatus.BAD_REQUEST,
-                    "ROOM_EXCEPTION_TIME_REQUIRED",
-                    "사용 불가 시작/종료 시간이 필요합니다."
-            );
-        }
-        if (!isHalfHourBoundary(blockedStartTime) || !isHalfHourBoundary(blockedEndTime)) {
-            throw new AppException(
-                    HttpStatus.BAD_REQUEST,
-                    "ROOM_EXCEPTION_BOUNDARY",
-                    "사용 불가 시간은 30분 단위로 설정해주세요."
-            );
-        }
-        if (blockedStartTime.isBefore(DEFAULT_OPEN_TIME)
-                || blockedEndTime.isAfter(DEFAULT_CLOSE_TIME)
-                || !blockedStartTime.isBefore(blockedEndTime)) {
+        if (blockedStartMinute < operatingHours.openMinute()
+                || blockedEndMinute > operatingHours.closeMinute()
+                || blockedStartMinute >= blockedEndMinute) {
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
                     "INVALID_ROOM_EXCEPTION_TIME",
-                    "사용 불가 시간은 10:00~22:00 범위에서 시작 시간이 종료 시간보다 빨라야 합니다."
+                    "사용 불가 시간은 해당 날짜의 실제 운영시간 안에 있어야 합니다."
             );
         }
-    }
-
-    private boolean isHalfHourBoundary(LocalTime time) {
-        return time.getSecond() == 0
-                && time.getNano() == 0
-                && (time.getMinute() == 0 || time.getMinute() == 30);
     }
 
     private Map<String, Object> settingsSnapshot(ReservationSettings settings) {
@@ -982,8 +1002,8 @@ public class ScheduleService {
     private Map<String, Object> exceptionSnapshot(RoomException exception) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("date", exception.getExceptionDate().toString());
-        snapshot.put("blockedStartTime", exception.getBlockedStartTime().toString());
-        snapshot.put("blockedEndTime", exception.getBlockedEndTime().toString());
+        snapshot.put("blockedStartMinute", exception.getBlockedStartMinute());
+        snapshot.put("blockedEndMinute", exception.getBlockedEndMinute());
         snapshot.put("reason", exception.getReason());
         return snapshot;
     }
@@ -1007,6 +1027,14 @@ public class ScheduleService {
         BOOKING_OPEN,
         IN_PROGRESS,
         CLOSED
+    }
+
+    public record OperatingHoursView(
+            int openMinute,
+            int closeMinute,
+            boolean overridden,
+            String reason
+    ) {
     }
 
     public enum SlotState {
@@ -1045,8 +1073,8 @@ public class ScheduleService {
     public record ExceptionView(
             Long id,
             LocalDate date,
-            LocalTime blockedStartTime,
-            LocalTime blockedEndTime,
+            int blockedStartMinute,
+            int blockedEndMinute,
             String reason,
             Long createdBy,
             Instant createdAt,
@@ -1060,6 +1088,7 @@ public class ScheduleService {
             Integer roundNo,
             RoundState roundState,
             RoomStatus roomStatus,
+            OperatingHoursView operatingHours,
             int blockedPeriodCount
     ) {
     }
@@ -1092,6 +1121,7 @@ public class ScheduleService {
             LocalDate date,
             RoundView round,
             RoomStatus roomStatus,
+            OperatingHoursView operatingHours,
             List<ExceptionView> blockedPeriods,
             List<BookableSlotView> standardSlots,
             List<BookableSlotView> remainderSlots,

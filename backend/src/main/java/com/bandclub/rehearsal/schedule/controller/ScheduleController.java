@@ -1,5 +1,6 @@
 package com.bandclub.rehearsal.schedule.controller;
 
+import com.bandclub.rehearsal.schedule.service.RoomOperatingHoursPolicy;
 import com.bandclub.rehearsal.schedule.service.ScheduleService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -61,6 +62,7 @@ public class ScheduleController {
             Integer roundNo,
             ScheduleService.RoundState roundState,
             ScheduleService.RoomStatus roomStatus,
+            OperatingHoursResponse operatingHours,
             int blockedPeriodCount
     ) {
         static DaySummaryResponse from(ScheduleService.DaySummary view) {
@@ -70,6 +72,7 @@ public class ScheduleController {
                     view.roundNo(),
                     view.roundState(),
                     view.roomStatus(),
+                    OperatingHoursResponse.from(view.operatingHours()),
                     view.blockedPeriodCount()
             );
         }
@@ -79,6 +82,7 @@ public class ScheduleController {
             LocalDate date,
             RoundResponse round,
             ScheduleService.RoomStatus roomStatus,
+            OperatingHoursResponse operatingHours,
             List<AdminScheduleController.ExceptionResponse> blockedPeriods,
             List<BookableSlotResponse> standardSlots,
             List<BookableSlotResponse> remainderSlots,
@@ -89,6 +93,7 @@ public class ScheduleController {
                     view.date(),
                     RoundResponse.from(view.round()),
                     view.roomStatus(),
+                    OperatingHoursResponse.from(view.operatingHours()),
                     view.blockedPeriods().stream()
                             .map(AdminScheduleController.ExceptionResponse::from)
                             .toList(),
@@ -119,6 +124,22 @@ public class ScheduleController {
                     view.bookingCloseAt(),
                     view.maxReservationMinutes(),
                     view.state()
+            );
+        }
+    }
+
+    public record OperatingHoursResponse(
+            String openTime,
+            String closeTime,
+            boolean overridden,
+            String reason
+    ) {
+        static OperatingHoursResponse from(ScheduleService.OperatingHoursView view) {
+            return new OperatingHoursResponse(
+                    RoomOperatingHoursPolicy.formatBoundary(view.openMinute()),
+                    RoomOperatingHoursPolicy.formatBoundary(view.closeMinute()),
+                    view.overridden(),
+                    view.reason()
             );
         }
     }

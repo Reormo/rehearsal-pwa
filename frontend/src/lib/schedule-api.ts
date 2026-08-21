@@ -10,6 +10,20 @@ export type SlotState = "OPEN" | "CLOSED" | "RESERVED";
 export type RoomStatus = "OPEN" | "PARTIAL_BLOCKED" | "CLOSED";
 export type ReservationStatus = "ACTIVE" | "CANCELED";
 export type ReservationSource = "TEAM" | "ADMIN";
+export type ReservationBoundary = "FRONT" | "BACK";
+
+export type OperatingHours = {
+  date: string;
+  openTime: string;
+  closeTime: string;
+  overridden: boolean;
+  reason: string | null;
+};
+
+export type OperatingHoursUpdate = {
+  operatingHours: OperatingHours;
+  canceledReservationIds: number[];
+};
 
 export type ScheduleSettings = {
   allowMultipleReservations: boolean;
@@ -142,6 +156,31 @@ export const scheduleApi = {
   myReservations() {
     return request<Reservation[]>("/api/reservations/mine");
   },
+
+  moveReservation(reservationId: number, startAt: string) {
+    return request<Reservation>(`/api/reservations/${reservationId}/move`, {
+      method: "PATCH",
+      body: JSON.stringify({ startAt }),
+    });
+  },
+
+  extendReservation(reservationId: number, boundary: ReservationBoundary) {
+    return request<Reservation>(`/api/reservations/${reservationId}/extend`, {
+      method: "PATCH",
+      body: JSON.stringify({ boundary }),
+    });
+  },
+
+  shortenReservation(reservationId: number, boundary: ReservationBoundary) {
+    return request<Reservation>(`/api/reservations/${reservationId}/shorten`, {
+      method: "PATCH",
+      body: JSON.stringify({ boundary }),
+    });
+  },
+
+  cancelReservation(reservationId: number) {
+    return request<void>(`/api/reservations/${reservationId}`, { method: "DELETE" });
+  },
 };
 
 export const scheduleAdminApi = {
@@ -196,5 +235,95 @@ export const scheduleAdminApi = {
     return request<void>(`/api/admin/schedule/exceptions/${exceptionId}`, {
       method: "DELETE",
     });
+  },
+
+  adminReservations() {
+    return request<Reservation[]>("/api/admin/reservations");
+  },
+
+  adminCreateReservation(input: {
+    songId: number;
+    startAt: string;
+    durationMinutes: number;
+    reason: string;
+  }) {
+    return request<Reservation>("/api/admin/reservations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  adminMoveReservation(reservationId: number, startAt: string, reason: string) {
+    return request<Reservation>(`/api/admin/reservations/${reservationId}/move`, {
+      method: "PATCH",
+      body: JSON.stringify({ startAt, reason }),
+    });
+  },
+
+  adminExtendReservation(
+    reservationId: number,
+    boundary: ReservationBoundary,
+    reason: string,
+  ) {
+    return request<Reservation>(`/api/admin/reservations/${reservationId}/extend`, {
+      method: "PATCH",
+      body: JSON.stringify({ boundary, reason }),
+    });
+  },
+
+  adminShortenReservation(
+    reservationId: number,
+    boundary: ReservationBoundary,
+    reason: string,
+  ) {
+    return request<Reservation>(`/api/admin/reservations/${reservationId}/shorten`, {
+      method: "PATCH",
+      body: JSON.stringify({ boundary, reason }),
+    });
+  },
+
+  adminCancelReservation(reservationId: number, reason: string) {
+    return request<void>(`/api/admin/reservations/${reservationId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  operatingHours(date: string) {
+    return request<OperatingHours>(
+      `/api/admin/schedule/operating-hours/${encodeURIComponent(date)}`,
+    );
+  },
+
+  operatingHourOverrides(from: string, to: string) {
+    return request<OperatingHours[]>(
+      `/api/admin/schedule/operating-hours?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    );
+  },
+
+  overrideOperatingHours(input: {
+    date: string;
+    openTime: string;
+    closeTime: string;
+    reason: string;
+  }) {
+    return request<OperatingHoursUpdate>(
+      `/api/admin/schedule/operating-hours/${encodeURIComponent(input.date)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          openTime: input.openTime,
+          closeTime: input.closeTime,
+          reason: input.reason,
+        }),
+      },
+    );
+  },
+
+  restoreDefaultOperatingHours(date: string, reason: string) {
+    return request<OperatingHoursUpdate>(
+      `/api/admin/schedule/operating-hours/${encodeURIComponent(date)}/restore-default`,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    );
   },
 };

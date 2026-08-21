@@ -1,5 +1,6 @@
 package com.bandclub.rehearsal.schedule.controller;
 
+import com.bandclub.rehearsal.schedule.domain.ReservationBoundary;
 import com.bandclub.rehearsal.schedule.domain.ReservationSource;
 import com.bandclub.rehearsal.schedule.domain.ReservationStatus;
 import com.bandclub.rehearsal.schedule.service.BookingService;
@@ -61,6 +62,54 @@ public class BookingController {
                 .toList();
     }
 
+    @PatchMapping("/{reservationId}/move")
+    public ReservationResponse move(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long reservationId,
+            @Valid @RequestBody MoveReservationRequest request
+    ) {
+        return ReservationResponse.from(bookingService.move(
+                userId(jwt),
+                reservationId,
+                request.startAt()
+        ));
+    }
+
+    @PatchMapping("/{reservationId}/extend")
+    public ReservationResponse extend(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long reservationId,
+            @Valid @RequestBody AdjustReservationRequest request
+    ) {
+        return ReservationResponse.from(bookingService.extend(
+                userId(jwt),
+                reservationId,
+                request.boundary()
+        ));
+    }
+
+    @PatchMapping("/{reservationId}/shorten")
+    public ReservationResponse shorten(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long reservationId,
+            @Valid @RequestBody AdjustReservationRequest request
+    ) {
+        return ReservationResponse.from(bookingService.shorten(
+                userId(jwt),
+                reservationId,
+                request.boundary()
+        ));
+    }
+
+    @DeleteMapping("/{reservationId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancel(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long reservationId
+    ) {
+        bookingService.cancel(userId(jwt), reservationId);
+    }
+
     private long userId(Jwt jwt) {
         return Long.parseLong(jwt.getSubject());
     }
@@ -69,6 +118,16 @@ public class BookingController {
             @NotNull Long songId,
             @NotNull Instant startAt,
             @Min(30) @Max(180) int durationMinutes
+    ) {
+    }
+
+    public record MoveReservationRequest(
+            @NotNull Instant startAt
+    ) {
+    }
+
+    public record AdjustReservationRequest(
+            @NotNull ReservationBoundary boundary
     ) {
     }
 

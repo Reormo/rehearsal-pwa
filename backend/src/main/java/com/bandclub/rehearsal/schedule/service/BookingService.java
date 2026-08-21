@@ -7,6 +7,7 @@ import com.bandclub.rehearsal.schedule.domain.BookingRound;
 import com.bandclub.rehearsal.schedule.domain.Reservation;
 import com.bandclub.rehearsal.schedule.domain.ReservationSettings;
 import com.bandclub.rehearsal.schedule.domain.ReservationSlot;
+import com.bandclub.rehearsal.schedule.domain.ReservationBoundary;
 import com.bandclub.rehearsal.schedule.domain.ReservationSource;
 import com.bandclub.rehearsal.schedule.domain.ReservationStatus;
 import com.bandclub.rehearsal.schedule.domain.RoomException;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -300,6 +302,287 @@ public class BookingService {
                 .toList();
     }
 
+    @Transactional
+    public ReservationView move(
+            Long userId,
+            Long reservationId,
+            Instant newStartAt
+    ) {
+        validateStart(newStartAt);
+        TeamEditContext context = requireTeamEditable(userId, reservationId);
+        Reservation reservation = context.reservation();
+        BookingRound round = context.round();
+
+        validateFutureTime(newStartAt, context.now());
+        LocalDate targetDate = newStartAt
+                .atZone(ScheduleService.SERVICE_ZONE)
+                .toLocalDate();
+        if (targetDate.isBefore(round.getStartDate())
+                || targetDate.isAfter(round.getEndDate())) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "RESERVATION_MOVE_OUTSIDE_ROUND",
+                    "예약은 같은 회차 안에서만 이동할 수 있습니다."
+            );
+        }
+
+        int durationMinutes = reservationDurationMinutes(reservation);
+        Instant newEndAt = newStartAt.plusSeconds(durationMinutes * 60L);
+        replaceReservationTime(
+                context,
+                targetDate,
+                newStartAt,
+                newEndAt
+        );
+        return toView(reservation, context.song().getTitle());
+    }
+
+    @Transactional
+    public ReservationView extend(
+            Long userId,
+            Long reservationId,
+            ReservationBoundary boundary
+    ) {
+        validateBoundary(boundary);
+        TeamEditContext context = requireTeamEditable(userId, reservationId);
+        Reservation reservation = context.reservation();
+
+        int extendedDuration = reservationDurationMinutes(reservation)
+                + ScheduleService.SLOT_MINUTES;
+        validateDurationForRound(extendedDuration, context.round());
+
+        Instant newStartAt = boundary == ReservationBoundary.FRONT
+                ? reservation.getStartAt().minusSeconds(ScheduleService.SLOT_MINUTES * 60L)
+                : reservation.getStartAt();
+        Instant newEndAt = boundary == ReservationBoundary.BACK
+                ? reservation.getEndAt().plusSeconds(ScheduleService.SLOT_MINUTES * 60L)
+                : reservation.getEndAt();
+        validateFutureTime(newStartAt, context.now());
+
+        LocalDate date = reservation.getStartAt()
+                .atZone(ScheduleService.SERVICE_ZONE)
+                .toLocalDate();
+        replaceReservationTime(context, date, newStartAt, newEndAt);
+        return toView(reservation, context.song().getTitle());
+    }
+
+    @Transactional
+    public ReservationView shorten(
+            Long userId,
+            Long reservationId,
+            ReservationBoundary boundary
+    ) {
+        validateBoundary(boundary);
+        TeamEditContext context = requireTeamEditable(userId, reservationId);
+        Reservation reservation = context.reservation();
+
+        int currentDuration = reservationDurationMinutes(reservation);
+        if (currentDuration <= ScheduleService.SLOT_MINUTES) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "RESERVATION_MIN_DURATION",
+                    "예약은 최소 30분이어야 합니다."
+            );
+        }
+
+        Instant newStartAt = boundary == ReservationBoundary.FRONT
+                ? reservation.getStartAt().plusSeconds(ScheduleService.SLOT_MINUTES * 60L)
+                : reservation.getStartAt();
+        Instant newEndAt = boundary == ReservationBoundary.BACK
+                ? reservation.getEndAt().minusSeconds(ScheduleService.SLOT_MINUTES * 60L)
+                : reservation.getEndAt();
+
+        LocalDate date = reservation.getStartAt()
+                .atZone(ScheduleService.SERVICE_ZONE)
+                .toLocalDate();
+        replaceReservationTime(context, date, newStartAt, newEndAt);
+        return toView(reservation, context.song().getTitle());
+    }
+
+    @Transactional
+    public void cancel(Long userId, Long reservationId) {
+        TeamEditContext context = requireTeamEditable(userId, reservationId);
+        Reservation reservation = context.reservation();
+        List<ReservationSlot> occupiedSlots = slotRepository
+                .findAllByReservationIdInForUpdate(List.of(reservation.getId()));
+        validateCurrentReservationSlots(reservation, occupiedSlots);
+
+        occupiedSlots.forEach(ReservationSlot::release);
+        reservation.cancel(userId, null, context.now());
+    }
+
+    private TeamEditContext requireTeamEditable(Long userId, Long reservationId) {
+        ClubMember membership = membershipService.requireMembership(userId);
+        Reservation reservation = reservationRepository.findByIdForUpdate(reservationId)
+                .orElseThrow(() -> reservationNotFound());
+        BookingRound round = roundRepository.findByIdAndClubId(
+                        reservation.getBookingRoundId(),
+                        membership.getClubId()
+                )
+                .orElseThrow(() -> reservationNotFound());
+
+        if (reservation.getStatus() != ReservationStatus.ACTIVE) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "RESERVATION_NOT_ACTIVE",
+                    "활성 상태인 예약만 수정할 수 있습니다."
+            );
+        }
+
+        Instant now = clock.instant();
+        if (!now.isBefore(reservation.getStartAt())) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "RESERVATION_ALREADY_STARTED",
+                    "이미 시작한 합주는 관리자만 조정할 수 있습니다."
+            );
+        }
+
+        Song song = songRepository.findByIdAndClubId(
+                        reservation.getSongId(),
+                        membership.getClubId()
+                )
+                .orElseThrow(() -> reservationNotFound());
+        if (!song.isActive()) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "SONG_ARCHIVED",
+                    "보관된 곡의 예약은 관리자만 조정할 수 있습니다."
+            );
+        }
+
+        boolean leader = songMemberRepository
+                .findBySongIdAndUserId(song.getId(), userId)
+                .map(member -> member.isLeader())
+                .orElse(false);
+        if (!leader) {
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "SONG_LEADER_REQUIRED",
+                    "해당 곡의 팀장만 예약을 수정할 수 있습니다."
+            );
+        }
+
+        return new TeamEditContext(membership, reservation, round, song, now);
+    }
+
+    private void replaceReservationTime(
+            TeamEditContext context,
+            LocalDate date,
+            Instant newStartAt,
+            Instant newEndAt
+    ) {
+        Reservation reservation = context.reservation();
+        var operatingHours = roomOperatingHoursPolicy.effective(
+                context.membership().getClubId(),
+                date
+        );
+        validateRoomHours(date, newStartAt, newEndAt, operatingHours);
+
+        List<RoomException> blockedPeriods = exceptionRepository
+                .findAllByClubIdAndExceptionDateOrderByBlockedStartMinuteAsc(
+                        context.membership().getClubId(),
+                        date
+                );
+        if (overlapsBlockedPeriod(date, newStartAt, newEndAt, blockedPeriods)) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "ROOM_TIME_BLOCKED",
+                    "변경하려는 시간에 동아리방 사용 불가 시간이 포함되어 있습니다."
+            );
+        }
+
+        List<ReservationSlot> currentSlots;
+        List<ReservationSlot> targetSlots;
+        boolean targetStartsFirst = newStartAt.isBefore(reservation.getStartAt());
+
+        if (targetStartsFirst) {
+            targetSlots = slotRepository.findRangeForUpdate(
+                    context.round().getId(),
+                    newStartAt,
+                    newEndAt
+            );
+            currentSlots = slotRepository.findRangeForUpdate(
+                    context.round().getId(),
+                    reservation.getStartAt(),
+                    reservation.getEndAt()
+            );
+        } else {
+            currentSlots = slotRepository.findRangeForUpdate(
+                    context.round().getId(),
+                    reservation.getStartAt(),
+                    reservation.getEndAt()
+            );
+            targetSlots = slotRepository.findRangeForUpdate(
+                    context.round().getId(),
+                    newStartAt,
+                    newEndAt
+            );
+        }
+
+        int targetDuration = Math.toIntExact(
+                Duration.between(newStartAt, newEndAt).toMinutes()
+        );
+        validateLockedSlots(targetSlots, newStartAt, targetDuration);
+        validateCurrentReservationSlots(reservation, currentSlots);
+
+        if (targetSlots.stream().anyMatch(slot ->
+                slot.getReservationId() != null
+                        && !reservation.getId().equals(slot.getReservationId()))) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "SLOT_ALREADY_RESERVED",
+                    "방금 다른 팀이 먼저 예약한 시간이 포함되어 있습니다."
+            );
+        }
+
+        currentSlots.forEach(ReservationSlot::release);
+        targetSlots.forEach(slot -> slot.occupy(reservation.getId()));
+        reservation.reschedule(newStartAt, newEndAt, context.now());
+    }
+
+    private void validateCurrentReservationSlots(
+            Reservation reservation,
+            List<ReservationSlot> currentSlots
+    ) {
+        int expectedCount = reservationDurationMinutes(reservation)
+                / ScheduleService.SLOT_MINUTES;
+        if (currentSlots.size() != expectedCount
+                || currentSlots.stream().anyMatch(slot ->
+                !reservation.getId().equals(slot.getReservationId()))) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "RESERVATION_SLOT_NOT_FOUND",
+                    "기존 예약 슬롯 상태가 올바르지 않습니다."
+            );
+        }
+    }
+
+    private int reservationDurationMinutes(Reservation reservation) {
+        return Math.toIntExact(Duration.between(
+                reservation.getStartAt(),
+                reservation.getEndAt()
+        ).toMinutes());
+    }
+
+    private void validateBoundary(ReservationBoundary boundary) {
+        if (boundary == null) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "RESERVATION_BOUNDARY_REQUIRED",
+                    "앞쪽 또는 뒤쪽 조정 방향이 필요합니다."
+            );
+        }
+    }
+
+    private AppException reservationNotFound() {
+        return new AppException(
+                HttpStatus.NOT_FOUND,
+                "RESERVATION_NOT_FOUND",
+                "예약을 찾을 수 없습니다."
+        );
+    }
+
     private BookingRound requireRound(Long clubId, LocalDate date) {
         return roundRepository.findByClubIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                         clubId,
@@ -479,6 +762,15 @@ public class BookingService {
                 reservation.getCreatedAt(),
                 reservation.getUpdatedAt()
         );
+    }
+
+    private record TeamEditContext(
+            ClubMember membership,
+            Reservation reservation,
+            BookingRound round,
+            Song song,
+            Instant now
+    ) {
     }
 
     public record BookingTimeOptionView(

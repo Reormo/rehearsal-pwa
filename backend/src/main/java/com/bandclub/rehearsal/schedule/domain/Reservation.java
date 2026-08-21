@@ -92,6 +92,12 @@ public class Reservation {
         );
     }
 
+    public void reschedule(Instant startAt, Instant endAt, Instant now) {
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.updatedAt = now;
+    }
+
     public void cancel(Long canceledBy, String reason, Instant now) {
         if (status == ReservationStatus.CANCELED) {
             return;

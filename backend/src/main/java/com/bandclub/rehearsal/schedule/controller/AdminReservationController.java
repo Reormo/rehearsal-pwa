@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/reservations")
@@ -26,6 +27,13 @@ public class AdminReservationController {
 
     public AdminReservationController(AdminReservationService adminReservationService) {
         this.adminReservationService = adminReservationService;
+    }
+
+    @GetMapping
+    public List<ReservationResponse> upcoming(@AuthenticationPrincipal Jwt jwt) {
+        return adminReservationService.upcoming(userId(jwt)).stream()
+                .map(ReservationResponse::from)
+                .toList();
     }
 
     @PostMapping

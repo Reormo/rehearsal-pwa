@@ -73,6 +73,30 @@ public class AdminReservationService {
         this.clock = clock;
     }
 
+    @Transactional(readOnly = true)
+    public List<ReservationView> upcoming(Long actorUserId) {
+        ClubMember actor = membershipService.requireAdmin(actorUserId);
+        Map<Long, Song> songs = new LinkedHashMap<>();
+        songRepository.findAllByClubIdOrderByIdAsc(actor.getClubId())
+                .forEach(song -> songs.put(song.getId(), song));
+        if (songs.isEmpty()) {
+            return List.of();
+        }
+
+        return reservationRepository
+                .findAllBySongIdInAndStatusAndEndAtAfterOrderByStartAtAsc(
+                        songs.keySet(),
+                        ReservationStatus.ACTIVE,
+                        clock.instant()
+                ).stream()
+                .filter(reservation -> songs.containsKey(reservation.getSongId()))
+                .map(reservation -> toView(
+                        reservation,
+                        songs.get(reservation.getSongId()).getTitle()
+                ))
+                .toList();
+    }
+
     @Transactional
     public ReservationView create(
             Long actorUserId,

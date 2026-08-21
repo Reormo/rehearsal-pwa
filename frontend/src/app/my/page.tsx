@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
@@ -93,6 +94,17 @@ function MyContent({
         {logoutMutation.isError && (
           <p className="error-box mt-3">{errorMessage(logoutMutation.error)}</p>
         )}
+      </section>
+
+      <section className="app-card">
+        <p className="card-label">합주 예약</p>
+        <h2 className="mt-2 text-lg font-bold text-slate-950">예정된 합주 관리</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          참여 중인 곡의 예정 예약을 확인하고, 팀장이라면 이동·연장·단축·취소할 수 있습니다.
+        </p>
+        <Link href="/my/reservations" className="primary-button mt-4 inline-flex">
+          예정 합주 보기
+        </Link>
       </section>
 
       <section className="app-card border-red-100">

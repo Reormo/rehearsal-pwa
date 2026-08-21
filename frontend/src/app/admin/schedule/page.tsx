@@ -109,9 +109,17 @@ function AdminScheduleContent() {
             기본 예약 정책, 회차별 오픈 시각과 동아리방 사용 불가 시간을 관리합니다.
           </p>
         </div>
-        <Link href="/schedule" className="secondary-button">
-          전체 시간표 보기
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/reservations" className="secondary-button">
+            예약 강제 관리
+          </Link>
+          <Link href="/admin/operating-hours" className="secondary-button">
+            날짜별 운영시간
+          </Link>
+          <Link href="/schedule" className="secondary-button">
+            전체 시간표 보기
+          </Link>
+        </div>
       </section>
 
       {mutationError && (
@@ -221,7 +229,7 @@ function AdminScheduleContent() {
           준비된 회차
         </h2>
         <p className="mt-2 text-sm text-slate-500">
-          현재 회차와 다음 회차는 자동으로 준비됩니다. DB에는 회차당 168개의 30분
+          현재 회차와 다음 회차는 자동으로 준비됩니다. DB에는 회차당 336개의 30분
           원자 슬롯을 유지하고, 화면의 예약 가능 슬롯만 최대 예약 시간에 맞춰 묶습니다.
         </p>
 
@@ -253,7 +261,7 @@ function AdminScheduleContent() {
           사용 불가 시간 추가
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          기본 운영시간은 항상 10:00~22:00입니다. 사용할 수 있는 시간을 따로 지정하지
+          기본 운영시간은 10:00~22:00이며 날짜별 Override가 있으면 해당 시간이 적용됩니다. 사용할 수 있는 시간을 따로 지정하지
           않고, 사용할 수 없는 구간만 등록합니다. 같은 날짜에 여러 구간을 추가할 수 있고
           나머지 시간은 자동으로 예약 가능합니다.
         </p>

@@ -106,9 +106,14 @@ function AdminReservationsContent() {
             사용 불가 시간, 다른 예약 충돌과 현재 최대 예약 시간은 그대로 준수합니다.
           </p>
         </div>
-        <Link href="/admin/schedule" className="secondary-button">
-          일정 설정으로
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/swaps" className="primary-button">
+            일정 교환 관리
+          </Link>
+          <Link href="/admin/schedule" className="secondary-button">
+            일정 설정으로
+          </Link>
+        </div>
       </section>
 
       {error && <p className="error-box">{errorMessage(error)}</p>}

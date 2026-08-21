@@ -27,6 +27,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             Instant after
     );
 
+    List<Reservation> findAllBySongIdIn(Collection<Long> songIds);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select r

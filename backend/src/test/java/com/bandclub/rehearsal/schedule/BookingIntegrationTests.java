@@ -134,34 +134,47 @@ class BookingIntegrationTests {
         long superAdminId = superAdminId();
         var round = openNextRound(superAdminId, 60);
         LocalDate date = round.startDate().plusDays(2);
-        var firstSong = createLedSong(superAdminId, "동시성 테스트 A");
-        var secondSong = createLedSong(superAdminId, "동시성 테스트 B");
         Instant startAt = at(date, 13, 0);
+        int requestCount = 20;
 
-        CountDownLatch ready = new CountDownLatch(2);
+        var songs = new java.util.ArrayList<SongService.SongView>();
+        for (int index = 0; index < requestCount; index++) {
+            songs.add(createLedSong(superAdminId, "동시성 테스트 " + index));
+        }
+
+        CountDownLatch ready = new CountDownLatch(requestCount);
         CountDownLatch start = new CountDownLatch(1);
-        ExecutorService executor = Executors.newFixedThreadPool(2);
+        ExecutorService executor = Executors.newFixedThreadPool(requestCount);
         try {
-            Future<Boolean> first = executor.submit(() -> attemptBooking(
-                    superAdminId,
-                    firstSong.id(),
-                    startAt,
-                    ready,
-                    start
-            ));
-            Future<Boolean> second = executor.submit(() -> attemptBooking(
-                    superAdminId,
-                    secondSong.id(),
-                    startAt,
-                    ready,
-                    start
-            ));
+            var attempts = new java.util.ArrayList<Future<Boolean>>();
+            for (var song : songs) {
+                attempts.add(executor.submit(() -> attemptBooking(
+                        superAdminId,
+                        song.id(),
+                        startAt,
+                        ready,
+                        start
+                )));
+            }
 
-            ready.await();
+            assertTrue(
+                    ready.await(10, java.util.concurrent.TimeUnit.SECONDS),
+                    "20개 동시 예약 요청이 준비 상태에 도달해야 합니다."
+            );
             start.countDown();
 
-            int successCount = (first.get() ? 1 : 0) + (second.get() ? 1 : 0);
-            assertEquals(1, successCount);
+            int successCount = 0;
+            for (Future<Boolean> attempt : attempts) {
+                if (attempt.get(30, java.util.concurrent.TimeUnit.SECONDS)) {
+                    successCount++;
+                }
+            }
+
+            assertEquals(
+                    1,
+                    successCount,
+                    "동일 슬롯 20건 동시 예약에서는 정확히 1건만 성공해야 합니다."
+            );
         } finally {
             executor.shutdownNow();
         }

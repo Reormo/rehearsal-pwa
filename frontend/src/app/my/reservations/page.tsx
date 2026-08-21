@@ -99,9 +99,14 @@ function ReservationsContent({ userId }: { userId: number }) {
             합주가 시작된 뒤에는 관리자만 조정할 수 있습니다.
           </p>
         </div>
-        <Link href="/schedule" className="secondary-button">
-          전체 시간표 보기
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/my/swaps" className="primary-button">
+            일정 교환
+          </Link>
+          <Link href="/schedule" className="secondary-button">
+            전체 시간표 보기
+          </Link>
+        </div>
       </section>
 
       {mutationError && <p className="error-box">{errorMessage(mutationError)}</p>}

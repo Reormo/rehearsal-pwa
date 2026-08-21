@@ -117,6 +117,18 @@ public class Reservation {
         this.updatedAt = now;
     }
 
+    public void relocate(
+            Long bookingRoundId,
+            Instant startAt,
+            Instant endAt,
+            Instant now
+    ) {
+        this.bookingRoundId = bookingRoundId;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.updatedAt = now;
+    }
+
     public void cancel(Long canceledBy, String reason, Instant now) {
         if (status == ReservationStatus.CANCELED) {
             return;

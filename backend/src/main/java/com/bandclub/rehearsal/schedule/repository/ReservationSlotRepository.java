@@ -40,6 +40,27 @@ public interface ReservationSlotRepository extends JpaRepository<ReservationSlot
     @Query("""
             select s
             from ReservationSlot s
+            where (s.bookingRoundId = :firstRoundId
+                   and s.slotStartAt >= :firstFrom
+                   and s.slotStartAt < :firstTo)
+               or (s.bookingRoundId = :secondRoundId
+                   and s.slotStartAt >= :secondFrom
+                   and s.slotStartAt < :secondTo)
+            order by s.slotStartAt asc, s.id asc
+            """)
+    List<ReservationSlot> findSwapWindowsForUpdate(
+            @Param("firstRoundId") Long firstRoundId,
+            @Param("firstFrom") Instant firstFrom,
+            @Param("firstTo") Instant firstTo,
+            @Param("secondRoundId") Long secondRoundId,
+            @Param("secondFrom") Instant secondFrom,
+            @Param("secondTo") Instant secondTo
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select s
+            from ReservationSlot s
             where s.reservationId in :reservationIds
             order by s.slotStartAt asc
             """)

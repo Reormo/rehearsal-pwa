@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useId, useState } from "react";
+import { FormEvent, useId, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
@@ -24,8 +24,9 @@ export default function AdminSongsPage() {
 function AdminSongsContent() {
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
+  const [songSearch, setSongSearch] = useState("");
   const [title, setTitle] = useState("");
-  const [leaderUserId, setLeaderUserId] = useState("");
+  const [leaderSearch, setLeaderSearch] = useState("");
   const [leaderSession, setLeaderSession] = useState("");
   const [createError, setCreateError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -39,6 +40,12 @@ function AdminSongsContent() {
     queryFn: adminApi.members,
   });
 
+  const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
+  const selectedLeader = useMemo(
+    () => members.find((member) => memberOptionValue(member) === leaderSearch),
+    [leaderSearch, members],
+  );
+
   const refreshSongs = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["admin", "songs"] }),
@@ -49,9 +56,8 @@ function AdminSongsContent() {
   async function createSong(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreateError("");
-    const parsedLeaderId = Number(leaderUserId);
-    if (!title.trim() || !parsedLeaderId || !leaderSession.trim()) {
-      setCreateError("곡 제목, 최초 팀장, 팀장 세션을 모두 입력해주세요.");
+    if (!title.trim() || !selectedLeader || !leaderSession.trim()) {
+      setCreateError("곡 제목, 최초 팀장, 팀장 세션을 모두 입력해주세요. 팀장은 검색 결과에서 선택해야 합니다.");
       return;
     }
 
@@ -59,11 +65,11 @@ function AdminSongsContent() {
     try {
       await adminApi.createSong({
         title: title.trim(),
-        leaderUserId: parsedLeaderId,
+        leaderUserId: selectedLeader.userId,
         leaderSessionName: leaderSession.trim(),
       });
       setTitle("");
-      setLeaderUserId("");
+      setLeaderSearch("");
       setLeaderSession("");
       await refreshSongs();
     } catch (error) {
@@ -73,9 +79,18 @@ function AdminSongsContent() {
     }
   }
 
-  const visibleSongs = songsQuery.data?.filter((song) =>
-    showArchived ? song.status === "ARCHIVED" : song.status === "ACTIVE",
-  );
+  const visibleSongs = useMemo(() => {
+    const byStatus = (songsQuery.data ?? []).filter((song) =>
+      showArchived ? song.status === "ARCHIVED" : song.status === "ACTIVE",
+    );
+    if (showArchived) return byStatus;
+
+    const query = songSearch.trim().toLocaleLowerCase("ko-KR");
+    if (!query) return byStatus;
+    return byStatus.filter((song) =>
+      song.title.toLocaleLowerCase("ko-KR").includes(query),
+    );
+  }, [showArchived, songSearch, songsQuery.data]);
 
   return (
     <div className="space-y-6">
@@ -110,21 +125,13 @@ function AdminSongsContent() {
             />
           </label>
 
-          <label className="field-label">
-            최초 팀장
-            <select
-              className="field-input"
-              value={leaderUserId}
-              onChange={(event) => setLeaderUserId(event.target.value)}
-            >
-              <option value="">회원 선택</option>
-              {membersQuery.data?.map((member) => (
-                <option key={member.userId} value={member.userId}>
-                  {member.name} ({member.loginId})
-                </option>
-              ))}
-            </select>
-          </label>
+          <MemberSearchField
+            members={members}
+            value={leaderSearch}
+            onChange={setLeaderSearch}
+            label="최초 팀장"
+            placeholder="이름 또는 아이디 검색"
+          />
 
           <SessionField value={leaderSession} onChange={setLeaderSession} label="팀장 세션" />
 
@@ -138,19 +145,34 @@ function AdminSongsContent() {
         </form>
       </section>
 
-      <section className="flex gap-2">
-        <button
-          className={showArchived ? "secondary-button small-button" : "primary-button small-button"}
-          onClick={() => setShowArchived(false)}
-        >
-          활성 곡 {songsQuery.data?.filter((song) => song.status === "ACTIVE").length ?? 0}
-        </button>
-        <button
-          className={showArchived ? "primary-button small-button" : "secondary-button small-button"}
-          onClick={() => setShowArchived(true)}
-        >
-          보관 곡 {songsQuery.data?.filter((song) => song.status === "ARCHIVED").length ?? 0}
-        </button>
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex gap-2">
+          <button
+            className={showArchived ? "secondary-button small-button" : "primary-button small-button"}
+            onClick={() => setShowArchived(false)}
+          >
+            활성 곡 {songsQuery.data?.filter((song) => song.status === "ACTIVE").length ?? 0}
+          </button>
+          <button
+            className={showArchived ? "primary-button small-button" : "secondary-button small-button"}
+            onClick={() => setShowArchived(true)}
+          >
+            보관 곡 {songsQuery.data?.filter((song) => song.status === "ARCHIVED").length ?? 0}
+          </button>
+        </div>
+
+        {!showArchived && (
+          <label className="field-label w-full sm:max-w-xs">
+            활성 곡 검색
+            <input
+              className="field-input"
+              type="search"
+              value={songSearch}
+              onChange={(event) => setSongSearch(event.target.value)}
+              placeholder="곡 제목 검색"
+            />
+          </label>
+        )}
       </section>
 
       {(songsQuery.isError || membersQuery.isError) && (
@@ -163,18 +185,22 @@ function AdminSongsContent() {
         <div className="app-card text-sm text-slate-500">곡 정보를 불러오고 있어요.</div>
       )}
 
-      {visibleSongs?.length === 0 && (
+      {visibleSongs.length === 0 && !songsQuery.isPending && (
         <div className="app-card text-center text-sm font-semibold text-slate-600">
-          {showArchived ? "보관된 곡이 없습니다." : "활성 곡이 없습니다."}
+          {showArchived
+            ? "보관된 곡이 없습니다."
+            : songSearch.trim()
+              ? "검색 결과가 없습니다."
+              : "활성 곡이 없습니다."}
         </div>
       )}
 
       <div className="space-y-4">
-        {visibleSongs?.map((song) => (
+        {visibleSongs.map((song) => (
           <SongAdminCard
             key={song.id}
             song={song}
-            members={membersQuery.data ?? []}
+            members={members}
             refreshSongs={refreshSongs}
           />
         ))}
@@ -194,11 +220,14 @@ function SongAdminCard({
 }) {
   const [actionError, setActionError] = useState("");
   const [pending, setPending] = useState("");
-  const [newMemberId, setNewMemberId] = useState("");
+  const [newMemberSearch, setNewMemberSearch] = useState("");
   const [newMemberSession, setNewMemberSession] = useState("");
   const active = song.status === "ACTIVE";
   const availableMembers = members.filter(
     (member) => !song.members.some((songMember) => songMember.userId === member.userId),
+  );
+  const selectedNewMember = availableMembers.find(
+    (member) => memberOptionValue(member) === newMemberSearch,
   );
 
   async function run(key: string, action: () => Promise<unknown>) {
@@ -230,15 +259,14 @@ function SongAdminCard({
 
   async function addMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const parsedId = Number(newMemberId);
-    if (!parsedId || !newMemberSession.trim()) {
-      setActionError("추가할 회원과 세션을 선택해주세요.");
+    if (!selectedNewMember || !newMemberSession.trim()) {
+      setActionError("추가할 회원을 검색 결과에서 선택하고 세션을 입력해주세요.");
       return;
     }
     await run("add-member", () =>
-      adminApi.addSongMember(song.id, parsedId, newMemberSession.trim()),
+      adminApi.addSongMember(song.id, selectedNewMember.userId, newMemberSession.trim()),
     );
-    setNewMemberId("");
+    setNewMemberSearch("");
     setNewMemberSession("");
   }
 
@@ -343,21 +371,14 @@ function SongAdminCard({
 
       {active && (
         <form className="mt-5 grid gap-3 sm:grid-cols-[1fr_1fr_auto]" onSubmit={addMember}>
-          <label className="field-label">
-            참여자 추가
-            <select
-              className="field-input"
-              value={newMemberId}
-              onChange={(event) => setNewMemberId(event.target.value)}
-            >
-              <option value="">회원 선택</option>
-              {availableMembers.map((member) => (
-                <option key={member.userId} value={member.userId}>
-                  {member.name} ({member.loginId})
-                </option>
-              ))}
-            </select>
-          </label>
+          <MemberSearchField
+            members={availableMembers}
+            value={newMemberSearch}
+            onChange={setNewMemberSearch}
+            label="참여자 추가"
+            placeholder={availableMembers.length === 0 ? "추가 가능한 회원 없음" : "이름 또는 아이디 검색"}
+            disabled={availableMembers.length === 0}
+          />
           <SessionField value={newMemberSession} onChange={setNewMemberSession} label="세션" />
           <div className="flex items-end">
             <button
@@ -371,6 +392,50 @@ function SongAdminCard({
       )}
     </article>
   );
+}
+
+function MemberSearchField({
+  members,
+  value,
+  onChange,
+  label,
+  placeholder,
+  disabled = false,
+}: {
+  members: Member[];
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  placeholder: string;
+  disabled?: boolean;
+}) {
+  const listId = useId();
+
+  return (
+    <label className="field-label">
+      {label}
+      <input
+        className="field-input"
+        type="search"
+        list={listId}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoComplete="off"
+      />
+      <datalist id={listId}>
+        {members.map((member) => (
+          <option key={member.userId} value={memberOptionValue(member)} />
+        ))}
+      </datalist>
+      <span className="field-help">이름이나 로그인 아이디를 입력해 검색한 뒤 회원을 선택하세요.</span>
+    </label>
+  );
+}
+
+function memberOptionValue(member: Member) {
+  return `${member.name} (${member.loginId})`;
 }
 
 function SessionField({

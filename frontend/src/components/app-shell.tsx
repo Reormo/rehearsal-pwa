@@ -62,7 +62,7 @@ export function AppShell({
                 ? `알림 ${unreadCount > 99 ? "99개 이상" : `${unreadCount}개`}`
                 : "알림"
             }
-            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-700 transition hover:bg-slate-100"
+            className="relative flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full text-slate-700 transition-[background-color,transform] duration-150 ease-out hover:bg-slate-100 active:scale-90"
           >
             <NavIcon name="bell" className="h-7 w-7" />
             {unreadCount > 0 && (
@@ -78,7 +78,7 @@ export function AppShell({
 
       <nav className="fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
         <div
-          className="mx-auto grid min-h-20 max-w-md px-3 pb-[env(safe-area-inset-bottom)]"
+          className="mx-auto grid h-20 max-w-md px-3 pb-[env(safe-area-inset-bottom)]"
           style={{
             gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
           }}
@@ -93,12 +93,14 @@ export function AppShell({
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-w-0 flex-col items-center justify-center gap-1 py-2 transition ${
+                className={`flex h-20 min-w-0 touch-manipulation select-none flex-col items-center justify-center gap-0.5 transition-[color,transform] duration-150 ease-out active:scale-90 ${
                   active ? "text-slate-950" : "text-slate-400"
                 }`}
               >
-                <NavIcon name={item.icon} className="h-7 w-7" />
-                <span className="text-[11px] font-bold leading-none">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+                  <NavIcon name={item.icon} className="h-7 w-7" />
+                </span>
+                <span className="h-4 text-[11px] font-bold leading-4">
                   {item.label}
                 </span>
               </Link>

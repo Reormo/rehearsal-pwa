@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { AppShell, roleLabel } from "@/components/app-shell";
+import { NotificationSettingsCard } from "@/components/notification-settings";
 import { authApi, errorMessage, songApi } from "@/lib/api";
 
 export default function MyPage() {
@@ -102,6 +103,8 @@ function MyContent({
           <p className="error-box mt-3">{errorMessage(logoutMutation.error)}</p>
         )}
       </section>
+
+      <NotificationSettingsCard />
 
       <section className="app-card">
         <div className="flex items-center justify-between gap-4">

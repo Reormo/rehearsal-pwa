@@ -17,3 +17,8 @@ app.bootstrap.club-name=밴드 동아리
 app.bootstrap.initial-admin-login-id=admin
 app.bootstrap.initial-admin-password=replace_with_a_strong_password
 app.bootstrap.initial-admin-name=관리자
+
+# Web Push. Generate one VAPID pair and keep the private key out of Git.
+app.notifications.vapid-public-key=replace_with_vapid_public_key
+app.notifications.vapid-private-key=replace_with_vapid_private_key
+app.notifications.vapid-subject=mailto:admin@example.com

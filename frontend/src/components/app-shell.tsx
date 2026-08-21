@@ -1,10 +1,18 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AuthUser } from "@/lib/api";
 import { notificationApi } from "@/lib/notification-api";
+
+type NavIconName =
+  | "home"
+  | "reservation"
+  | "announcement"
+  | "admin"
+  | "my"
+  | "bell";
 
 export function AppShell({
   user,
@@ -14,7 +22,6 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const queryClient = useQueryClient();
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const unreadCountQuery = useQuery({
     queryKey: ["notifications", "unread-count"],
@@ -23,70 +30,76 @@ export function AppShell({
   });
   const unreadCount = unreadCountQuery.data?.count ?? 0;
 
-  const navItems = [
-    { href: "/", label: "홈" },
-    { href: "/schedule", label: "일정" },
-    { href: "/songs", label: "곡" },
-    { href: "/announcements", label: "공지" },
-    { href: "/notifications", label: "알림" },
-    ...(isAdmin ? [{ href: "/admin", label: "관리자" }] : []),
-    { href: "/my", label: "MY" },
+  const navItems: Array<{
+    href: string;
+    label: string;
+    icon: NavIconName;
+  }> = [
+    { href: "/", label: "홈", icon: "home" },
+    { href: "/schedule", label: "예약", icon: "reservation" },
+    { href: "/announcements", label: "공지", icon: "announcement" },
+    ...(isAdmin
+      ? [{ href: "/admin", label: "관리자", icon: "admin" as NavIconName }]
+      : []),
+    { href: "/my", label: "MY", icon: "my" },
   ];
-
-  function acknowledgeNotifications() {
-    if (unreadCount <= 0) return;
-
-    queryClient.setQueryData(["notifications", "unread-count"], { count: 0 });
-    void notificationApi.markAllRead().catch(() => {
-      void queryClient.invalidateQueries({
-        queryKey: ["notifications", "unread-count"],
-      });
-    });
-  }
 
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-          <Link href="/" className="font-bold tracking-tight text-slate-950">
-            합주 예약
-          </Link>
-          <div className="text-right">
-            <p className="text-sm font-semibold text-slate-900">{user.name}</p>
-            <p className="text-xs text-slate-500">{roleLabel(user.role)}</p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-slate-950">{user.name}</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-500">
+              {roleLabel(user.role)}
+            </p>
           </div>
+
+          <Link
+            href="/notifications"
+            aria-label={
+              unreadCount > 0
+                ? `알림 ${unreadCount > 99 ? "99개 이상" : `${unreadCount}개`}`
+                : "알림"
+            }
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-700 transition hover:bg-slate-100"
+          >
+            <NavIcon name="bell" className="h-7 w-7" />
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-1 text-[10px] font-black leading-none text-white shadow-sm">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Link>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl px-5 py-7 pb-24">{children}</main>
+      <main className="mx-auto w-full max-w-5xl px-5 py-7 pb-32">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white">
+      <nav className="fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
         <div
-          className="mx-auto grid h-16 max-w-md px-2"
-          style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+          className="mx-auto grid min-h-20 max-w-md px-3 pb-[env(safe-area-inset-bottom)]"
+          style={{
+            gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
+          }}
         >
           {navItems.map((item) => {
             const active =
               item.href === "/"
                 ? pathname === "/"
                 : pathname.startsWith(item.href);
-            const notificationItem = item.href === "/notifications";
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={notificationItem ? acknowledgeNotifications : undefined}
-                className={`flex items-center justify-center text-sm font-semibold transition ${
+                aria-current={active ? "page" : undefined}
+                className={`flex min-w-0 flex-col items-center justify-center gap-1 py-2 transition ${
                   active ? "text-slate-950" : "text-slate-400"
                 }`}
               >
-                <span className="inline-flex items-center gap-1">
+                <NavIcon name={item.icon} className="h-7 w-7" />
+                <span className="text-[11px] font-bold leading-none">
                   {item.label}
-                  {notificationItem && unreadCount > 0 && (
-                    <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                      {unreadCount > 99 ? "99+" : unreadCount}
-                    </span>
-                  )}
                 </span>
               </Link>
             );
@@ -94,6 +107,80 @@ export function AppShell({
         </div>
       </nav>
     </div>
+  );
+}
+
+function NavIcon({
+  name,
+  className,
+}: {
+  name: NavIconName;
+  className?: string;
+}) {
+  const common = {
+    className,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  if (name === "home") {
+    return (
+      <svg {...common}>
+        <path d="M3 10.8 12 3l9 7.8" />
+        <path d="M5.5 9.5V21h13V9.5" />
+        <path d="M9.5 21v-6h5v6" />
+      </svg>
+    );
+  }
+
+  if (name === "reservation") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="18" height="16" rx="3" />
+        <path d="M7 3v4M17 3v4M3 10h18" />
+        <path d="m8.5 15 2.2 2.2 4.8-5" />
+      </svg>
+    );
+  }
+
+  if (name === "announcement") {
+    return (
+      <svg {...common}>
+        <path d="M4 13V9a2 2 0 0 1 2-2h3l8-4v16l-8-4H6a2 2 0 0 1-2-2Z" />
+        <path d="m9 15 1.5 5H7l-1.5-5M20 8v6" />
+      </svg>
+    );
+  }
+
+  if (name === "admin") {
+    return (
+      <svg {...common}>
+        <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z" />
+        <circle cx="12" cy="10" r="2.2" />
+        <path d="M8.5 16c.8-1.7 2-2.5 3.5-2.5s2.7.8 3.5 2.5" />
+      </svg>
+    );
+  }
+
+  if (name === "bell") {
+    return (
+      <svg {...common}>
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+        <path d="M10 21h4" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+    </svg>
   );
 }
 

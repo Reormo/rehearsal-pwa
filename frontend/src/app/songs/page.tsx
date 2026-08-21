@@ -28,10 +28,10 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
     <div className="space-y-6">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">MY SONGS</p>
-          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950">내 곡 / 팀</h1>
+          <p className="eyebrow">MY TEAMS</p>
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950">내 팀</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            참여 중인 활성 곡과 팀장, 세션 구성을 확인할 수 있어요.
+            참여 중인 팀과 팀장, 세션 구성을 확인할 수 있어요.
           </p>
         </div>
         {isAdmin && (
@@ -42,7 +42,7 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
       </section>
 
       {songsQuery.isPending && (
-        <div className="app-card text-sm text-slate-500">곡 정보를 불러오고 있어요.</div>
+        <div className="app-card text-sm text-slate-500">팀 정보를 불러오고 있어요.</div>
       )}
 
       {songsQuery.isError && (
@@ -51,7 +51,7 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
 
       {songsQuery.data?.length === 0 && (
         <div className="app-card text-center">
-          <p className="text-sm font-semibold text-slate-700">현재 참여 중인 활성 곡이 없어요.</p>
+          <p className="text-sm font-semibold text-slate-700">현재 참여 중인 팀이 없어요.</p>
         </div>
       )}
 
@@ -62,8 +62,7 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
             <article key={song.id} className="app-card">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="card-label">ACTIVE SONG</p>
-                  <h2 className="mt-2 text-xl font-black text-slate-950">{song.title}</h2>
+                  <h2 className="text-xl font-black text-slate-950">{song.title}</h2>
                   <p className="mt-1 text-sm text-slate-500">
                     팀장 {leader ? `${leader.name} · ${leader.sessionName}` : "미지정"}
                   </p>

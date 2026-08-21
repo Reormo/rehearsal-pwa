@@ -19,7 +19,6 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -196,8 +195,8 @@ class BookingIntegrationTests {
         scheduleService.createException(
                 superAdminId,
                 date,
-                LocalTime.of(15, 30),
-                LocalTime.of(16, 30),
+                "15:30",
+                "16:30",
                 "장비 점검"
         );
 

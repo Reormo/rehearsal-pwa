@@ -11,12 +11,12 @@ public interface RoomExceptionRepository extends JpaRepository<RoomException, Lo
 
     Optional<RoomException> findByIdAndClubId(Long id, Long clubId);
 
-    List<RoomException> findAllByClubIdAndExceptionDateOrderByBlockedStartTimeAsc(
+    List<RoomException> findAllByClubIdAndExceptionDateOrderByBlockedStartMinuteAsc(
             Long clubId,
             LocalDate exceptionDate
     );
 
-    List<RoomException> findAllByClubIdAndExceptionDateBetweenOrderByExceptionDateAscBlockedStartTimeAsc(
+    List<RoomException> findAllByClubIdAndExceptionDateBetweenOrderByExceptionDateAscBlockedStartMinuteAsc(
             Long clubId,
             LocalDate from,
             LocalDate to

@@ -42,6 +42,7 @@ public class BookingService {
 
     private final MembershipService membershipService;
     private final ScheduleService scheduleService;
+    private final RoomOperatingHoursPolicy roomOperatingHoursPolicy;
     private final BookingRoundRepository roundRepository;
     private final ReservationSettingsRepository settingsRepository;
     private final ReservationSlotRepository slotRepository;
@@ -54,6 +55,7 @@ public class BookingService {
     public BookingService(
             MembershipService membershipService,
             ScheduleService scheduleService,
+            RoomOperatingHoursPolicy roomOperatingHoursPolicy,
             BookingRoundRepository roundRepository,
             ReservationSettingsRepository settingsRepository,
             ReservationSlotRepository slotRepository,
@@ -65,6 +67,7 @@ public class BookingService {
     ) {
         this.membershipService = membershipService;
         this.scheduleService = scheduleService;
+        this.roomOperatingHoursPolicy = roomOperatingHoursPolicy;
         this.roundRepository = roundRepository;
         this.settingsRepository = settingsRepository;
         this.slotRepository = slotRepository;
@@ -97,7 +100,11 @@ public class BookingService {
         validateFutureTime(startAt, now);
 
         Instant endAt = startAt.plusSeconds(durationMinutes * 60L);
-        validateRoomHours(date, startAt, endAt);
+        var operatingHours = roomOperatingHoursPolicy.effective(
+                membership.getClubId(),
+                date
+        );
+        validateRoomHours(date, startAt, endAt, operatingHours);
 
         Song song = songRepository.findForUpdate(songId, membership.getClubId())
                 .orElseThrow(() -> new AppException(
@@ -150,13 +157,18 @@ public class BookingService {
                 endAt
         );
         validateLockedSlots(lockedSlots, startAt, durationMinutes);
+        operatingHours = roomOperatingHoursPolicy.effective(
+                membership.getClubId(),
+                date
+        );
+        validateRoomHours(date, startAt, endAt, operatingHours);
 
         List<RoomException> blockedPeriods = exceptionRepository
-                .findAllByClubIdAndExceptionDateOrderByBlockedStartTimeAsc(
+                .findAllByClubIdAndExceptionDateOrderByBlockedStartMinuteAsc(
                         membership.getClubId(),
                         date
                 );
-        if (overlapsBlockedPeriod(startAt, endAt, blockedPeriods)) {
+        if (overlapsBlockedPeriod(date, startAt, endAt, blockedPeriods)) {
             throw new AppException(
                     HttpStatus.CONFLICT,
                     "ROOM_TIME_BLOCKED",
@@ -207,10 +219,14 @@ public class BookingService {
                         to
                 );
         List<RoomException> blockedPeriods = exceptionRepository
-                .findAllByClubIdAndExceptionDateOrderByBlockedStartTimeAsc(
+                .findAllByClubIdAndExceptionDateOrderByBlockedStartMinuteAsc(
                         membership.getClubId(),
                         date
                 );
+        var operatingHours = roomOperatingHoursPolicy.effective(
+                membership.getClubId(),
+                date
+        );
 
         Instant now = clock.instant();
         boolean acceptingReservations = !now.isBefore(round.getBookingOpenAt())
@@ -225,13 +241,15 @@ public class BookingService {
             if (!candidateStart.isAfter(now)) {
                 continue;
             }
-            if (!withinRoomHours(date, candidateStart, candidateEnd)) {
+            if (!roomOperatingHoursPolicy.contains(
+                    date, candidateStart, candidateEnd, operatingHours
+            )) {
                 continue;
             }
             if (!hasContiguousOpenSlots(slots, index, atoms, candidateStart)) {
                 continue;
             }
-            if (overlapsBlockedPeriod(candidateStart, candidateEnd, blockedPeriods)) {
+            if (overlapsBlockedPeriod(date, candidateStart, candidateEnd, blockedPeriods)) {
                 continue;
             }
 
@@ -363,24 +381,21 @@ public class BookingService {
         }
     }
 
-    private void validateRoomHours(LocalDate date, Instant startAt, Instant endAt) {
-        if (!withinRoomHours(date, startAt, endAt)) {
+    private void validateRoomHours(
+            LocalDate date,
+            Instant startAt,
+            Instant endAt,
+            RoomOperatingHoursPolicy.Window operatingHours
+    ) {
+        if (!roomOperatingHoursPolicy.contains(
+                date, startAt, endAt, operatingHours
+        )) {
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
                     "RESERVATION_OUTSIDE_ROOM_HOURS",
-                    "예약은 같은 날짜의 10:00~22:00 범위 안에서만 가능합니다."
+                    "예약은 해당 날짜의 동아리방 운영시간 범위 안에서만 가능합니다."
             );
         }
-    }
-
-    private boolean withinRoomHours(LocalDate date, Instant startAt, Instant endAt) {
-        ZonedDateTime localStart = startAt.atZone(ScheduleService.SERVICE_ZONE);
-        ZonedDateTime localEnd = endAt.atZone(ScheduleService.SERVICE_ZONE);
-        return localStart.toLocalDate().equals(date)
-                && localEnd.toLocalDate().equals(date)
-                && !localStart.toLocalTime().isBefore(ScheduleService.DEFAULT_OPEN_TIME)
-                && !localEnd.toLocalTime().isAfter(ScheduleService.DEFAULT_CLOSE_TIME)
-                && localStart.isBefore(localEnd);
     }
 
     private void validateLockedSlots(
@@ -434,15 +449,16 @@ public class BookingService {
     }
 
     private boolean overlapsBlockedPeriod(
+            LocalDate date,
             Instant startAt,
             Instant endAt,
             Collection<RoomException> blockedPeriods
     ) {
-        LocalTime start = startAt.atZone(ScheduleService.SERVICE_ZONE).toLocalTime();
-        LocalTime end = endAt.atZone(ScheduleService.SERVICE_ZONE).toLocalTime();
+        int start = roomOperatingHoursPolicy.minuteOffset(date, startAt);
+        int end = roomOperatingHoursPolicy.minuteOffset(date, endAt);
         return blockedPeriods.stream().anyMatch(exception ->
-                start.isBefore(exception.getBlockedEndTime())
-                        && end.isAfter(exception.getBlockedStartTime())
+                start < exception.getBlockedEndMinute()
+                        && end > exception.getBlockedStartMinute()
         );
     }
 

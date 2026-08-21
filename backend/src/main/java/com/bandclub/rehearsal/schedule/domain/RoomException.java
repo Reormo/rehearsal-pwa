@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 @Entity
 @Table(name = "room_exceptions")
@@ -20,11 +19,11 @@ public class RoomException {
     @Column(name = "exception_date", nullable = false)
     private LocalDate exceptionDate;
 
-    @Column(name = "blocked_start_time", nullable = false)
-    private LocalTime blockedStartTime;
+    @Column(name = "blocked_start_minute", nullable = false)
+    private short blockedStartMinute;
 
-    @Column(name = "blocked_end_time", nullable = false)
-    private LocalTime blockedEndTime;
+    @Column(name = "blocked_end_minute", nullable = false)
+    private short blockedEndMinute;
 
     @Column(nullable = false, length = 500)
     private String reason;
@@ -44,16 +43,16 @@ public class RoomException {
     private RoomException(
             Long clubId,
             LocalDate exceptionDate,
-            LocalTime blockedStartTime,
-            LocalTime blockedEndTime,
+            int blockedStartMinute,
+            int blockedEndMinute,
             String reason,
             Long createdBy,
             Instant now
     ) {
         this.clubId = clubId;
         this.exceptionDate = exceptionDate;
-        this.blockedStartTime = blockedStartTime;
-        this.blockedEndTime = blockedEndTime;
+        this.blockedStartMinute = (short) blockedStartMinute;
+        this.blockedEndMinute = (short) blockedEndMinute;
         this.reason = reason;
         this.createdBy = createdBy;
         this.createdAt = now;
@@ -63,8 +62,8 @@ public class RoomException {
     public static RoomException create(
             Long clubId,
             LocalDate exceptionDate,
-            LocalTime blockedStartTime,
-            LocalTime blockedEndTime,
+            int blockedStartMinute,
+            int blockedEndMinute,
             String reason,
             Long createdBy,
             Instant now
@@ -72,8 +71,8 @@ public class RoomException {
         return new RoomException(
                 clubId,
                 exceptionDate,
-                blockedStartTime,
-                blockedEndTime,
+                blockedStartMinute,
+                blockedEndMinute,
                 reason,
                 createdBy,
                 now
@@ -92,12 +91,12 @@ public class RoomException {
         return exceptionDate;
     }
 
-    public LocalTime getBlockedStartTime() {
-        return blockedStartTime;
+    public int getBlockedStartMinute() {
+        return blockedStartMinute;
     }
 
-    public LocalTime getBlockedEndTime() {
-        return blockedEndTime;
+    public int getBlockedEndMinute() {
+        return blockedEndMinute;
     }
 
     public String getReason() {

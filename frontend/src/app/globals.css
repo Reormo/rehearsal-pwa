@@ -42,6 +42,7 @@ button:disabled {
 .auth-page {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
   align-items: center;
   justify-content: center;
   padding: 24px;
@@ -185,9 +186,14 @@ button:disabled {
   .auth-card {
     max-width: none;
     min-height: 100vh;
+    min-height: 100dvh;
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    padding: 36px 24px;
+    padding:
+      max(36px, env(safe-area-inset-top))
+      max(24px, env(safe-area-inset-right))
+      max(36px, env(safe-area-inset-bottom))
+      max(24px, env(safe-area-inset-left));
   }
 }

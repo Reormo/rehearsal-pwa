@@ -11,7 +11,7 @@ type NavIconName =
   | "reservation"
   | "announcement"
   | "admin"
-  | "my"
+  | "menu"
   | "bell";
 
 export function AppShell({
@@ -41,12 +41,12 @@ export function AppShell({
     ...(isAdmin
       ? [{ href: "/admin", label: "관리자", icon: "admin" as NavIconName }]
       : []),
-    { href: "/my", label: "MY", icon: "my" },
+    { href: "/my", label: "전체", icon: "menu" },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="min-h-dvh bg-slate-50">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-slate-950">{user.name}</p>
@@ -76,9 +76,9 @@ export function AppShell({
 
       <main className="mx-auto w-full max-w-5xl px-5 py-7 pb-32">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
         <div
-          className="mx-auto grid h-20 max-w-md px-3 pb-[env(safe-area-inset-bottom)]"
+          className="mx-auto grid h-20 max-w-md px-3"
           style={{
             gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
           }}
@@ -165,6 +165,22 @@ function NavIcon({
         <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z" />
         <circle cx="12" cy="10" r="2.2" />
         <path d="M8.5 16c.8-1.7 2-2.5 3.5-2.5s2.7.8 3.5 2.5" />
+      </svg>
+    );
+  }
+
+  if (name === "menu") {
+    return (
+      <svg {...common}>
+        <circle cx="5" cy="5" r="1.5" />
+        <circle cx="12" cy="5" r="1.5" />
+        <circle cx="19" cy="5" r="1.5" />
+        <circle cx="5" cy="12" r="1.5" />
+        <circle cx="12" cy="12" r="1.5" />
+        <circle cx="19" cy="12" r="1.5" />
+        <circle cx="5" cy="19" r="1.5" />
+        <circle cx="12" cy="19" r="1.5" />
+        <circle cx="19" cy="19" r="1.5" />
       </svg>
     );
   }

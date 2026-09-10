@@ -1,4 +1,4 @@
-const CACHE_NAME = "rehearsal-pwa-v1";
+const CACHE_NAME = "muhon-pwa-v4";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
   OFFLINE_URL,
@@ -54,10 +54,10 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   let payload = {
-    title: "합주 알림",
+    title: "무혼 알림",
     body: "새 알림이 도착했습니다.",
     linkPath: "/notifications",
-    tag: "rehearsal-notification",
+    tag: "muhon-notification",
   };
 
   if (event.data) {
@@ -68,15 +68,40 @@ self.addEventListener("push", (event) => {
     }
   }
 
+  const notificationTag = payload.tag || `muhon-${Date.now()}`;
+
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: "/icons/pwa-192x192.png",
-      tag: payload.tag,
-      data: {
-        linkPath: payload.linkPath || "/notifications",
-      },
-    }),
+    Promise.all([
+      self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((windowClients) => {
+          windowClients.forEach((client) => {
+            client.postMessage({
+              type: "MUHON_PUSH_RECEIVED",
+              payload: {
+                title: payload.title,
+                body: payload.body,
+                linkPath: payload.linkPath || "/notifications",
+                tag: notificationTag,
+              },
+            });
+          });
+        }),
+      self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: "/icons/pwa-192x192.png",
+        badge: "/icons/pwa-192x192.png",
+        tag: notificationTag,
+        renotify: true,
+        requireInteraction: true,
+        silent: false,
+        vibrate: [300, 120, 300],
+        timestamp: Date.now(),
+        data: {
+          linkPath: payload.linkPath || "/notifications",
+        },
+      }),
+    ]),
   );
 });
 

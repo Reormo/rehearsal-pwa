@@ -1,6 +1,8 @@
 package com.bandclub.rehearsal.notification;
 
+import com.bandclub.rehearsal.admin.service.AnnouncementService;
 import com.bandclub.rehearsal.auth.repository.UserRepository;
+import com.bandclub.rehearsal.notification.service.NotificationFanoutService;
 import com.bandclub.rehearsal.notification.service.NotificationService;
 import com.bandclub.rehearsal.schedule.service.BookingService;
 import com.bandclub.rehearsal.schedule.service.ScheduleService;
@@ -41,6 +43,12 @@ class NotificationIntegrationTests {
 
     @Autowired
     NotificationService notificationService;
+
+    @Autowired
+    AnnouncementService announcementService;
+
+    @Autowired
+    NotificationFanoutService notificationFanoutService;
 
     @Autowired
     UserRepository userRepository;
@@ -101,6 +109,32 @@ class NotificationIntegrationTests {
         assertTrue(notificationService.list(superAdminId).stream().noneMatch(item ->
                 notification.id().equals(item.id())
         ));
+    }
+
+    @Test
+    void announcementFanoutCreatesNotificationAndDismissAllClearsWarehouse() {
+        long superAdminId = superAdminId();
+
+        var announcement = announcementService.create(
+                superAdminId,
+                "공지 Push 테스트",
+                "공지 내용",
+                false
+        );
+        notificationFanoutService.announcementCreated(
+                announcement.id(),
+                announcement.title()
+        );
+
+        assertTrue(notificationService.list(superAdminId).stream().anyMatch(item ->
+                "ANNOUNCEMENT".equals(item.type())
+                        && item.body().contains("공지 Push 테스트")
+        ));
+
+        notificationService.dismissAll(superAdminId);
+
+        assertTrue(notificationService.list(superAdminId).isEmpty());
+        assertEquals(0, notificationService.unreadCount(superAdminId));
     }
 
     private Instant at(LocalDate date, int hour, int minute) {

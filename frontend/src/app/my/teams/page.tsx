@@ -65,7 +65,10 @@ function TeamsContent({ userId }: { userId: number }) {
                     {me ? ` · 내 세션 ${me.sessionName}` : ""}
                   </p>
                 </div>
-                <span className="count-badge shrink-0">{team.members.length}명</span>
+                <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  <span className="count-badge">{team.stageTypeName}</span>
+                  <span className="count-badge">{team.members.length}명</span>
+                </div>
               </div>
             </article>
           );

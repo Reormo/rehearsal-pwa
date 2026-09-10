@@ -18,6 +18,9 @@ public class Song {
     @Column(nullable = false, length = 150)
     private String title;
 
+    @Column(name = "stage_type_id", nullable = false)
+    private Long stageTypeId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SongStatus status;
@@ -37,21 +40,39 @@ public class Song {
     protected Song() {
     }
 
-    private Song(Long clubId, String title, Long createdBy, Instant now) {
+    private Song(
+            Long clubId,
+            String title,
+            Long stageTypeId,
+            Long createdBy,
+            Instant now
+    ) {
         this.clubId = clubId;
         this.title = title;
+        this.stageTypeId = stageTypeId;
         this.status = SongStatus.ACTIVE;
         this.createdBy = createdBy;
         this.createdAt = now;
         this.updatedAt = now;
     }
 
-    public static Song active(Long clubId, String title, Long createdBy, Instant now) {
-        return new Song(clubId, title, createdBy, now);
+    public static Song active(
+            Long clubId,
+            String title,
+            Long stageTypeId,
+            Long createdBy,
+            Instant now
+    ) {
+        return new Song(clubId, title, stageTypeId, createdBy, now);
     }
 
     public void rename(String title, Instant now) {
         this.title = title;
+        this.updatedAt = now;
+    }
+
+    public void changeStageType(Long stageTypeId, Instant now) {
+        this.stageTypeId = stageTypeId;
         this.updatedAt = now;
     }
 
@@ -83,6 +104,10 @@ public class Song {
 
     public String getTitle() {
         return title;
+    }
+
+    public Long getStageTypeId() {
+        return stageTypeId;
     }
 
     public SongStatus getStatus() {

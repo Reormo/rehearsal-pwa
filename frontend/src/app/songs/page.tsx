@@ -67,7 +67,10 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
                     팀장 {leader ? `${leader.name} · ${leader.sessionName}` : "미지정"}
                   </p>
                 </div>
-                <span className="count-badge">{song.members.length}명</span>
+                <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  <span className="count-badge">{song.stageTypeName}</span>
+                  <span className="count-badge">{song.members.length}명</span>
+                </div>
               </div>
 
               <div className="mt-5 divide-y divide-slate-100 border-t border-slate-100">

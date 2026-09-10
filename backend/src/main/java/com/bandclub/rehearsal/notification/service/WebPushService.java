@@ -135,8 +135,8 @@ public class WebPushService {
 
         DeliveryResult result = sendToUser(
                 userId,
-                "푸시 알림 테스트",
-                "이 알림이 보이면 현재 브라우저의 Web Push 설정이 정상입니다.",
+                "무혼 푸시 팝업 테스트",
+                "이 알림이 보이면 Web Push가 정상입니다. 앱이 열려 있으면 상단 팝업도 함께 표시됩니다.",
                 "/my",
                 "push-test-" + clock.instant().toEpochMilli()
         );

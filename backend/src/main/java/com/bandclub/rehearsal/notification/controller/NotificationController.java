@@ -37,6 +37,12 @@ public class NotificationController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping
+    public ResponseEntity<Void> dismissAll(@AuthenticationPrincipal Jwt jwt) {
+        notificationService.dismissAll(userId(jwt));
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<Void> dismiss(
             @AuthenticationPrincipal Jwt jwt,

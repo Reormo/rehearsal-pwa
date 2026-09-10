@@ -40,6 +40,7 @@ public class AdminSongController {
         SongController.SongResponse response = SongController.SongResponse.from(songService.createSong(
                 actorUserId,
                 request.title(),
+                request.stageTypeName(),
                 request.leaderUserId(),
                 request.leaderSessionName()
         ));
@@ -50,7 +51,10 @@ public class AdminSongController {
                 response.id(),
                 null,
                 null,
-                java.util.Map.of("title", response.title())
+                java.util.Map.of(
+                        "title", response.title(),
+                        "stageTypeName", response.stageTypeName()
+                )
         );
         return response;
     }
@@ -73,6 +77,33 @@ public class AdminSongController {
                 null,
                 null,
                 java.util.Map.of("title", response.title())
+        );
+        return response;
+    }
+
+    @PatchMapping("/{songId}/stage-type")
+    public SongController.SongResponse changeStageType(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long songId,
+            @Valid @RequestBody ChangeStageTypeRequest request
+    ) {
+        long actorUserId = userId(jwt);
+        SongController.SongResponse response = SongController.SongResponse.from(
+                songService.changeStageType(
+                        actorUserId, songId, request.stageTypeName()
+                )
+        );
+        actionLogService.record(
+                actorUserId,
+                "SONG_STAGE_TYPE_CHANGE",
+                "SONG",
+                songId,
+                null,
+                null,
+                java.util.Map.of(
+                        "stageTypeId", response.stageTypeId(),
+                        "stageTypeName", response.stageTypeName()
+                )
         );
         return response;
     }
@@ -200,12 +231,18 @@ public class AdminSongController {
 
     public record CreateSongRequest(
             @NotBlank @Size(max = 150) String title,
+            @NotBlank @Size(max = 50) String stageTypeName,
             @NotNull Long leaderUserId,
             @NotBlank @Size(max = 50) String leaderSessionName
     ) {
     }
 
     public record RenameSongRequest(@NotBlank @Size(max = 150) String title) {
+    }
+
+    public record ChangeStageTypeRequest(
+            @NotBlank @Size(max = 50) String stageTypeName
+    ) {
     }
 
     public record AddMemberRequest(

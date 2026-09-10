@@ -55,6 +55,12 @@ export const notificationApi = {
     });
   },
 
+  dismissAll() {
+    return request<void>("/api/notifications", {
+      method: "DELETE",
+    });
+  },
+
   settings() {
     return request<NotificationSettings>("/api/notifications/settings");
   },

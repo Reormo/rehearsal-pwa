@@ -25,7 +25,9 @@ function AdminSongsContent() {
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const [songSearch, setSongSearch] = useState("");
+  const [stageTypeFilter, setStageTypeFilter] = useState("ALL");
   const [title, setTitle] = useState("");
+  const [stageTypeName, setStageTypeName] = useState("");
   const [leaderSearch, setLeaderSearch] = useState("");
   const [leaderSession, setLeaderSession] = useState("");
   const [createError, setCreateError] = useState("");
@@ -41,6 +43,15 @@ function AdminSongsContent() {
   });
 
   const members = useMemo(() => membersQuery.data ?? [], [membersQuery.data]);
+  const stageTypeSuggestions = useMemo(
+    () =>
+      [...new Set(
+        (songsQuery.data ?? [])
+          .map((song) => song.stageTypeName)
+          .filter(Boolean),
+      )].sort((a, b) => a.localeCompare(b, "ko-KR")),
+    [songsQuery.data],
+  );
   const selectedLeader = useMemo(
     () => members.find((member) => memberOptionValue(member) === leaderSearch),
     [leaderSearch, members],
@@ -56,8 +67,15 @@ function AdminSongsContent() {
   async function createSong(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreateError("");
-    if (!title.trim() || !selectedLeader || !leaderSession.trim()) {
-      setCreateError("곡 제목, 최초 팀장, 팀장 세션을 모두 입력해주세요. 팀장은 검색 결과에서 선택해야 합니다.");
+    if (
+      !title.trim() ||
+      !stageTypeName.trim() ||
+      !selectedLeader ||
+      !leaderSession.trim()
+    ) {
+      setCreateError(
+        "곡 제목, 무대 종류, 최초 팀장, 팀장 세션을 모두 입력해주세요. 팀장은 검색 결과에서 선택해야 합니다.",
+      );
       return;
     }
 
@@ -65,10 +83,12 @@ function AdminSongsContent() {
     try {
       await adminApi.createSong({
         title: title.trim(),
+        stageTypeName: stageTypeName.trim(),
         leaderUserId: selectedLeader.userId,
         leaderSessionName: leaderSession.trim(),
       });
       setTitle("");
+      setStageTypeName("");
       setLeaderSearch("");
       setLeaderSession("");
       await refreshSongs();
@@ -79,6 +99,21 @@ function AdminSongsContent() {
     }
   }
 
+  const activeSongs = useMemo(
+    () => (songsQuery.data ?? []).filter((song) => song.status === "ACTIVE"),
+    [songsQuery.data],
+  );
+
+  const stageTypeCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    activeSongs.forEach((song) => {
+      counts.set(song.stageTypeName, (counts.get(song.stageTypeName) ?? 0) + 1);
+    });
+    return [...counts.entries()].sort(([first], [second]) =>
+      first.localeCompare(second, "ko-KR"),
+    );
+  }, [activeSongs]);
+
   const visibleSongs = useMemo(() => {
     const byStatus = (songsQuery.data ?? []).filter((song) =>
       showArchived ? song.status === "ARCHIVED" : song.status === "ACTIVE",
@@ -86,11 +121,14 @@ function AdminSongsContent() {
     if (showArchived) return byStatus;
 
     const query = songSearch.trim().toLocaleLowerCase("ko-KR");
-    if (!query) return byStatus;
-    return byStatus.filter((song) =>
-      song.title.toLocaleLowerCase("ko-KR").includes(query),
-    );
-  }, [showArchived, songSearch, songsQuery.data]);
+    return byStatus.filter((song) => {
+      const matchesStage =
+        stageTypeFilter === "ALL" || song.stageTypeName === stageTypeFilter;
+      const matchesSearch =
+        !query || song.title.toLocaleLowerCase("ko-KR").includes(query);
+      return matchesStage && matchesSearch;
+    });
+  }, [showArchived, songSearch, songsQuery.data, stageTypeFilter]);
 
   return (
     <div className="space-y-6">
@@ -113,7 +151,7 @@ function AdminSongsContent() {
           <h2 className="mt-2 text-lg font-black text-slate-950">새 곡 만들기</h2>
         </div>
 
-        <form className="grid gap-4 lg:grid-cols-4" onSubmit={createSong}>
+        <form className="grid gap-4 lg:grid-cols-5" onSubmit={createSong}>
           <label className="field-label lg:col-span-2">
             곡 제목
             <input
@@ -125,6 +163,13 @@ function AdminSongsContent() {
             />
           </label>
 
+          <StageTypeField
+            value={stageTypeName}
+            onChange={setStageTypeName}
+            suggestions={stageTypeSuggestions}
+            label="무대 종류"
+          />
+
           <MemberSearchField
             members={members}
             value={leaderSearch}
@@ -135,9 +180,9 @@ function AdminSongsContent() {
 
           <SessionField value={leaderSession} onChange={setLeaderSession} label="팀장 세션" />
 
-          {createError && <div className="error-box lg:col-span-4">{createError}</div>}
+          {createError && <div className="error-box lg:col-span-5">{createError}</div>}
 
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-5">
             <button className="primary-button" disabled={creating || membersQuery.isPending}>
               {creating ? "생성 중..." : "곡 생성"}
             </button>
@@ -175,6 +220,41 @@ function AdminSongsContent() {
         )}
       </section>
 
+      {!showArchived && (
+        <section className="app-card !p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={
+                stageTypeFilter === "ALL"
+                  ? "primary-button small-button"
+                  : "secondary-button small-button"
+              }
+              onClick={() => setStageTypeFilter("ALL")}
+            >
+              전체 {activeSongs.length}
+            </button>
+            {stageTypeCounts.map(([stageType, count]) => (
+              <button
+                key={stageType}
+                type="button"
+                className={
+                  stageTypeFilter === stageType
+                    ? "primary-button small-button"
+                    : "secondary-button small-button"
+                }
+                onClick={() => setStageTypeFilter(stageType)}
+              >
+                {stageType} {count}
+              </button>
+            ))}
+            <span className="ml-auto text-xs font-bold text-slate-400">
+              검색 결과 {visibleSongs.length}곡
+            </span>
+          </div>
+        </section>
+      )}
+
       {(songsQuery.isError || membersQuery.isError) && (
         <div className="error-box">
           {errorMessage(songsQuery.error ?? membersQuery.error)}
@@ -189,7 +269,7 @@ function AdminSongsContent() {
         <div className="app-card text-center text-sm font-semibold text-slate-600">
           {showArchived
             ? "보관된 곡이 없습니다."
-            : songSearch.trim()
+            : songSearch.trim() || stageTypeFilter !== "ALL"
               ? "검색 결과가 없습니다."
               : "활성 곡이 없습니다."}
         </div>
@@ -198,9 +278,10 @@ function AdminSongsContent() {
       <div className="space-y-4">
         {visibleSongs.map((song) => (
           <SongAdminCard
-            key={song.id}
+            key={`${song.id}-${song.stageTypeId}`}
             song={song}
             members={members}
+            stageTypes={stageTypeSuggestions}
             refreshSongs={refreshSongs}
           />
         ))}
@@ -212,16 +293,19 @@ function AdminSongsContent() {
 function SongAdminCard({
   song,
   members,
+  stageTypes,
   refreshSongs,
 }: {
   song: Song;
   members: Member[];
+  stageTypes: string[];
   refreshSongs: () => Promise<void>;
 }) {
   const [actionError, setActionError] = useState("");
   const [pending, setPending] = useState("");
   const [newMemberSearch, setNewMemberSearch] = useState("");
   const [newMemberSession, setNewMemberSession] = useState("");
+  const [stageTypeName, setStageTypeName] = useState(song.stageTypeName);
   const active = song.status === "ACTIVE";
   const availableMembers = members.filter(
     (member) => !song.members.some((songMember) => songMember.userId === member.userId),
@@ -257,6 +341,20 @@ function SongAdminCard({
     );
   }
 
+  async function saveStageType(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextStageType = stageTypeName.trim();
+    if (!nextStageType) {
+      setActionError("무대 종류를 입력해주세요.");
+      return;
+    }
+    if (nextStageType === song.stageTypeName) return;
+
+    await run("stage-type", () =>
+      adminApi.changeSongStageType(song.id, nextStageType),
+    );
+  }
+
   async function addMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedNewMember || !newMemberSession.trim()) {
@@ -277,6 +375,7 @@ function SongAdminCard({
           <div className="flex flex-wrap items-center gap-2">
             <span className="card-label">{song.status}</span>
             <span className="count-badge">{song.members.length}명</span>
+            <span className="count-badge">{song.stageTypeName}</span>
           </div>
           <h2 className="mt-2 text-xl font-black text-slate-950">{song.title}</h2>
         </div>
@@ -305,6 +404,28 @@ function SongAdminCard({
       </div>
 
       {actionError && <div className="error-box mt-4">{actionError}</div>}
+
+      {active && (
+        <form
+          className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]"
+          onSubmit={saveStageType}
+        >
+          <StageTypeField
+            value={stageTypeName}
+            onChange={setStageTypeName}
+            suggestions={stageTypes}
+            label="무대 종류"
+          />
+          <div className="flex items-end">
+            <button
+              className="secondary-button w-full sm:w-auto"
+              disabled={!!pending || !stageTypeName.trim()}
+            >
+              무대 종류 저장
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
         {song.members.map((member) => (
@@ -391,6 +512,44 @@ function SongAdminCard({
         </form>
       )}
     </article>
+  );
+}
+
+function StageTypeField({
+  value,
+  onChange,
+  suggestions,
+  label,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  suggestions: string[];
+  label: string;
+}) {
+  const listId = useId();
+
+  return (
+    <label className="field-label">
+      {label}
+      <input
+        className="field-input"
+        type="text"
+        list={listId}
+        value={value}
+        maxLength={50}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="예: 축제 / 버스킹 / 정기공연"
+        autoComplete="off"
+      />
+      <datalist id={listId}>
+        {suggestions.map((stageType) => (
+          <option key={stageType} value={stageType} />
+        ))}
+      </datalist>
+      <span className="field-help">
+        기존 무대를 선택하거나 새 이름을 직접 입력하면 자동으로 추가됩니다.
+      </span>
+    </label>
   );
 }
 

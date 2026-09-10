@@ -33,6 +33,18 @@ export type ScheduleSettings = {
   updatedAt: string;
 };
 
+export type StageBookingWindow = {
+  id: number;
+  bookingRoundId: number;
+  stageTypeId: number;
+  stageTypeName: string;
+  bookingOpenAt: string;
+  bookingCloseAt: string;
+  maxReservationMinutes: number;
+  updatedBy: number | null;
+  updatedAt: string;
+};
+
 export type BookingRound = {
   id: number;
   roundNo: number;
@@ -105,6 +117,10 @@ export type BookingOptions = {
   durationMinutes: number;
   maxReservationMinutes: number;
   acceptingReservations: boolean;
+  stageTypeName: string | null;
+  bookingOpenAt: string | null;
+  bookingCloseAt: string | null;
+  customStageWindow: boolean;
   options: BookingTimeOption[];
 };
 
@@ -136,9 +152,13 @@ export const scheduleApi = {
     return request<DaySchedule>(`/api/schedule/days/${encodeURIComponent(date)}`);
   },
 
-  bookingOptions(date: string, durationMinutes: number) {
+  bookingOptions(
+    date: string,
+    durationMinutes: number,
+    songId: number,
+  ) {
     return request<BookingOptions>(
-      `/api/reservations/options?date=${encodeURIComponent(date)}&durationMinutes=${encodeURIComponent(durationMinutes)}`,
+      `/api/reservations/options?date=${encodeURIComponent(date)}&durationMinutes=${encodeURIComponent(durationMinutes)}&songId=${encodeURIComponent(songId)}`,
     );
   },
 
@@ -205,12 +225,47 @@ export const scheduleAdminApi = {
 
   updateRound(
     roundId: number,
-    input: { bookingOpenAt: string; maxReservationMinutes: number },
+    input: {
+      bookingOpenAt: string;
+      bookingCloseAt: string;
+      maxReservationMinutes: number;
+    },
   ) {
     return request<BookingRound>(`/api/admin/schedule/rounds/${roundId}`, {
       method: "PATCH",
       body: JSON.stringify(input),
     });
+  },
+
+  stageWindows(roundId: number) {
+    return request<StageBookingWindow[]>(
+      `/api/admin/schedule/rounds/${roundId}/stage-windows`,
+    );
+  },
+
+  updateStageWindow(
+    roundId: number,
+    stageTypeId: number,
+    input: {
+      bookingOpenAt: string;
+      bookingCloseAt: string;
+      maxReservationMinutes: number;
+    },
+  ) {
+    return request<StageBookingWindow>(
+      `/api/admin/schedule/rounds/${roundId}/stage-windows/${stageTypeId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(input),
+      },
+    );
+  },
+
+  deleteStageWindow(roundId: number, stageTypeId: number) {
+    return request<void>(
+      `/api/admin/schedule/rounds/${roundId}/stage-windows/${stageTypeId}`,
+      { method: "DELETE" },
+    );
   },
 
   exceptions(from: string, to: string) {

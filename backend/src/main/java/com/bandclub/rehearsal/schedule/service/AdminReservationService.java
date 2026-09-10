@@ -41,6 +41,7 @@ public class AdminReservationService {
     private final MembershipService membershipService;
     private final ScheduleService scheduleService;
     private final RoomOperatingHoursPolicy roomOperatingHoursPolicy;
+    private final BookingWindowPolicy bookingWindowPolicy;
     private final BookingRoundRepository roundRepository;
     private final ReservationSlotRepository slotRepository;
     private final RoomExceptionRepository exceptionRepository;
@@ -53,6 +54,7 @@ public class AdminReservationService {
             MembershipService membershipService,
             ScheduleService scheduleService,
             RoomOperatingHoursPolicy roomOperatingHoursPolicy,
+            BookingWindowPolicy bookingWindowPolicy,
             BookingRoundRepository roundRepository,
             ReservationSlotRepository slotRepository,
             RoomExceptionRepository exceptionRepository,
@@ -64,6 +66,7 @@ public class AdminReservationService {
         this.membershipService = membershipService;
         this.scheduleService = scheduleService;
         this.roomOperatingHoursPolicy = roomOperatingHoursPolicy;
+        this.bookingWindowPolicy = bookingWindowPolicy;
         this.roundRepository = roundRepository;
         this.slotRepository = slotRepository;
         this.exceptionRepository = exceptionRepository;
@@ -115,7 +118,6 @@ public class AdminReservationService {
 
         LocalDate date = startAt.atZone(ScheduleService.SERVICE_ZONE).toLocalDate();
         BookingRound round = requireRound(actor.getClubId(), date);
-        validateDurationForRound(durationMinutes, round);
 
         Instant endAt = startAt.plusSeconds(durationMinutes * 60L);
         var operatingHours = roomOperatingHoursPolicy.effective(actor.getClubId(), date);
@@ -130,6 +132,10 @@ public class AdminReservationService {
                     "보관된 곡에는 새 예약을 만들 수 없습니다."
             );
         }
+        validateDurationForWindow(
+                durationMinutes,
+                bookingWindowPolicy.resolve(round, song)
+        );
 
         List<ReservationSlot> lockedSlots = slotRepository.findRangeForUpdate(
                 round.getId(),
@@ -216,7 +222,10 @@ public class AdminReservationService {
 
         int extendedDuration = reservationDurationMinutes(reservation)
                 + ScheduleService.SLOT_MINUTES;
-        validateDurationForRound(extendedDuration, context.round());
+        validateDurationForWindow(
+                extendedDuration,
+                bookingWindowPolicy.resolve(context.round(), context.song())
+        );
 
         Instant newStartAt = boundary == ReservationBoundary.FRONT
                 ? reservation.getStartAt().minusSeconds(ScheduleService.SLOT_MINUTES * 60L)
@@ -549,6 +558,20 @@ public class AdminReservationService {
                     HttpStatus.BAD_REQUEST,
                     "INVALID_RESERVATION_DURATION",
                     "예약 시간은 30, 60, 90, 120, 150, 180분 중 하나여야 합니다."
+            );
+        }
+    }
+
+    private void validateDurationForWindow(
+            int durationMinutes,
+            BookingWindowPolicy.ResolvedWindow window
+    ) {
+        if (durationMinutes > window.maxReservationMinutes()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "RESERVATION_TOO_LONG",
+                    "선택한 예약 시간이 " + window.stageTypeName()
+                            + " 팀의 최대 예약 시간을 초과합니다."
             );
         }
     }

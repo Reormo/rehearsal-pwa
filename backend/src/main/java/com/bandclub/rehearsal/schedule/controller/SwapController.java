@@ -1,5 +1,6 @@
 package com.bandclub.rehearsal.schedule.controller;
 
+import com.bandclub.rehearsal.notification.service.NotificationFanoutService;
 import com.bandclub.rehearsal.schedule.service.SwapService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -15,9 +16,14 @@ import java.util.List;
 public class SwapController {
 
     private final SwapService swapService;
+    private final NotificationFanoutService notificationFanoutService;
 
-    public SwapController(SwapService swapService) {
+    public SwapController(
+            SwapService swapService,
+            NotificationFanoutService notificationFanoutService
+    ) {
         this.swapService = swapService;
+        this.notificationFanoutService = notificationFanoutService;
     }
 
     @GetMapping
@@ -39,11 +45,13 @@ public class SwapController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateSwapRequest request
     ) {
-        return swapService.request(
+        var swap = swapService.request(
                 userId(jwt),
                 request.requesterReservationId(),
                 request.targetReservationId()
         );
+        notificationFanoutService.swapRequested(swap);
+        return swap;
     }
 
     @PostMapping("/{swapRequestId}/accept")

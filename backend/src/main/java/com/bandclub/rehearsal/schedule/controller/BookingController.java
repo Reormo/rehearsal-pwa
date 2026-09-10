@@ -32,13 +32,22 @@ public class BookingController {
     public BookingOptionsResponse options(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam @Min(30) @Max(180) int durationMinutes
+            @RequestParam @Min(30) @Max(180) int durationMinutes,
+            @RequestParam(required = false) Long songId
     ) {
-        return BookingOptionsResponse.from(bookingService.options(
-                userId(jwt),
-                date,
-                durationMinutes
-        ));
+        BookingService.BookingOptionsView view = songId == null
+                ? bookingService.options(
+                        userId(jwt),
+                        date,
+                        durationMinutes
+                )
+                : bookingService.options(
+                        userId(jwt),
+                        date,
+                        durationMinutes,
+                        songId
+                );
+        return BookingOptionsResponse.from(view);
     }
 
     @PostMapping
@@ -145,6 +154,10 @@ public class BookingController {
             int durationMinutes,
             int maxReservationMinutes,
             boolean acceptingReservations,
+            String stageTypeName,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            boolean customStageWindow,
             List<BookingTimeOptionResponse> options
     ) {
         static BookingOptionsResponse from(BookingService.BookingOptionsView view) {
@@ -153,6 +166,10 @@ public class BookingController {
                     view.durationMinutes(),
                     view.maxReservationMinutes(),
                     view.acceptingReservations(),
+                    view.stageTypeName(),
+                    view.bookingOpenAt(),
+                    view.bookingCloseAt(),
+                    view.customStageWindow(),
                     view.options().stream().map(BookingTimeOptionResponse::from).toList()
             );
         }

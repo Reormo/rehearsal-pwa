@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AuthGate } from "@/components/auth-gate";
 import { AppShell, roleLabel } from "@/components/app-shell";
 import {
@@ -10,6 +10,7 @@ import {
   ClubRole,
   errorMessage,
   Member,
+  Song,
   SignupApplication,
 } from "@/lib/api";
 
@@ -33,6 +34,7 @@ function AdminContent({
   currentRole: ClubRole;
 }) {
   const queryClient = useQueryClient();
+  const [memberSearch, setMemberSearch] = useState("");
 
   const inviteQuery = useQuery({
     queryKey: ["admin", "invite-code"],
@@ -46,6 +48,21 @@ function AdminContent({
     queryKey: ["admin", "members"],
     queryFn: adminApi.members,
   });
+  const songsQuery = useQuery({
+    queryKey: ["admin", "songs"],
+    queryFn: adminApi.songs,
+  });
+
+  const filteredMembers = useMemo(() => {
+    const query = memberSearch.trim().toLocaleLowerCase("ko-KR");
+    if (!query) return membersQuery.data ?? [];
+
+    return (membersQuery.data ?? []).filter((member) => {
+      const name = member.name.toLocaleLowerCase("ko-KR");
+      const loginId = (member.loginId ?? "").toLocaleLowerCase("ko-KR");
+      return name.includes(query) || loginId.includes(query);
+    });
+  }, [memberSearch, membersQuery.data]);
 
   const rotateMutation = useMutation({
     mutationFn: adminApi.rotateInviteCode,
@@ -204,7 +221,7 @@ function AdminContent({
       </section>
 
       <section className="app-card">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="card-label">회원</p>
             <h2 className="mt-2 text-lg font-bold text-slate-950">전체 회원</h2>
@@ -212,15 +229,35 @@ function AdminContent({
           <span className="count-badge">{membersQuery.data?.length ?? 0}</span>
         </div>
 
+        <label className="field-label mt-5 block">
+          회원 이름 검색
+          <input
+            className="field-input mt-2"
+            type="search"
+            value={memberSearch}
+            onChange={(event) => setMemberSearch(event.target.value)}
+            placeholder="이름 검색"
+          />
+          <span className="field-help">
+            이름을 입력해 회원을 찾고, 회원을 누르면 참여 중인 팀 현황을 볼 수 있습니다.
+          </span>
+        </label>
+
         <div className="mt-5 space-y-3">
           {membersQuery.isPending && <EmptyText>불러오는 중...</EmptyText>}
-          {membersQuery.isError && (
-            <p className="text-sm text-red-600">{errorMessage(membersQuery.error)}</p>
+          {(membersQuery.isError || songsQuery.isError) && (
+            <p className="text-sm text-red-600">
+              {errorMessage(membersQuery.error ?? songsQuery.error)}
+            </p>
           )}
-          {membersQuery.data?.map((member) => (
+          {!membersQuery.isPending && filteredMembers.length === 0 && (
+            <EmptyText>검색 결과가 없습니다.</EmptyText>
+          )}
+          {filteredMembers.map((member) => (
             <MemberRow
               key={member.userId}
               member={member}
+              songs={songsQuery.data ?? []}
               currentUserId={currentUserId}
               canChangeRole={currentRole === "SUPER_ADMIN"}
               busy={
@@ -296,6 +333,7 @@ function SignupRow({
 
 function MemberRow({
   member,
+  songs,
   currentUserId,
   canChangeRole,
   busy,
@@ -304,6 +342,7 @@ function MemberRow({
   onResetPassword,
 }: {
   member: Member;
+  songs: Song[];
   currentUserId: number;
   canChangeRole: boolean;
   busy: boolean;
@@ -312,19 +351,38 @@ function MemberRow({
   onResetPassword: (password: string) => void;
 }) {
   const [newPassword, setNewPassword] = useState("");
+  const [teamsOpen, setTeamsOpen] = useState(false);
   const isSelf = member.userId === currentUserId;
   const isSuperAdmin = member.role === "SUPER_ADMIN";
+  const teams = songs
+    .filter((song) =>
+      song.members.some((songMember) => songMember.userId === member.userId),
+    )
+    .sort((first, second) => {
+      const statusOrder =
+        Number(second.status === "ACTIVE") - Number(first.status === "ACTIVE");
+      return statusOrder || first.title.localeCompare(second.title, "ko-KR");
+    });
+  const activeTeamCount = teams.filter((song) => song.status === "ACTIVE").length;
 
   return (
     <div className="rounded-2xl border border-slate-200 p-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <button
+          type="button"
+          className="min-w-0 text-left"
+          aria-expanded={teamsOpen}
+          onClick={() => setTeamsOpen((current) => !current)}
+        >
           <p className="font-semibold text-slate-950">
             {member.name} {isSelf && <span className="text-xs text-slate-400">(나)</span>}
           </p>
           <p className="mt-1 text-sm text-slate-500">{member.loginId ?? "삭제된 계정"}</p>
-          <p className="mt-1 text-xs font-semibold text-slate-400">{roleLabel(member.role)}</p>
-        </div>
+          <p className="mt-1 text-xs font-semibold text-slate-400">
+            {roleLabel(member.role)} · 활성 팀 {activeTeamCount}개 · 전체 {teams.length}개
+            <span className="ml-2">{teamsOpen ? "▲" : "▼"}</span>
+          </p>
+        </button>
 
         {canChangeRole && !isSuperAdmin && (
           <select
@@ -338,6 +396,49 @@ function MemberRow({
           </select>
         )}
       </div>
+
+      {teamsOpen && (
+        <div className="mt-4 rounded-2xl bg-slate-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-bold text-slate-900">팀 현황</p>
+            <span className="text-xs font-semibold text-slate-400">
+              활성 {activeTeamCount} · 전체 {teams.length}
+            </span>
+          </div>
+
+          {teams.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">참여 중인 팀이 없습니다.</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {teams.map((song) => {
+                const songMember = song.members.find(
+                  (item) => item.userId === member.userId,
+                );
+                if (!songMember) return null;
+
+                return (
+                  <div
+                    key={song.id}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-bold text-slate-900">{song.title}</p>
+                      <span className="count-badge">
+                        {song.status === "ACTIVE" ? "활성" : "보관"}
+                      </span>
+                      <span className="count-badge">무대 · {song.stageTypeName}</span>
+                      {songMember.leader && <span className="count-badge">팀장</span>}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      세션 · {songMember.sessionName}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {!isSuperAdmin && (
         <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]">

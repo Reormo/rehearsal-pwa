@@ -167,7 +167,7 @@ export function NotificationSettingsCard() {
       const result = await notificationApi.testPush();
       setPushMessage(
         result.successCount > 0
-          ? `테스트 Push를 ${result.successCount}개 기기에 보냈습니다.`
+          ? `테스트 Push를 ${result.successCount}개 기기에 보냈습니다. 앱이 열려 있으면 화면 상단 팝업도 함께 표시됩니다.`
           : "Push 전송을 시도했지만 성공한 기기가 없습니다.",
       );
     } catch (error) {

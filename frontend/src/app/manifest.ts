@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "합주 예약",
-    short_name: "합주",
-    description: "밴드 동아리 합주 예약 관리 PWA",
+    name: "무혼",
+    short_name: "무혼",
+    description: "무혼 합주 예약 관리 PWA",
     start_url: "/",
     scope: "/",
     display: "standalone",

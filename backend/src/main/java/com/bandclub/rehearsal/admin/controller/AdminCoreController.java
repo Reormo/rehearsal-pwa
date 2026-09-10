@@ -2,6 +2,7 @@ package com.bandclub.rehearsal.admin.controller;
 
 import com.bandclub.rehearsal.admin.service.AdminActionLogService;
 import com.bandclub.rehearsal.admin.service.AnnouncementService;
+import com.bandclub.rehearsal.notification.service.NotificationFanoutService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -20,13 +21,16 @@ public class AdminCoreController {
 
     private final AnnouncementService announcementService;
     private final AdminActionLogService actionLogService;
+    private final NotificationFanoutService notificationFanoutService;
 
     public AdminCoreController(
             AnnouncementService announcementService,
-            AdminActionLogService actionLogService
+            AdminActionLogService actionLogService,
+            NotificationFanoutService notificationFanoutService
     ) {
         this.announcementService = announcementService;
         this.actionLogService = actionLogService;
+        this.notificationFanoutService = notificationFanoutService;
     }
 
     @GetMapping("/announcements")
@@ -41,9 +45,17 @@ public class AdminCoreController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AnnouncementRequest request
     ) {
-        return AnnouncementController.AnnouncementResponse.from(
-                announcementService.create(userId(jwt), request.title(), request.content(), request.pinned())
+        var announcement = announcementService.create(
+                userId(jwt),
+                request.title(),
+                request.content(),
+                request.pinned()
         );
+        notificationFanoutService.announcementCreated(
+                announcement.id(),
+                announcement.title()
+        );
+        return AnnouncementController.AnnouncementResponse.from(announcement);
     }
 
     @PutMapping("/announcements/{announcementId}")

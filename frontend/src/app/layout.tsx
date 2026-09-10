@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "합주 예약",
-  description: "밴드 동아리 합주 예약 관리 PWA",
-  applicationName: "합주 예약",
+  title: "무혼",
+  description: "무혼 합주 예약 관리 PWA",
+  applicationName: "무혼",
   icons: {
     icon: [
       {
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "합주 예약",
+    title: "무혼",
   },
 };
 

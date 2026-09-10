@@ -1,0 +1,26 @@
+{
+	admin off
+}
+
+:{$PORT} {
+	encode zstd gzip
+
+	@backend path /api/* /ws /health
+	handle @backend {
+		reverse_proxy 127.0.0.1:{$BACKEND_PORT}
+	}
+
+	handle {
+		@serviceWorker path /sw.js
+		header @serviceWorker {
+			Content-Type "application/javascript; charset=utf-8"
+			Cache-Control "no-cache, no-store, must-revalidate"
+			Content-Security-Policy "default-src 'self'; script-src 'self'"
+			Service-Worker-Allowed "/"
+		}
+
+		root * /srv
+		try_files {path} {path}/ {path}/index.html /404.html
+		file_server
+	}
+}

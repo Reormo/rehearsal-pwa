@@ -10,6 +10,7 @@ import com.bandclub.rehearsal.common.exception.AppException;
 import com.bandclub.rehearsal.song.domain.Song;
 import com.bandclub.rehearsal.song.domain.SongMember;
 import com.bandclub.rehearsal.song.domain.SongStatus;
+import com.bandclub.rehearsal.song.domain.StageType;
 import com.bandclub.rehearsal.song.repository.SongMemberRepository;
 import com.bandclub.rehearsal.song.repository.SongRepository;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,7 @@ public class SongService {
     private final UserRepository userRepository;
     private final SongRepository songRepository;
     private final SongMemberRepository songMemberRepository;
+    private final StageTypeService stageTypeService;
     private final Clock clock;
 
     public SongService(
@@ -38,6 +40,7 @@ public class SongService {
             UserRepository userRepository,
             SongRepository songRepository,
             SongMemberRepository songMemberRepository,
+            StageTypeService stageTypeService,
             Clock clock
     ) {
         this.membershipService = membershipService;
@@ -45,6 +48,7 @@ public class SongService {
         this.userRepository = userRepository;
         this.songRepository = songRepository;
         this.songMemberRepository = songMemberRepository;
+        this.stageTypeService = stageTypeService;
         this.clock = clock;
     }
 
@@ -93,6 +97,7 @@ public class SongService {
     public SongView createSong(
             Long actorUserId,
             String title,
+            String stageTypeName,
             Long leaderUserId,
             String leaderSessionName
     ) {
@@ -100,9 +105,14 @@ public class SongService {
         requireActiveSameClubUser(actor.getClubId(), leaderUserId);
 
         Instant now = clock.instant();
+        StageType stageType = stageTypeService.resolveOrCreate(
+                actor.getClubId(),
+                stageTypeName
+        );
         Song song = songRepository.save(Song.active(
                 actor.getClubId(),
                 normalizeTitle(title),
+                stageType.getId(),
                 actorUserId,
                 now
         ));
@@ -117,9 +127,41 @@ public class SongService {
     }
 
     @Transactional
+    public SongView createSong(
+            Long actorUserId,
+            String title,
+            Long leaderUserId,
+            String leaderSessionName
+    ) {
+        return createSong(
+                actorUserId,
+                title,
+                "미분류",
+                leaderUserId,
+                leaderSessionName
+        );
+    }
+
+    @Transactional
     public SongView renameSong(Long actorUserId, Long songId, String title) {
         Song song = requireSongForUpdate(actorUserId, songId);
         song.rename(normalizeTitle(title), clock.instant());
+        return toView(song);
+    }
+
+    @Transactional
+    public SongView changeStageType(
+            Long actorUserId,
+            Long songId,
+            String stageTypeName
+    ) {
+        Song song = requireSongForUpdate(actorUserId, songId);
+        requireActive(song);
+        StageType stageType = stageTypeService.resolveOrCreate(
+                song.getClubId(),
+                stageTypeName
+        );
+        song.changeStageType(stageType.getId(), clock.instant());
         return toView(song);
     }
 
@@ -296,6 +338,10 @@ public class SongService {
     }
 
     private SongView toView(Song song) {
+        StageType stageType = stageTypeService.require(
+                song.getStageTypeId(),
+                song.getClubId()
+        );
         List<SongMemberView> members = songMemberRepository
                 .findAllBySongIdOrderByLeaderDescIdAsc(song.getId())
                 .stream()
@@ -305,6 +351,8 @@ public class SongService {
         return new SongView(
                 song.getId(),
                 song.getTitle(),
+                stageType.getId(),
+                stageType.getName(),
                 song.getStatus(),
                 song.getArchivedAt(),
                 song.getCreatedAt(),
@@ -336,6 +384,8 @@ public class SongService {
     public record SongView(
             Long id,
             String title,
+            Long stageTypeId,
+            String stageTypeName,
             SongStatus status,
             Instant archivedAt,
             Instant createdAt,

@@ -1,0 +1,17 @@
+.git
+.gitignore
+**/.DS_Store
+
+backend/.gradle
+backend/build
+backend/src/main/resources/application-local.properties
+
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/coverage
+frontend/.env*
+frontend/*.tsbuildinfo
+
+**/*.log
+**/*.pem

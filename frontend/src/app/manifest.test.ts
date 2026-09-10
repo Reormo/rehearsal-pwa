@@ -5,8 +5,8 @@ describe("PWA manifest", () => {
   it("keeps the installable standalone contract", () => {
     const value = manifest();
 
-    expect(value.name).toBe("합주 예약");
-    expect(value.short_name).toBe("합주");
+    expect(value.name).toBe("무혼");
+    expect(value.short_name).toBe("무혼");
     expect(value.start_url).toBe("/");
     expect(value.scope).toBe("/");
     expect(value.display).toBe("standalone");

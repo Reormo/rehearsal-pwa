@@ -86,10 +86,29 @@ public class BookingRound {
         );
     }
 
-    public void updatePolicy(Instant bookingOpenAt, int maxReservationMinutes, Instant now) {
+    public void updatePolicy(
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            int maxReservationMinutes,
+            Instant now
+    ) {
         this.bookingOpenAt = bookingOpenAt;
+        this.bookingCloseAt = bookingCloseAt;
         this.maxReservationMinutes = (short) maxReservationMinutes;
         this.updatedAt = now;
+    }
+
+    public void updatePolicy(
+            Instant bookingOpenAt,
+            int maxReservationMinutes,
+            Instant now
+    ) {
+        updatePolicy(
+                bookingOpenAt,
+                this.bookingCloseAt,
+                maxReservationMinutes,
+                now
+        );
     }
 
     public Long getId() {

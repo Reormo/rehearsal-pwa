@@ -44,6 +44,8 @@ export type SongMember = {
 export type Song = {
   id: number;
   title: string;
+  stageTypeId: number;
+  stageTypeName: string;
   status: SongStatus;
   archivedAt: string | null;
   createdAt: string;
@@ -316,6 +318,7 @@ export const adminApi = {
 
   createSong(input: {
     title: string;
+    stageTypeName: string;
     leaderUserId: number;
     leaderSessionName: string;
   }) {
@@ -329,6 +332,13 @@ export const adminApi = {
     return request<Song>(`/api/admin/songs/${songId}`, {
       method: "PATCH",
       body: JSON.stringify({ title }),
+    });
+  },
+
+  changeSongStageType(songId: number, stageTypeName: string) {
+    return request<Song>(`/api/admin/songs/${songId}/stage-type`, {
+      method: "PATCH",
+      body: JSON.stringify({ stageTypeName }),
     });
   },
 

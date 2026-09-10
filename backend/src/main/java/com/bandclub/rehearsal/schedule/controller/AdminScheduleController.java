@@ -2,6 +2,7 @@ package com.bandclub.rehearsal.schedule.controller;
 
 import com.bandclub.rehearsal.schedule.service.RoomOperatingHoursPolicy;
 import com.bandclub.rehearsal.schedule.service.ScheduleService;
+import com.bandclub.rehearsal.schedule.service.StageBookingWindowService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -23,9 +24,14 @@ import java.util.List;
 public class AdminScheduleController {
 
     private final ScheduleService scheduleService;
+    private final StageBookingWindowService stageBookingWindowService;
 
-    public AdminScheduleController(ScheduleService scheduleService) {
+    public AdminScheduleController(
+            ScheduleService scheduleService,
+            StageBookingWindowService stageBookingWindowService
+    ) {
         this.scheduleService = scheduleService;
+        this.stageBookingWindowService = stageBookingWindowService;
     }
 
     @GetMapping("/settings")
@@ -63,8 +69,53 @@ public class AdminScheduleController {
                 userId(jwt),
                 roundId,
                 request.bookingOpenAt(),
+                request.bookingCloseAt(),
                 request.maxReservationMinutes()
         ));
+    }
+
+    @GetMapping("/rounds/{roundId}/stage-windows")
+    public List<StageWindowResponse> stageWindows(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long roundId
+    ) {
+        return stageBookingWindowService.list(
+                        userId(jwt),
+                        roundId
+                ).stream()
+                .map(StageWindowResponse::from)
+                .toList();
+    }
+
+    @PutMapping("/rounds/{roundId}/stage-windows/{stageTypeId}")
+    public StageWindowResponse upsertStageWindow(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long roundId,
+            @PathVariable Long stageTypeId,
+            @Valid @RequestBody UpdateStageWindowRequest request
+    ) {
+        return StageWindowResponse.from(stageBookingWindowService.upsert(
+                userId(jwt),
+                roundId,
+                stageTypeId,
+                request.bookingOpenAt(),
+                request.bookingCloseAt(),
+                request.maxReservationMinutes()
+        ));
+    }
+
+    @DeleteMapping("/rounds/{roundId}/stage-windows/{stageTypeId}")
+    public ResponseEntity<Void> deleteStageWindow(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long roundId,
+            @PathVariable Long stageTypeId
+    ) {
+        stageBookingWindowService.delete(
+                userId(jwt),
+                roundId,
+                stageTypeId
+        );
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/exceptions")
@@ -114,8 +165,44 @@ public class AdminScheduleController {
 
     public record UpdateRoundRequest(
             @NotNull Instant bookingOpenAt,
+            @NotNull Instant bookingCloseAt,
             @Min(30) @Max(180) int maxReservationMinutes
     ) {
+    }
+
+    public record UpdateStageWindowRequest(
+            @NotNull Instant bookingOpenAt,
+            @NotNull Instant bookingCloseAt,
+            @Min(30) @Max(180) int maxReservationMinutes
+    ) {
+    }
+
+    public record StageWindowResponse(
+            Long id,
+            Long bookingRoundId,
+            Long stageTypeId,
+            String stageTypeName,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            int maxReservationMinutes,
+            Long updatedBy,
+            Instant updatedAt
+    ) {
+        static StageWindowResponse from(
+                StageBookingWindowService.StageWindowView view
+        ) {
+            return new StageWindowResponse(
+                    view.id(),
+                    view.bookingRoundId(),
+                    view.stageTypeId(),
+                    view.stageTypeName(),
+                    view.bookingOpenAt(),
+                    view.bookingCloseAt(),
+                    view.maxReservationMinutes(),
+                    view.updatedBy(),
+                    view.updatedAt()
+            );
+        }
     }
 
     public record CreateExceptionRequest(

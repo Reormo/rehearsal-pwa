@@ -215,7 +215,19 @@ public class ScheduleService {
     public List<RoundView> adminRounds(Long userId) {
         var membership = membershipService.requireAdmin(userId);
         ensureCurrentAndNext(membership.getClubId());
-        return roundRepository.findAllByClubIdOrderByStartDateAsc(membership.getClubId()).stream()
+
+        LocalDate currentMonday = weekStart(koreanToday());
+        LocalDate nextSunday = currentMonday.plusWeeks(1).plusDays(6);
+
+        return roundRepository
+                .findAllByClubIdAndEndDateGreaterThanEqualAndStartDateLessThanEqualOrderByStartDateAsc(
+                        membership.getClubId(),
+                        currentMonday,
+                        nextSunday
+                ).stream()
+                .filter(round ->
+                        round.getStartDate().equals(currentMonday)
+                                || round.getStartDate().equals(currentMonday.plusWeeks(1)))
                 .map(this::toRoundView)
                 .toList();
     }
@@ -276,6 +288,7 @@ public class ScheduleService {
             Long userId,
             Long roundId,
             Instant bookingOpenAt,
+            Instant bookingCloseAt,
             int maxReservationMinutes
     ) {
         var membership = membershipService.requireAdmin(userId);
@@ -288,16 +301,35 @@ public class ScheduleService {
                         "예약 회차를 찾을 수 없습니다."
                 ));
 
-        if (bookingOpenAt == null || !bookingOpenAt.isBefore(round.getBookingCloseAt())) {
+        Instant roundEndLimit = round.getEndDate()
+                .atTime(DEFAULT_CLOSE_TIME)
+                .atZone(SERVICE_ZONE)
+                .toInstant();
+
+        if (bookingOpenAt == null
+                || bookingCloseAt == null
+                || !bookingOpenAt.isBefore(bookingCloseAt)) {
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
-                    "INVALID_BOOKING_OPEN_AT",
-                    "예약 오픈 시각은 회차 마감 시각보다 빨라야 합니다."
+                    "INVALID_BOOKING_WINDOW",
+                    "예약 오픈 시각은 예약 종료 시각보다 빨라야 합니다."
+            );
+        }
+        if (bookingCloseAt.isAfter(roundEndLimit)) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "BOOKING_CLOSE_AFTER_ROUND",
+                    "예약 종료 시각은 해당 회차 마지막 날 22:00보다 늦을 수 없습니다."
             );
         }
 
         Map<String, Object> before = roundSnapshot(round);
-        round.updatePolicy(bookingOpenAt, maxReservationMinutes, clock.instant());
+        round.updatePolicy(
+                bookingOpenAt,
+                bookingCloseAt,
+                maxReservationMinutes,
+                clock.instant()
+        );
         Map<String, Object> after = roundSnapshot(round);
 
         actionLogService.record(
@@ -311,6 +343,30 @@ public class ScheduleService {
         );
 
         return toRoundView(round);
+    }
+
+    @Transactional
+    public RoundView updateRound(
+            Long userId,
+            Long roundId,
+            Instant bookingOpenAt,
+            int maxReservationMinutes
+    ) {
+        var membership = membershipService.requireAdmin(userId);
+        BookingRound round = roundRepository
+                .findByIdAndClubId(roundId, membership.getClubId())
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "BOOKING_ROUND_NOT_FOUND",
+                        "예약 회차를 찾을 수 없습니다."
+                ));
+        return updateRound(
+                userId,
+                roundId,
+                bookingOpenAt,
+                round.getBookingCloseAt(),
+                maxReservationMinutes
+        );
     }
 
     @Transactional

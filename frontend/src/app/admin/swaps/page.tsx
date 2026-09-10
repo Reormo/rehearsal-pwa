@@ -136,14 +136,61 @@ function ReservationSelect({
   label: string;
   reservations: Awaited<ReturnType<typeof scheduleAdminApi.adminReservations>>;
 }) {
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const query = search.trim().toLocaleLowerCase("ko-KR");
+  const filteredReservations = query
+    ? reservations.filter((reservation) =>
+        [
+          `#${reservation.id}`,
+          reservation.id,
+          reservation.songTitle,
+          formatRange(reservation.startAt, reservation.endAt),
+          reservation.startAt,
+        ]
+          .join(" ")
+          .toLocaleLowerCase("ko-KR")
+          .includes(query),
+      )
+    : reservations;
+
+  const selectedReservation = reservations.find(
+    (reservation) => String(reservation.id) === selectedId,
+  );
+  const visibleReservations =
+    selectedReservation &&
+    !filteredReservations.some(
+      (reservation) => reservation.id === selectedReservation.id,
+    )
+      ? [selectedReservation, ...filteredReservations]
+      : filteredReservations;
+
   return (
-    <label>
+    <label className="block">
       <span className="card-label">{label}</span>
-      <select className="field-input mt-2" name={name} required>
+      <input
+        className="field-input mt-2"
+        type="search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="곡명, 예약 번호, 날짜 검색"
+        aria-label={`${label} 검색`}
+      />
+      <p className="mt-1 text-xs text-slate-400">
+        검색 결과 {filteredReservations.length}/{reservations.length}
+      </p>
+      <select
+        className="field-input mt-2"
+        name={name}
+        value={selectedId}
+        onChange={(event) => setSelectedId(event.target.value)}
+        required
+      >
         <option value="">선택</option>
-        {reservations.map((reservation) => (
+        {visibleReservations.map((reservation) => (
           <option key={reservation.id} value={reservation.id}>
-            {reservation.songTitle} · {formatRange(reservation.startAt, reservation.endAt)}
+            #{reservation.id} · {reservation.songTitle} ·{" "}
+            {formatRange(reservation.startAt, reservation.endAt)}
           </option>
         ))}
       </select>

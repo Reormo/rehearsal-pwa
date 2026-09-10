@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
@@ -34,6 +34,7 @@ export default function AdminReservationsPage() {
 
 function AdminReservationsContent() {
   const queryClient = useQueryClient();
+  const [reservationSearch, setReservationSearch] = useState("");
   const reservationsQuery = useQuery({
     queryKey: ["admin", "reservations"],
     queryFn: scheduleAdminApi.adminReservations,
@@ -92,6 +93,26 @@ function AdminReservationsContent() {
 
   const error = createMutation.error ?? actionMutation.error;
   const activeSongs = (songsQuery.data ?? []).filter((song) => song.status === "ACTIVE");
+  const filteredReservations = useMemo(() => {
+    const reservations = reservationsQuery.data ?? [];
+    const query = reservationSearch.trim().toLocaleLowerCase("ko-KR");
+    if (!query) return reservations;
+
+    return reservations.filter((reservation) =>
+      [
+        `#${reservation.id}`,
+        reservation.id,
+        reservation.songTitle,
+        reservation.source,
+        formatKoreanDateTime(reservation.startAt),
+        formatTime(reservation.endAt),
+        reservation.startAt,
+      ]
+        .join(" ")
+        .toLocaleLowerCase("ko-KR")
+        .includes(query),
+    );
+  }, [reservationSearch, reservationsQuery.data]);
 
   return (
     <div className="space-y-7">
@@ -184,10 +205,25 @@ function AdminReservationsContent() {
       </section>
 
       <section className="space-y-4">
-        <div>
-          <p className="card-label">예정 예약</p>
-          <h2 className="mt-2 text-lg font-bold text-slate-950">전체 활성 예약</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="card-label">예정 예약</p>
+            <h2 className="mt-2 text-lg font-bold text-slate-950">전체 활성 예약</h2>
+          </div>
+          {reservationsQuery.data && (
+            <span className="count-badge">
+              {filteredReservations.length}/{reservationsQuery.data.length}
+            </span>
+          )}
         </div>
+        <input
+          className="field-input"
+          type="search"
+          value={reservationSearch}
+          onChange={(event) => setReservationSearch(event.target.value)}
+          placeholder="곡명, 예약 번호, 날짜/시간 검색"
+          aria-label="전체 활성 예약 검색"
+        />
         {reservationsQuery.isPending && <p className="app-card text-sm text-slate-400">불러오는 중...</p>}
         {reservationsQuery.isError && (
           <p className="error-box">{errorMessage(reservationsQuery.error)}</p>
@@ -195,7 +231,14 @@ function AdminReservationsContent() {
         {reservationsQuery.data?.length === 0 && (
           <p className="app-card text-sm text-slate-500">예정된 예약이 없습니다.</p>
         )}
-        {reservationsQuery.data?.map((reservation) => (
+        {reservationsQuery.data &&
+          reservationsQuery.data.length > 0 &&
+          filteredReservations.length === 0 && (
+            <p className="app-card text-sm text-slate-500">
+              검색 조건에 맞는 활성 예약이 없습니다.
+            </p>
+          )}
+        {filteredReservations.map((reservation) => (
           <AdminReservationCard
             key={reservation.id}
             reservation={reservation}

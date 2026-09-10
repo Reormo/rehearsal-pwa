@@ -44,6 +44,8 @@ public class SongController {
     public record SongResponse(
             Long id,
             String title,
+            Long stageTypeId,
+            String stageTypeName,
             SongStatus status,
             Instant archivedAt,
             Instant createdAt,
@@ -54,6 +56,8 @@ public class SongController {
             return new SongResponse(
                     view.id(),
                     view.title(),
+                    view.stageTypeId(),
+                    view.stageTypeName(),
                     view.status(),
                     view.archivedAt(),
                     view.createdAt(),

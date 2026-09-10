@@ -52,6 +52,7 @@ public class BookingService {
     private final ReservationRepository reservationRepository;
     private final SongRepository songRepository;
     private final SongMemberRepository songMemberRepository;
+    private final BookingWindowPolicy bookingWindowPolicy;
     private final Clock clock;
 
     public BookingService(
@@ -65,6 +66,7 @@ public class BookingService {
             ReservationRepository reservationRepository,
             SongRepository songRepository,
             SongMemberRepository songMemberRepository,
+            BookingWindowPolicy bookingWindowPolicy,
             Clock clock
     ) {
         this.membershipService = membershipService;
@@ -77,6 +79,7 @@ public class BookingService {
         this.reservationRepository = reservationRepository;
         this.songRepository = songRepository;
         this.songMemberRepository = songMemberRepository;
+        this.bookingWindowPolicy = bookingWindowPolicy;
         this.clock = clock;
     }
 
@@ -95,10 +98,8 @@ public class BookingService {
 
         LocalDate date = startAt.atZone(ScheduleService.SERVICE_ZONE).toLocalDate();
         BookingRound round = requireRound(membership.getClubId(), date);
-        validateDurationForRound(durationMinutes, round);
 
         Instant now = clock.instant();
-        validateBookingWindow(now, round);
         validateFutureTime(startAt, now);
 
         Instant endAt = startAt.plusSeconds(durationMinutes * 60L);
@@ -132,6 +133,11 @@ public class BookingService {
                     "해당 곡의 팀장만 예약할 수 있습니다."
             );
         }
+
+        BookingWindowPolicy.ResolvedWindow bookingWindow =
+                bookingWindowPolicy.resolve(round, song);
+        validateDurationForWindow(durationMinutes, bookingWindow);
+        validateBookingWindow(now, bookingWindow);
 
         ReservationSettings settings = settingsRepository.findById(membership.getClubId())
                 .orElseThrow(() -> new AppException(
@@ -197,6 +203,106 @@ public class BookingService {
         lockedSlots.forEach(slot -> slot.occupy(reservation.getId()));
 
         return toView(reservation, song.getTitle());
+    }
+
+    @Transactional
+    public BookingOptionsView options(
+            Long userId,
+            LocalDate date,
+            int durationMinutes,
+            Long songId
+    ) {
+        ClubMember membership = membershipService.requireMembership(userId);
+        scheduleService.ensureCurrentAndNext(membership.getClubId());
+        validateDurationShape(durationMinutes);
+
+        BookingRound round = requireRound(membership.getClubId(), date);
+
+        Song song = songRepository.findByIdAndClubId(
+                        songId,
+                        membership.getClubId()
+                )
+                .filter(Song::isActive)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "SONG_NOT_FOUND",
+                        "예약할 곡을 찾을 수 없습니다."
+                ));
+
+        boolean leader = songMemberRepository
+                .findBySongIdAndUserId(songId, userId)
+                .map(member -> member.isLeader())
+                .orElse(false);
+        if (!leader) {
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "SONG_LEADER_REQUIRED",
+                    "해당 곡의 팀장만 예약 가능한 시간을 조회할 수 있습니다."
+            );
+        }
+
+        BookingWindowPolicy.ResolvedWindow bookingWindow =
+                bookingWindowPolicy.resolve(round, song);
+        validateDurationForWindow(durationMinutes, bookingWindow);
+
+        Instant from = date.atStartOfDay(ScheduleService.SERVICE_ZONE).toInstant();
+        Instant to = date.plusDays(1).atStartOfDay(ScheduleService.SERVICE_ZONE).toInstant();
+        List<ReservationSlot> slots = slotRepository
+                .findAllByBookingRoundIdAndSlotStartAtGreaterThanEqualAndSlotStartAtLessThanOrderBySlotStartAtAsc(
+                        round.getId(),
+                        from,
+                        to
+                );
+        List<RoomException> blockedPeriods = exceptionRepository
+                .findAllByClubIdAndExceptionDateOrderByBlockedStartMinuteAsc(
+                        membership.getClubId(),
+                        date
+                );
+        var operatingHours = roomOperatingHoursPolicy.effective(
+                membership.getClubId(),
+                date
+        );
+
+        Instant now = clock.instant();
+        boolean acceptingReservations =
+                !now.isBefore(bookingWindow.bookingOpenAt())
+                        && now.isBefore(bookingWindow.bookingCloseAt());
+
+        int atoms = durationMinutes / ScheduleService.SLOT_MINUTES;
+        List<BookingTimeOptionView> result = new ArrayList<>();
+        for (int index = 0; index < slots.size(); index++) {
+            Instant candidateStart = slots.get(index).getSlotStartAt();
+            Instant candidateEnd = candidateStart.plusSeconds(durationMinutes * 60L);
+
+            if (!candidateStart.isAfter(now)) {
+                continue;
+            }
+            if (!roomOperatingHoursPolicy.contains(
+                    date, candidateStart, candidateEnd, operatingHours
+            )) {
+                continue;
+            }
+            if (!hasContiguousOpenSlots(slots, index, atoms, candidateStart)) {
+                continue;
+            }
+            if (overlapsBlockedPeriod(date, candidateStart, candidateEnd, blockedPeriods)) {
+                continue;
+            }
+
+            result.add(new BookingTimeOptionView(candidateStart, candidateEnd));
+        }
+
+        return new BookingOptionsView(
+                date,
+                durationMinutes,
+                bookingWindow.maxReservationMinutes(),
+                acceptingReservations,
+                bookingWindow.stageTypeName(),
+                bookingWindow.bookingOpenAt(),
+                bookingWindow.bookingCloseAt(),
+                bookingWindow.customStageWindow(),
+                result
+        );
     }
 
     @Transactional
@@ -349,7 +455,10 @@ public class BookingService {
 
         int extendedDuration = reservationDurationMinutes(reservation)
                 + ScheduleService.SLOT_MINUTES;
-        validateDurationForRound(extendedDuration, context.round());
+        validateDurationForWindow(
+                extendedDuration,
+                bookingWindowPolicy.resolve(context.round(), context.song())
+        );
 
         Instant newStartAt = boundary == ReservationBoundary.FRONT
                 ? reservation.getStartAt().minusSeconds(ScheduleService.SLOT_MINUTES * 60L)
@@ -596,6 +705,26 @@ public class BookingService {
                 ));
     }
 
+    private void validateBookingWindow(
+            Instant now,
+            BookingWindowPolicy.ResolvedWindow window
+    ) {
+        if (now.isBefore(window.bookingOpenAt())) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "BOOKING_NOT_OPEN",
+                    window.stageTypeName() + " 팀의 예약은 아직 열리지 않았습니다."
+            );
+        }
+        if (!now.isBefore(window.bookingCloseAt())) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "BOOKING_CLOSED",
+                    window.stageTypeName() + " 팀의 예약 접수가 마감되었습니다."
+            );
+        }
+    }
+
     private void validateBookingWindow(Instant now, BookingRound round) {
         if (now.isBefore(round.getBookingOpenAt())) {
             throw new AppException(
@@ -650,6 +779,20 @@ public class BookingService {
                     HttpStatus.BAD_REQUEST,
                     "INVALID_RESERVATION_DURATION",
                     "예약 시간은 30, 60, 90, 120, 150, 180분 중 하나여야 합니다."
+            );
+        }
+    }
+
+    private void validateDurationForWindow(
+            int durationMinutes,
+            BookingWindowPolicy.ResolvedWindow window
+    ) {
+        if (durationMinutes > window.maxReservationMinutes()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "RESERVATION_TOO_LONG",
+                    "선택한 예약 시간이 " + window.stageTypeName()
+                            + " 팀의 최대 예약 시간을 초과합니다."
             );
         }
     }
@@ -784,8 +927,31 @@ public class BookingService {
             int durationMinutes,
             int maxReservationMinutes,
             boolean acceptingReservations,
+            String stageTypeName,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            boolean customStageWindow,
             List<BookingTimeOptionView> options
     ) {
+        public BookingOptionsView(
+                LocalDate date,
+                int durationMinutes,
+                int maxReservationMinutes,
+                boolean acceptingReservations,
+                List<BookingTimeOptionView> options
+        ) {
+            this(
+                    date,
+                    durationMinutes,
+                    maxReservationMinutes,
+                    acceptingReservations,
+                    null,
+                    null,
+                    null,
+                    false,
+                    options
+            );
+        }
     }
 
     public record ReservationView(

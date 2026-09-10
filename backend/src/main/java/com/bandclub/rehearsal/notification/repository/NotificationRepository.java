@@ -30,4 +30,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             @Param("userId") Long userId,
             @Param("readAt") Instant readAt
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update Notification n
+            set n.dismissedAt = :dismissedAt
+            where n.userId = :userId
+              and n.dismissedAt is null
+            """)
+    int dismissAll(
+            @Param("userId") Long userId,
+            @Param("dismissedAt") Instant dismissedAt
+    );
 }

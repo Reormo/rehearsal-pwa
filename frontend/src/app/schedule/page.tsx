@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
 import {
@@ -49,7 +49,6 @@ function ScheduleContent({ user }: { user: AuthUser }) {
   const [durationMinutes, setDurationMinutes] = useState(30);
   const [selectedStartAt, setSelectedStartAt] = useState<string | null>(null);
   const [bookingMessage, setBookingMessage] = useState<string | null>(null);
-  const touchStartX = useRef<number | null>(null);
 
   const leaderSongsQuery = useQuery({
     queryKey: ["songs", "mine"],
@@ -88,28 +87,37 @@ function ScheduleContent({ user }: { user: AuthUser }) {
     enabled: Boolean(selectedSummary?.roundId),
   });
 
-  const allowedDurations = useMemo(
-    () =>
-      ALLOWED_DURATIONS.filter(
-        (duration) => duration <= (dayQuery.data?.round.maxReservationMinutes ?? 0),
-      ),
-    [dayQuery.data?.round.maxReservationMinutes],
-  );
-  const effectiveDuration = allowedDurations.includes(durationMinutes)
-    ? durationMinutes
-    : (allowedDurations[0] ?? 30);
-
   const bookingOptionsQuery = useQuery({
     queryKey: [
       "schedule",
       "booking-options",
       selectedDate,
-      effectiveDuration,
+      durationMinutes,
+      effectiveSongId,
     ],
     queryFn: () =>
-      scheduleApi.bookingOptions(selectedDate, effectiveDuration),
+      scheduleApi.bookingOptions(
+        selectedDate,
+        durationMinutes,
+        effectiveSongId!,
+      ),
     enabled: Boolean(dayQuery.data?.round.id && effectiveSongId),
   });
+
+  const effectiveMaxReservationMinutes =
+    bookingOptionsQuery.data?.maxReservationMinutes ??
+    dayQuery.data?.round.maxReservationMinutes ??
+    0;
+  const allowedDurations = useMemo(
+    () =>
+      ALLOWED_DURATIONS.filter(
+        (duration) => duration <= effectiveMaxReservationMinutes,
+      ),
+    [effectiveMaxReservationMinutes],
+  );
+  const effectiveDuration = allowedDurations.includes(durationMinutes)
+    ? durationMinutes
+    : (allowedDurations[0] ?? 30);
   const effectiveStartAt = bookingOptionsQuery.data?.options.some(
     (option) => option.startAt === selectedStartAt,
   )
@@ -138,6 +146,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             "booking-options",
             selectedDate,
             effectiveDuration,
+            effectiveSongId,
           ],
         }),
         queryClient.invalidateQueries({
@@ -208,6 +217,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             value={effectiveSongId ?? ""}
             onChange={(event) => {
               setSelectedSongId(Number(event.target.value));
+              setDurationMinutes(30);
               setSelectedStartAt(null);
               clearBookingFeedback();
             }}
@@ -221,20 +231,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
         )}
       </section>
 
-      <section
-        className="app-card select-none"
-        onTouchStart={(event) => {
-          touchStartX.current = event.touches[0]?.clientX ?? null;
-        }}
-        onTouchEnd={(event) => {
-          if (touchStartX.current == null) return;
-          const endX = event.changedTouches[0]?.clientX ?? touchStartX.current;
-          const delta = endX - touchStartX.current;
-          touchStartX.current = null;
-          if (Math.abs(delta) < 50) return;
-          moveMonth(delta < 0 ? 1 : -1);
-        }}
-      >
+      <section className="app-card select-none">
         <div className="flex items-center justify-between gap-4">
           <button
             type="button"
@@ -322,11 +319,26 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 {formatDateLabel(dayQuery.data.round.startDate)} ~{" "}
                 {formatDateLabel(dayQuery.data.round.endDate)}
               </p>
+              {bookingOptionsQuery.data?.stageTypeName &&
+              bookingOptionsQuery.data.bookingOpenAt &&
+              bookingOptionsQuery.data.bookingCloseAt ? (
+                <p className="mt-1 text-slate-500">
+                  {bookingOptionsQuery.data.stageTypeName} 예약 기간 ·{" "}
+                  {formatDateTime(bookingOptionsQuery.data.bookingOpenAt)} ~{" "}
+                  {formatDateTime(bookingOptionsQuery.data.bookingCloseAt)}
+                  {bookingOptionsQuery.data.customStageWindow
+                    ? " · 무대별 기간"
+                    : " · 회차 기본 기간"}
+                </p>
+              ) : (
+                <p className="mt-1 text-slate-500">
+                  기본 예약 기간 ·{" "}
+                  {formatDateTime(dayQuery.data.round.bookingOpenAt)} ~{" "}
+                  {formatDateTime(dayQuery.data.round.bookingCloseAt)}
+                </p>
+              )}
               <p className="mt-1 text-slate-500">
-                예약 오픈 {formatDateTime(dayQuery.data.round.bookingOpenAt)}
-              </p>
-              <p className="mt-1 text-slate-500">
-                1회 최대 {dayQuery.data.round.maxReservationMinutes}분 · 일반 슬롯{" "}
+                1회 최대 {effectiveMaxReservationMinutes}분 · 일반 슬롯{" "}
                 {dayQuery.data.standardSlots.length}개
               </p>
               {dayQuery.data.roomStatus === "PARTIAL_BLOCKED" && (
@@ -359,8 +371,8 @@ function ScheduleContent({ user }: { user: AuthUser }) {
               <div>
                 <p className="card-label">3. 예약 길이 선택</p>
                 <p className="mt-1 text-sm text-slate-500">
-                  이 회차는 최대 {dayQuery.data.round.maxReservationMinutes}분까지 예약할
-                  수 있습니다.
+                  선택한 팀은 최대 {effectiveMaxReservationMinutes}분까지 예약할 수
+                  있습니다.
                 </p>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -622,7 +634,7 @@ function CalendarDay({
       type="button"
       disabled={!prepared}
       onClick={onClick}
-      className={`min-h-16 rounded-xl border px-1 py-2 text-left transition ${
+      className={`min-h-16 overflow-hidden rounded-xl border px-1 py-2 text-left transition ${
         selected
           ? "border-slate-950 bg-slate-950 text-white"
           : "border-slate-100 bg-white hover:border-slate-300"
@@ -632,7 +644,7 @@ function CalendarDay({
     >
       <span className="text-xs font-bold">{date.getDate()}</span>
       <span
-        className={`mt-1 block truncate text-[10px] font-semibold ${
+        className={`mt-1 block whitespace-nowrap text-[9px] font-semibold leading-4 ${
           selected
             ? "text-white/80"
             : closed
@@ -643,12 +655,12 @@ function CalendarDay({
         }`}
       >
         {closed
-          ? "사용 불가"
+          ? "휴관"
           : partial
-            ? `${summary?.blockedPeriodCount ?? 0}개 예외`
+            ? `예외 ${summary?.blockedPeriodCount ?? 0}`
             : prepared
               ? "10~22"
-              : "준비 전"}
+              : "준비"}
       </span>
     </button>
   );

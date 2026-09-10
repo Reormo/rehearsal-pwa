@@ -53,6 +53,17 @@ function NotificationsContent() {
       ]);
     },
   });
+  const dismissAllMutation = useMutation({
+    mutationFn: notificationApi.dismissAll,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications", "unread-count"],
+        }),
+      ]);
+    },
+  });
 
   useEffect(() => {
     markAllReadMutation.mutate();
@@ -62,15 +73,33 @@ function NotificationsContent() {
 
   return (
     <div className="space-y-7">
-      <section>
-        <p className="eyebrow">NOTIFICATIONS</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-          알림 창고
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">
-          알림 창고를 열면 하단 메뉴의 미확인 숫자는 사라집니다. 알림 내용은
-          그대로 남아 있고, 더 이상 보관하지 않을 알림만 오른쪽 X로 없앨 수 있습니다.
-        </p>
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow">NOTIFICATIONS</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+            알림 창고
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            알림 창고를 열면 하단 메뉴의 미확인 숫자는 사라집니다. 개별 X 또는
+            모두 지우기로 더 이상 보관하지 않을 알림을 정리할 수 있습니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="danger-button small-button"
+          disabled={
+            dismissAllMutation.isPending ||
+            !notificationsQuery.data ||
+            notificationsQuery.data.length === 0
+          }
+          onClick={() => {
+            if (window.confirm("알림 창고의 모든 알림을 지울까요?")) {
+              dismissAllMutation.mutate();
+            }
+          }}
+        >
+          {dismissAllMutation.isPending ? "지우는 중..." : "모두 지우기"}
+        </button>
       </section>
 
       <section className="app-card">
@@ -85,6 +114,9 @@ function NotificationsContent() {
         )}
         {dismissMutation.isError && (
           <p className="error-box mb-4">{errorMessage(dismissMutation.error)}</p>
+        )}
+        {dismissAllMutation.isError && (
+          <p className="error-box mb-4">{errorMessage(dismissAllMutation.error)}</p>
         )}
         {notificationsQuery.data?.length === 0 && (
           <p className="rounded-2xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">

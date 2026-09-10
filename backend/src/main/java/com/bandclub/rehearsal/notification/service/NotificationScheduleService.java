@@ -44,23 +44,39 @@ public class NotificationScheduleService {
     private int processBookingPreOpen(Instant now) {
         List<BookingOpenCandidate> candidates = jdbcTemplate.query(
                 """
-                select
+                select distinct
                     br.id,
                     br.round_no,
-                    br.booking_open_at,
-                    cm.user_id
+                    st.id as stage_type_id,
+                    st.name as stage_type_name,
+                    coalesce(brsw.booking_open_at, br.booking_open_at)
+                        as booking_open_at,
+                    sm.user_id
                 from booking_rounds br
-                join club_members cm on cm.club_id = br.club_id
-                join users u on u.id = cm.user_id
+                join songs s
+                  on s.club_id = br.club_id
+                 and s.status = 'ACTIVE'
+                join stage_types st
+                  on st.id = s.stage_type_id
+                join song_members sm
+                  on sm.song_id = s.id
+                 and sm.is_leader = true
+                join users u
+                  on u.id = sm.user_id
+                left join booking_round_stage_windows brsw
+                  on brsw.booking_round_id = br.id
+                 and brsw.stage_type_id = st.id
                 where u.status = 'ACTIVE'
-                  and br.booking_open_at > ?
-                  and br.booking_open_at <= ?
-                  and br.booking_close_at > ?
-                order by br.booking_open_at asc, cm.user_id asc
+                  and coalesce(brsw.booking_open_at, br.booking_open_at) > ?
+                  and coalesce(brsw.booking_open_at, br.booking_open_at) <= ?
+                  and coalesce(brsw.booking_close_at, br.booking_close_at) > ?
+                order by booking_open_at asc, st.name asc, sm.user_id asc
                 """,
                 (rs, rowNum) -> new BookingOpenCandidate(
                         rs.getLong("id"),
                         rs.getInt("round_no"),
+                        rs.getLong("stage_type_id"),
+                        rs.getString("stage_type_name"),
                         rs.getTimestamp("booking_open_at").toInstant(),
                         rs.getLong("user_id")
                 ),
@@ -73,9 +89,13 @@ public class NotificationScheduleService {
         for (BookingOpenCandidate candidate : candidates) {
             String dedupeKey =
                     "booking-open-10:" + candidate.roundId()
+                            + ":" + candidate.stageTypeId()
                             + ":" + candidate.userId();
-            String title = "예약 오픈이 곧 시작돼요";
-            String body = candidate.roundNo() + "회차 예약이 "
+            String title = candidate.stageTypeName()
+                    + " 예약 오픈이 곧 시작돼요";
+            String body = candidate.roundNo() + "회차 · "
+                    + candidate.stageTypeName()
+                    + " 팀 예약이 "
                     + DATE_TIME.format(
                     candidate.bookingOpenAt().atZone(SEOUL)
             )
@@ -95,7 +115,10 @@ public class NotificationScheduleService {
                         title,
                         body,
                         "/schedule",
-                        "booking-open-10-" + candidate.roundId()
+                        "booking-open-10-"
+                                + candidate.roundId()
+                                + "-"
+                                + candidate.stageTypeId()
                 );
                 created++;
             }
@@ -106,23 +129,39 @@ public class NotificationScheduleService {
     private int processBookingOpen(Instant now) {
         List<BookingOpenCandidate> candidates = jdbcTemplate.query(
                 """
-                select
+                select distinct
                     br.id,
                     br.round_no,
-                    br.booking_open_at,
-                    cm.user_id
+                    st.id as stage_type_id,
+                    st.name as stage_type_name,
+                    coalesce(brsw.booking_open_at, br.booking_open_at)
+                        as booking_open_at,
+                    sm.user_id
                 from booking_rounds br
-                join club_members cm on cm.club_id = br.club_id
-                join users u on u.id = cm.user_id
+                join songs s
+                  on s.club_id = br.club_id
+                 and s.status = 'ACTIVE'
+                join stage_types st
+                  on st.id = s.stage_type_id
+                join song_members sm
+                  on sm.song_id = s.id
+                 and sm.is_leader = true
+                join users u
+                  on u.id = sm.user_id
+                left join booking_round_stage_windows brsw
+                  on brsw.booking_round_id = br.id
+                 and brsw.stage_type_id = st.id
                 where u.status = 'ACTIVE'
-                  and br.booking_open_at <= ?
-                  and br.booking_open_at > ?
-                  and br.booking_close_at > ?
-                order by br.booking_open_at asc, cm.user_id asc
+                  and coalesce(brsw.booking_open_at, br.booking_open_at) <= ?
+                  and coalesce(brsw.booking_open_at, br.booking_open_at) > ?
+                  and coalesce(brsw.booking_close_at, br.booking_close_at) > ?
+                order by booking_open_at asc, st.name asc, sm.user_id asc
                 """,
                 (rs, rowNum) -> new BookingOpenCandidate(
                         rs.getLong("id"),
                         rs.getInt("round_no"),
+                        rs.getLong("stage_type_id"),
+                        rs.getString("stage_type_name"),
                         rs.getTimestamp("booking_open_at").toInstant(),
                         rs.getLong("user_id")
                 ),
@@ -135,10 +174,14 @@ public class NotificationScheduleService {
         for (BookingOpenCandidate candidate : candidates) {
             String dedupeKey =
                     "booking-open:" + candidate.roundId()
+                            + ":" + candidate.stageTypeId()
                             + ":" + candidate.userId();
-            String title = "합주 예약이 열렸어요";
+            String title = candidate.stageTypeName()
+                    + " 예약이 열렸어요";
             String body = candidate.roundNo()
-                    + "회차 예약이 시작되었습니다. 지금 시간표에서 예약할 수 있어요.";
+                    + "회차 · "
+                    + candidate.stageTypeName()
+                    + " 팀 예약이 시작되었습니다. 지금 시간표에서 예약할 수 있어요.";
 
             if (createNotification(
                     candidate.userId(),
@@ -154,7 +197,10 @@ public class NotificationScheduleService {
                         title,
                         body,
                         "/schedule",
-                        "booking-open-" + candidate.roundId()
+                        "booking-open-"
+                                + candidate.roundId()
+                                + "-"
+                                + candidate.stageTypeId()
                 );
                 created++;
             }
@@ -278,6 +324,8 @@ public class NotificationScheduleService {
     private record BookingOpenCandidate(
             Long roundId,
             int roundNo,
+            Long stageTypeId,
+            String stageTypeName,
             Instant bookingOpenAt,
             Long userId
     ) {

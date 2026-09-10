@@ -65,6 +65,12 @@ public class NotificationService {
         notification.dismiss(clock.instant());
     }
 
+    @Transactional
+    public void dismissAll(Long userId) {
+        membershipService.requireMembership(userId);
+        notificationRepository.dismissAll(userId, clock.instant());
+    }
+
     private NotificationView toView(Notification notification) {
         return new NotificationView(
                 notification.getId(),

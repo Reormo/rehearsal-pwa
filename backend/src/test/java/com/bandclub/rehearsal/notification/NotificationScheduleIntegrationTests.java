@@ -54,6 +54,8 @@ class NotificationScheduleIntegrationTests {
                 now.plusSeconds(600),
                 now.plusSeconds(60 * 60 * 24 * 8)
         );
+        long songId = insertSong(clubId, userId, now);
+        insertSongMember(songId, userId, now);
 
         NotificationScheduleService service =
                 new NotificationScheduleService(

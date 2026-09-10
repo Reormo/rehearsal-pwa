@@ -10,15 +10,18 @@ import { PwaRegistration } from "./pwa-registration";
 
 describe("PwaRegistration", () => {
   const register = vi.fn();
+  const update = vi.fn();
   const addEventListener = vi.fn();
   const removeEventListener = vi.fn();
   let messageHandler: ((event: MessageEvent) => void) | null = null;
 
   beforeEach(() => {
     register.mockReset();
+    update.mockReset();
     addEventListener.mockReset();
     removeEventListener.mockReset();
-    register.mockResolvedValue({});
+    update.mockResolvedValue(undefined);
+    register.mockResolvedValue({ update });
     messageHandler = null;
 
     addEventListener.mockImplementation(
@@ -32,6 +35,7 @@ describe("PwaRegistration", () => {
     Object.defineProperty(navigator, "serviceWorker", {
       configurable: true,
       value: {
+        controller: null,
         register,
         addEventListener,
         removeEventListener,
@@ -54,6 +58,9 @@ describe("PwaRegistration", () => {
     });
 
     expect(register).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("shows an in-app heads-up banner when a push message arrives", async () => {

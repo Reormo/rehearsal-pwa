@@ -1,4 +1,4 @@
-const CACHE_NAME = "muhon-pwa-v4";
+const CACHE_NAME = "muhon-pwa-v5";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
   OFFLINE_URL,
@@ -45,7 +45,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    fetch(request).catch(async () => {
+    fetch(request, { cache: "no-store" }).catch(async () => {
       const offlineResponse = await caches.match(OFFLINE_URL);
       return offlineResponse || Response.error();
     }),

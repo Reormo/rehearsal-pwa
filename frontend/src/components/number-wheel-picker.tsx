@@ -39,7 +39,7 @@ export function NumberWheelPicker({
     const timer = window.setTimeout(() => {
       listRef.current?.scrollTo({
         top: index * ITEM_HEIGHT,
-        behavior: "instant",
+        behavior: "auto",
       });
     }, 0);
     return () => window.clearTimeout(timer);
@@ -132,7 +132,7 @@ export function NumberWheelPicker({
               <div
                 ref={listRef}
                 onScroll={handleScroll}
-                className="relative z-20 h-60 snap-y snap-mandatory overflow-y-auto overscroll-contain"
+                className="relative z-20 h-60 snap-y snap-mandatory overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:hidden"
                 style={{
                   paddingTop: SIDE_PADDING,
                   paddingBottom: SIDE_PADDING,

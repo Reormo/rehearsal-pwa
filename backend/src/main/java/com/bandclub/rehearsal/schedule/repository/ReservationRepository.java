@@ -21,6 +21,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             ReservationStatus status
     );
 
+    long countByBookingRoundIdAndSongIdAndStatus(
+            Long bookingRoundId,
+            Long songId,
+            ReservationStatus status
+    );
+
+    boolean existsBySongId(Long songId);
+
     List<Reservation> findAllBySongIdInAndStatusAndEndAtAfterOrderByStartAtAsc(
             Collection<Long> songIds,
             ReservationStatus status,

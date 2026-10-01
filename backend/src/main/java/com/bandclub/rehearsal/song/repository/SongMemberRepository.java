@@ -17,4 +17,6 @@ public interface SongMemberRepository extends JpaRepository<SongMember, Long> {
     Optional<SongMember> findBySongIdAndLeaderTrue(Long songId);
 
     boolean existsBySongIdAndUserId(Long songId, Long userId);
+
+    void deleteAllBySongId(Long songId);
 }

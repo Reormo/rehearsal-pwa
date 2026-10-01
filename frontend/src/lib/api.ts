@@ -53,6 +53,18 @@ export type Song = {
   members: SongMember[];
 };
 
+export type SongCatalogItem = {
+  id: number;
+  title: string;
+  stageTypeId: number;
+  stageTypeName: string;
+  memberCount: number;
+  leaderName: string | null;
+  leaderSessionName: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Announcement = {
   id: number;
   title: string;
@@ -436,7 +448,7 @@ export const songApi = {
   },
 
   all() {
-    return request<Song[]>("/api/songs/all");
+    return request<SongCatalogItem[]>("/api/songs/all");
   },
 
   detail(songId: number) {

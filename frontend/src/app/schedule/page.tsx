@@ -344,8 +344,10 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 </p>
               )}
               <p className="mt-1 text-slate-500">
-                1회 최대 {effectiveMaxReservationMinutes}분 · 일반 슬롯{" "}
-                {dayQuery.data.standardSlots.length}개
+                1회 최대 {effectiveMaxReservationMinutes}분
+                {bookingOptionsQuery.data &&
+                  ` · 회차 내 예약 ${bookingOptionsQuery.data.currentReservationCount}/${bookingOptionsQuery.data.maxReservationsPerSong}건`}
+                {" · "}일반 슬롯 {dayQuery.data.standardSlots.length}개
               </p>
               {dayQuery.data.roomStatus === "PARTIAL_BLOCKED" && (
                 <p className="mt-2 font-semibold text-amber-700">

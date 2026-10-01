@@ -46,7 +46,9 @@ public class AdminScheduleController {
     ) {
         return SettingsResponse.from(scheduleService.updateSettings(
                 userId(jwt),
-                request.allowMultipleReservations(),
+                request.defaultMaxReservationsPerSong() == null
+                        ? (request.allowMultipleReservations() ? 99 : 1)
+                        : request.defaultMaxReservationsPerSong(),
                 request.defaultBookingOpenLeadMinutes(),
                 request.defaultMaxReservationMinutes()
         ));
@@ -100,7 +102,10 @@ public class AdminScheduleController {
                 stageTypeId,
                 request.bookingOpenAt(),
                 request.bookingCloseAt(),
-                request.maxReservationMinutes()
+                request.maxReservationMinutes(),
+                request.maxReservationsPerSong() == null
+                        ? 1
+                        : request.maxReservationsPerSong()
         ));
     }
 
@@ -158,6 +163,7 @@ public class AdminScheduleController {
 
     public record UpdateSettingsRequest(
             boolean allowMultipleReservations,
+            @Min(1) @Max(99) Integer defaultMaxReservationsPerSong,
             @Min(0) @Max(10080) int defaultBookingOpenLeadMinutes,
             @Min(30) @Max(180) int defaultMaxReservationMinutes
     ) {
@@ -173,7 +179,8 @@ public class AdminScheduleController {
     public record UpdateStageWindowRequest(
             @NotNull Instant bookingOpenAt,
             @NotNull Instant bookingCloseAt,
-            @Min(30) @Max(180) int maxReservationMinutes
+            @Min(30) @Max(180) int maxReservationMinutes,
+            @Min(1) @Max(99) Integer maxReservationsPerSong
     ) {
     }
 
@@ -185,6 +192,7 @@ public class AdminScheduleController {
             Instant bookingOpenAt,
             Instant bookingCloseAt,
             int maxReservationMinutes,
+            int maxReservationsPerSong,
             Long updatedBy,
             Instant updatedAt
     ) {
@@ -199,6 +207,7 @@ public class AdminScheduleController {
                     view.bookingOpenAt(),
                     view.bookingCloseAt(),
                     view.maxReservationMinutes(),
+                    view.maxReservationsPerSong(),
                     view.updatedBy(),
                     view.updatedAt()
             );
@@ -215,6 +224,7 @@ public class AdminScheduleController {
 
     public record SettingsResponse(
             boolean allowMultipleReservations,
+            int defaultMaxReservationsPerSong,
             int defaultBookingOpenLeadMinutes,
             int defaultMaxReservationMinutes,
             Long updatedBy,
@@ -223,6 +233,7 @@ public class AdminScheduleController {
         static SettingsResponse from(ScheduleService.SettingsView view) {
             return new SettingsResponse(
                     view.allowMultipleReservations(),
+                    view.defaultMaxReservationsPerSong(),
                     view.defaultBookingOpenLeadMinutes(),
                     view.defaultMaxReservationMinutes(),
                     view.updatedBy(),

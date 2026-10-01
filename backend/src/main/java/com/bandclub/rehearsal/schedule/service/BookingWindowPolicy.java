@@ -3,6 +3,7 @@ package com.bandclub.rehearsal.schedule.service;
 import com.bandclub.rehearsal.schedule.domain.BookingRound;
 import com.bandclub.rehearsal.schedule.domain.BookingRoundStageWindow;
 import com.bandclub.rehearsal.schedule.repository.BookingRoundStageWindowRepository;
+import com.bandclub.rehearsal.schedule.repository.ReservationSettingsRepository;
 import com.bandclub.rehearsal.song.domain.Song;
 import com.bandclub.rehearsal.song.domain.StageType;
 import com.bandclub.rehearsal.song.repository.StageTypeRepository;
@@ -14,13 +15,16 @@ public class BookingWindowPolicy {
 
     private final BookingRoundStageWindowRepository windowRepository;
     private final StageTypeRepository stageTypeRepository;
+    private final ReservationSettingsRepository settingsRepository;
 
     public BookingWindowPolicy(
             BookingRoundStageWindowRepository windowRepository,
-            StageTypeRepository stageTypeRepository
+            StageTypeRepository stageTypeRepository,
+            ReservationSettingsRepository settingsRepository
     ) {
         this.windowRepository = windowRepository;
         this.stageTypeRepository = stageTypeRepository;
+        this.settingsRepository = settingsRepository;
     }
 
     public ResolvedWindow resolve(BookingRound round, Song song) {
@@ -43,9 +47,15 @@ public class BookingWindowPolicy {
                     custom.getBookingOpenAt(),
                     custom.getBookingCloseAt(),
                     custom.getMaxReservationMinutes(),
+                    custom.getMaxReservationsPerSong(),
                     true
             );
         }
+
+        int defaultMaxReservations = settingsRepository
+                .findById(song.getClubId())
+                .map(settings -> settings.getDefaultMaxReservationsPerSong())
+                .orElse(1);
 
         return new ResolvedWindow(
                 stageType.getId(),
@@ -53,6 +63,7 @@ public class BookingWindowPolicy {
                 round.getBookingOpenAt(),
                 round.getBookingCloseAt(),
                 round.getMaxReservationMinutes(),
+                defaultMaxReservations,
                 false
         );
     }
@@ -63,6 +74,7 @@ public class BookingWindowPolicy {
             Instant bookingOpenAt,
             Instant bookingCloseAt,
             int maxReservationMinutes,
+            int maxReservationsPerSong,
             boolean customStageWindow
     ) {}
 }

@@ -26,6 +26,9 @@ public class BookingRoundStageWindow {
     @Column(name = "max_reservation_minutes", nullable = false)
     private short maxReservationMinutes;
 
+    @Column(name = "max_reservations_per_song", nullable = false)
+    private short maxReservationsPerSong;
+
     @Column(name = "updated_by")
     private Long updatedBy;
 
@@ -43,6 +46,7 @@ public class BookingRoundStageWindow {
             Instant bookingOpenAt,
             Instant bookingCloseAt,
             int maxReservationMinutes,
+            int maxReservationsPerSong,
             Long updatedBy,
             Instant now
     ) {
@@ -51,6 +55,7 @@ public class BookingRoundStageWindow {
         this.bookingOpenAt = bookingOpenAt;
         this.bookingCloseAt = bookingCloseAt;
         this.maxReservationMinutes = (short) maxReservationMinutes;
+        this.maxReservationsPerSong = (short) maxReservationsPerSong;
         this.updatedBy = updatedBy;
         this.createdAt = now;
         this.updatedAt = now;
@@ -65,12 +70,35 @@ public class BookingRoundStageWindow {
             Long updatedBy,
             Instant now
     ) {
+        return create(
+                bookingRoundId,
+                stageTypeId,
+                bookingOpenAt,
+                bookingCloseAt,
+                maxReservationMinutes,
+                1,
+                updatedBy,
+                now
+        );
+    }
+
+    public static BookingRoundStageWindow create(
+            Long bookingRoundId,
+            Long stageTypeId,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            int maxReservationMinutes,
+            int maxReservationsPerSong,
+            Long updatedBy,
+            Instant now
+    ) {
         return new BookingRoundStageWindow(
                 bookingRoundId,
                 stageTypeId,
                 bookingOpenAt,
                 bookingCloseAt,
                 maxReservationMinutes,
+                maxReservationsPerSong,
                 updatedBy,
                 now
         );
@@ -83,9 +111,28 @@ public class BookingRoundStageWindow {
             Long updatedBy,
             Instant now
     ) {
+        update(
+                bookingOpenAt,
+                bookingCloseAt,
+                maxReservationMinutes,
+                1,
+                updatedBy,
+                now
+        );
+    }
+
+    public void update(
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            int maxReservationMinutes,
+            int maxReservationsPerSong,
+            Long updatedBy,
+            Instant now
+    ) {
         this.bookingOpenAt = bookingOpenAt;
         this.bookingCloseAt = bookingCloseAt;
         this.maxReservationMinutes = (short) maxReservationMinutes;
+        this.maxReservationsPerSong = (short) maxReservationsPerSong;
         this.updatedBy = updatedBy;
         this.updatedAt = now;
     }
@@ -96,6 +143,7 @@ public class BookingRoundStageWindow {
     public Instant getBookingOpenAt() { return bookingOpenAt; }
     public Instant getBookingCloseAt() { return bookingCloseAt; }
     public int getMaxReservationMinutes() { return maxReservationMinutes; }
+    public int getMaxReservationsPerSong() { return maxReservationsPerSong; }
     public Long getUpdatedBy() { return updatedBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

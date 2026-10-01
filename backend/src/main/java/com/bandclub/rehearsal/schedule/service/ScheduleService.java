@@ -253,16 +253,38 @@ public class ScheduleService {
             int defaultBookingOpenLeadMinutes,
             int defaultMaxReservationMinutes
     ) {
+        return updateSettings(
+                userId,
+                allowMultipleReservations ? 99 : 1,
+                defaultBookingOpenLeadMinutes,
+                defaultMaxReservationMinutes
+        );
+    }
+
+    @Transactional
+    public SettingsView updateSettings(
+            Long userId,
+            int defaultMaxReservationsPerSong,
+            int defaultBookingOpenLeadMinutes,
+            int defaultMaxReservationMinutes
+    ) {
         var membership = membershipService.requireAdmin(userId);
         validateBookingOpenLead(defaultBookingOpenLeadMinutes);
         validateMaxMinutes(defaultMaxReservationMinutes);
+        if (defaultMaxReservationsPerSong < 1 || defaultMaxReservationsPerSong > 99) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_MAX_RESERVATIONS_PER_SONG",
+                    "회차 내 최대 예약 건수는 1회 이상 99회 이하여야 합니다."
+            );
+        }
 
         provisioningLock.lockClub(membership.getClubId());
         ReservationSettings settings = ensureSettingsLocked(membership.getClubId());
         Map<String, Object> before = settingsSnapshot(settings);
 
         settings.update(
-                allowMultipleReservations,
+                defaultMaxReservationsPerSong,
                 defaultBookingOpenLeadMinutes,
                 defaultMaxReservationMinutes,
                 userId,
@@ -941,6 +963,7 @@ public class ScheduleService {
     private SettingsView toSettingsView(ReservationSettings settings) {
         return new SettingsView(
                 settings.isAllowMultipleReservations(),
+                settings.getDefaultMaxReservationsPerSong(),
                 settings.getDefaultBookingOpenLeadMinutes(),
                 settings.getDefaultMaxReservationMinutes(),
                 settings.getUpdatedBy(),
@@ -1039,6 +1062,7 @@ public class ScheduleService {
     private Map<String, Object> settingsSnapshot(ReservationSettings settings) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("allowMultipleReservations", settings.isAllowMultipleReservations());
+        snapshot.put("defaultMaxReservationsPerSong", settings.getDefaultMaxReservationsPerSong());
         snapshot.put("defaultBookingOpenLeadMinutes", settings.getDefaultBookingOpenLeadMinutes());
         snapshot.put("defaultMaxReservationMinutes", settings.getDefaultMaxReservationMinutes());
         return snapshot;
@@ -1107,6 +1131,7 @@ public class ScheduleService {
 
     public record SettingsView(
             boolean allowMultipleReservations,
+            int defaultMaxReservationsPerSong,
             int defaultBookingOpenLeadMinutes,
             int defaultMaxReservationMinutes,
             Long updatedBy,

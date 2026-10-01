@@ -75,11 +75,33 @@ public class StageBookingWindowService {
             Instant bookingCloseAt,
             int maxReservationMinutes
     ) {
+        return upsert(
+                actorUserId,
+                roundId,
+                stageTypeId,
+                bookingOpenAt,
+                bookingCloseAt,
+                maxReservationMinutes,
+                1
+        );
+    }
+
+    @Transactional
+    public StageWindowView upsert(
+            Long actorUserId,
+            Long roundId,
+            Long stageTypeId,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            int maxReservationMinutes,
+            int maxReservationsPerSong
+    ) {
         var membership = membershipService.requireAdmin(actorUserId);
         BookingRound round = requireRound(roundId, membership.getClubId());
         StageType stageType = requireStageType(stageTypeId, membership.getClubId());
         validateWindow(round, bookingOpenAt, bookingCloseAt);
         validateMaxReservationMinutes(maxReservationMinutes);
+        validateMaxReservationsPerSong(maxReservationsPerSong);
 
         BookingRoundStageWindow existing = windowRepository
                 .findByBookingRoundIdAndStageTypeId(roundId, stageTypeId)
@@ -97,6 +119,7 @@ public class StageBookingWindowService {
                     bookingOpenAt,
                     bookingCloseAt,
                     maxReservationMinutes,
+                    maxReservationsPerSong,
                     actorUserId,
                     now
             ));
@@ -105,6 +128,7 @@ public class StageBookingWindowService {
                     bookingOpenAt,
                     bookingCloseAt,
                     maxReservationMinutes,
+                    maxReservationsPerSong,
                     actorUserId,
                     now
             );
@@ -214,6 +238,16 @@ public class StageBookingWindowService {
         }
     }
 
+    private void validateMaxReservationsPerSong(int maxReservationsPerSong) {
+        if (maxReservationsPerSong < 1 || maxReservationsPerSong > 99) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_STAGE_MAX_RESERVATIONS",
+                    "무대별 회차 내 최대 예약 건수는 1회 이상 99회 이하여야 합니다."
+            );
+        }
+    }
+
     private StageWindowView toView(
             BookingRoundStageWindow window,
             StageType stageType
@@ -226,6 +260,7 @@ public class StageBookingWindowService {
                 window.getBookingOpenAt(),
                 window.getBookingCloseAt(),
                 window.getMaxReservationMinutes(),
+                window.getMaxReservationsPerSong(),
                 window.getUpdatedBy(),
                 window.getUpdatedAt()
         );
@@ -242,6 +277,7 @@ public class StageBookingWindowService {
         result.put("bookingOpenAt", window.getBookingOpenAt().toString());
         result.put("bookingCloseAt", window.getBookingCloseAt().toString());
         result.put("maxReservationMinutes", window.getMaxReservationMinutes());
+        result.put("maxReservationsPerSong", window.getMaxReservationsPerSong());
         return result;
     }
 
@@ -253,6 +289,7 @@ public class StageBookingWindowService {
             Instant bookingOpenAt,
             Instant bookingCloseAt,
             int maxReservationMinutes,
+            int maxReservationsPerSong,
             Long updatedBy,
             Instant updatedAt
     ) {}

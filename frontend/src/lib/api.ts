@@ -53,6 +53,18 @@ export type Song = {
   members: SongMember[];
 };
 
+export type SongCatalogItem = {
+  id: number;
+  title: string;
+  stageTypeId: number;
+  stageTypeName: string;
+  memberCount: number;
+  leaderName: string | null;
+  leaderSessionName: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Announcement = {
   id: number;
   title: string;
@@ -86,6 +98,8 @@ type ErrorPayload = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
   "http://localhost:8080";
+
+const REQUEST_TIMEOUT_MS = 15_000;
 
 export class ApiError extends Error {
   status: number;
@@ -134,11 +148,45 @@ export async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers,
-    credentials: "include",
-  });
+  const requestController = new AbortController();
+  const callerSignal = init.signal;
+  let timedOut = false;
+
+  const abortFromCaller = () => requestController.abort();
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      requestController.abort();
+    } else {
+      callerSignal.addEventListener("abort", abortFromCaller, { once: true });
+    }
+  }
+
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    requestController.abort();
+  }, REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers,
+      credentials: "include",
+      signal: requestController.signal,
+    });
+  } catch (error) {
+    if (timedOut) {
+      throw new ApiError(
+        0,
+        "REQUEST_TIMEOUT",
+        "서버 응답이 지연되고 있습니다. 네트워크 연결을 확인한 뒤 다시 시도해주세요.",
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    callerSignal?.removeEventListener("abort", abortFromCaller);
+  }
 
   const canRefresh =
     retryAfterRefresh &&
@@ -354,6 +402,12 @@ export const adminApi = {
     });
   },
 
+  deleteSong(songId: number) {
+    return request<void>(`/api/admin/songs/${songId}`, {
+      method: "DELETE",
+    });
+  },
+
   addSongMember(songId: number, userId: number, sessionName: string) {
     return request<Song>(`/api/admin/songs/${songId}/members`, {
       method: "POST",
@@ -391,6 +445,10 @@ export const announcementApi = {
 export const songApi = {
   mine() {
     return request<Song[]>("/api/songs");
+  },
+
+  all() {
+    return request<SongCatalogItem[]>("/api/songs/all");
   },
 
   detail(songId: number) {

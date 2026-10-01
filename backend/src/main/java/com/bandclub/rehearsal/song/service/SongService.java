@@ -7,6 +7,7 @@ import com.bandclub.rehearsal.auth.repository.ClubMemberRepository;
 import com.bandclub.rehearsal.auth.repository.UserRepository;
 import com.bandclub.rehearsal.auth.service.MembershipService;
 import com.bandclub.rehearsal.common.exception.AppException;
+import com.bandclub.rehearsal.schedule.repository.ReservationRepository;
 import com.bandclub.rehearsal.song.domain.Song;
 import com.bandclub.rehearsal.song.domain.SongMember;
 import com.bandclub.rehearsal.song.domain.SongStatus;
@@ -31,6 +32,7 @@ public class SongService {
     private final UserRepository userRepository;
     private final SongRepository songRepository;
     private final SongMemberRepository songMemberRepository;
+    private final ReservationRepository reservationRepository;
     private final StageTypeService stageTypeService;
     private final Clock clock;
 
@@ -40,6 +42,7 @@ public class SongService {
             UserRepository userRepository,
             SongRepository songRepository,
             SongMemberRepository songMemberRepository,
+            ReservationRepository reservationRepository,
             StageTypeService stageTypeService,
             Clock clock
     ) {
@@ -48,6 +51,7 @@ public class SongService {
         this.userRepository = userRepository;
         this.songRepository = songRepository;
         this.songMemberRepository = songMemberRepository;
+        this.reservationRepository = reservationRepository;
         this.stageTypeService = stageTypeService;
         this.clock = clock;
     }
@@ -66,6 +70,15 @@ public class SongService {
                     .ifPresent(song -> result.add(toView(song)));
         }
         return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<SongView> listActiveSongs(Long userId) {
+        ClubMember membership = membershipService.requireMembership(userId);
+        return songRepository.findAllByClubIdOrderByIdAsc(membership.getClubId()).stream()
+                .filter(Song::isActive)
+                .map(this::toView)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -184,6 +197,30 @@ public class SongService {
         }
         song.restore(clock.instant());
         return toView(song);
+    }
+
+    @Transactional
+    public void deleteArchivedSong(Long actorUserId, Long songId) {
+        Song song = requireSongForUpdate(actorUserId, songId);
+        if (song.isActive()) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "ACTIVE_SONG_CANNOT_BE_DELETED",
+                    "활성 곡은 먼저 보관한 뒤 삭제해주세요."
+            );
+        }
+        if (reservationRepository.existsBySongId(songId)) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "SONG_HAS_RESERVATION_HISTORY",
+                    "예약 기록이 남아 있는 곡은 아직 영구 삭제할 수 없습니다. 해당 회차 기록이 정리된 뒤 다시 시도해주세요."
+            );
+        }
+
+        songMemberRepository.deleteAllBySongId(songId);
+        songMemberRepository.flush();
+        songRepository.delete(song);
+        songRepository.flush();
     }
 
     @Transactional

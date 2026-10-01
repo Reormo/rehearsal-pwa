@@ -17,11 +17,28 @@ export function PwaRegistration() {
       return;
     }
 
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloadingForUpdate = false;
+
+    const onControllerChange = () => {
+      if (!hadController || reloadingForUpdate) {
+        return;
+      }
+      reloadingForUpdate = true;
+      window.location.reload();
+    };
+
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      onControllerChange,
+    );
+
     void navigator.serviceWorker
       .register("/sw.js", {
         scope: "/",
         updateViaCache: "none",
       })
+      .then((registration) => registration.update())
       .catch((error) => {
         console.error("PWA Service Worker registration failed.", error);
       });
@@ -50,6 +67,10 @@ export function PwaRegistration() {
     navigator.serviceWorker.addEventListener("message", onMessage);
 
     return () => {
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        onControllerChange,
+      );
       navigator.serviceWorker.removeEventListener("message", onMessage);
       if (dismissTimerRef.current != null) {
         window.clearTimeout(dismissTimerRef.current);

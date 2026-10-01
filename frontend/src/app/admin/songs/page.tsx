@@ -9,6 +9,9 @@ import { Member, Song, adminApi, errorMessage } from "@/lib/api";
 
 const SESSION_PRESETS = ["보컬", "기타", "베이스", "드럼", "키보드", "신디사이저"];
 
+type SongSortKey = "LATEST" | "NAME" | "STAGE";
+type SortDirection = "ASC" | "DESC";
+
 export default function AdminSongsPage() {
   return (
     <AuthGate adminOnly>
@@ -26,6 +29,8 @@ function AdminSongsContent() {
   const [showArchived, setShowArchived] = useState(false);
   const [songSearch, setSongSearch] = useState("");
   const [stageTypeFilter, setStageTypeFilter] = useState("ALL");
+  const [sortKey, setSortKey] = useState<SongSortKey>("LATEST");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("DESC");
   const [title, setTitle] = useState("");
   const [stageTypeName, setStageTypeName] = useState("");
   const [leaderSearch, setLeaderSearch] = useState("");
@@ -118,17 +123,46 @@ function AdminSongsContent() {
     const byStatus = (songsQuery.data ?? []).filter((song) =>
       showArchived ? song.status === "ARCHIVED" : song.status === "ACTIVE",
     );
-    if (showArchived) return byStatus;
-
     const query = songSearch.trim().toLocaleLowerCase("ko-KR");
-    return byStatus.filter((song) => {
-      const matchesStage =
-        stageTypeFilter === "ALL" || song.stageTypeName === stageTypeFilter;
-      const matchesSearch =
-        !query || song.title.toLocaleLowerCase("ko-KR").includes(query);
-      return matchesStage && matchesSearch;
+    const filtered = showArchived
+      ? byStatus
+      : byStatus.filter((song) => {
+          const matchesStage =
+            stageTypeFilter === "ALL" || song.stageTypeName === stageTypeFilter;
+          const matchesSearch =
+            !query || song.title.toLocaleLowerCase("ko-KR").includes(query);
+          return matchesStage && matchesSearch;
+        });
+
+    return [...filtered].sort((first, second) => {
+      const direction = sortDirection === "ASC" ? 1 : -1;
+      if (sortKey === "LATEST") {
+        return (
+          (new Date(first.createdAt).getTime() -
+            new Date(second.createdAt).getTime()) *
+          direction
+        );
+      }
+      if (sortKey === "STAGE") {
+        const stageCompare = compareSongText(
+          first.stageTypeName,
+          second.stageTypeName,
+        );
+        return (
+          (stageCompare || compareSongText(first.title, second.title)) *
+          direction
+        );
+      }
+      return compareSongText(first.title, second.title) * direction;
     });
-  }, [showArchived, songSearch, songsQuery.data, stageTypeFilter]);
+  }, [
+    showArchived,
+    songSearch,
+    songsQuery.data,
+    sortDirection,
+    sortKey,
+    stageTypeFilter,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -206,18 +240,51 @@ function AdminSongsContent() {
           </button>
         </div>
 
-        {!showArchived && (
-          <label className="field-label w-full sm:max-w-xs">
-            활성 곡 검색
-            <input
-              className="field-input"
-              type="search"
-              value={songSearch}
-              onChange={(event) => setSongSearch(event.target.value)}
-              placeholder="곡 제목 검색"
-            />
-          </label>
-        )}
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+          {!showArchived && (
+            <label className="field-label w-full sm:w-64">
+              활성 곡 검색
+              <input
+                className="field-input"
+                type="search"
+                value={songSearch}
+                onChange={(event) => setSongSearch(event.target.value)}
+                placeholder="곡 제목 검색"
+              />
+            </label>
+          )}
+          <div className="flex items-end gap-2">
+            <label className="field-label min-w-36">
+              정렬
+              <select
+                className="field-input"
+                value={sortKey}
+                onChange={(event) =>
+                  setSortKey(event.target.value as SongSortKey)
+                }
+              >
+                <option value="LATEST">최신순</option>
+                <option value="NAME">이름순</option>
+                <option value="STAGE">종류순</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="secondary-button h-[46px] min-w-12 px-3 text-lg"
+              aria-label={
+                sortDirection === "ASC" ? "정렬 역순으로 변경" : "정렬 정순으로 변경"
+              }
+              title={sortDirection === "ASC" ? "오름차순" : "내림차순"}
+              onClick={() =>
+                setSortDirection((current) =>
+                  current === "ASC" ? "DESC" : "ASC",
+                )
+              }
+            >
+              {sortDirection === "ASC" ? "↑" : "↓"}
+            </button>
+          </div>
+        </div>
       </section>
 
       {!showArchived && (
@@ -392,13 +459,30 @@ function SongAdminCard({
               보관
             </button>
           ) : (
-            <button
-              className="primary-button small-button"
-              disabled={!!pending}
-              onClick={() => run("restore", () => adminApi.restoreSong(song.id))}
-            >
-              복구
-            </button>
+            <>
+              <button
+                className="primary-button small-button"
+                disabled={!!pending}
+                onClick={() => run("restore", () => adminApi.restoreSong(song.id))}
+              >
+                복구
+              </button>
+              <button
+                className="danger-button small-button"
+                disabled={!!pending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `"${song.title}" 곡을 DB에서 영구 삭제할까요?\n예약 기록이 남아 있으면 삭제되지 않습니다.`,
+                    )
+                  ) {
+                    void run("delete", () => adminApi.deleteSong(song.id));
+                  }
+                }}
+              >
+                영구 삭제
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -591,6 +675,18 @@ function MemberSearchField({
       <span className="field-help">이름이나 로그인 아이디를 입력해 검색한 뒤 회원을 선택하세요.</span>
     </label>
   );
+}
+
+function compareSongText(first: string, second: string) {
+  const firstValue = first.trim();
+  const secondValue = second.trim();
+  const firstGroup = /^[A-Za-z]/.test(firstValue) ? 0 : 1;
+  const secondGroup = /^[A-Za-z]/.test(secondValue) ? 0 : 1;
+  if (firstGroup !== secondGroup) return firstGroup - secondGroup;
+  return firstValue.localeCompare(secondValue, "ko-KR", {
+    numeric: true,
+    sensitivity: "base",
+  });
 }
 
 function memberOptionValue(member: Member) {

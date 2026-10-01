@@ -440,8 +440,11 @@ function ScheduleContent({ user }: { user: AuthUser }) {
               {bookingOptionsQuery.data &&
                 !bookingOptionsQuery.data.acceptingReservations && (
                   <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-800">
-                    현재 이 회차는 예약 접수 시간이 아닙니다. 시간표는 볼 수 있지만
-                    새 예약은 서버에서 허용하지 않습니다.
+                    {bookingOptionsQuery.data.maxReservationsPerSong > 0 &&
+                    bookingOptionsQuery.data.currentReservationCount >=
+                      bookingOptionsQuery.data.maxReservationsPerSong
+                      ? `이 팀은 이번 회차 최대 예약 ${bookingOptionsQuery.data.maxReservationsPerSong}건을 모두 사용했습니다.`
+                      : "현재 이 회차는 예약 접수 시간이 아닙니다. 시간표는 볼 수 있지만 새 예약은 서버에서 허용하지 않습니다."}
                   </p>
                 )}
               {bookingOptionsQuery.data?.acceptingReservations &&

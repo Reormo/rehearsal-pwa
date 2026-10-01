@@ -233,6 +233,12 @@ public class BookingService {
         BookingWindowPolicy.ResolvedWindow bookingWindow =
                 bookingWindowPolicy.resolve(round, song);
         validateDurationForWindow(durationMinutes, bookingWindow);
+        long currentReservationCount =
+                reservationRepository.countByBookingRoundIdAndSongIdAndStatus(
+                        round.getId(),
+                        songId,
+                        ReservationStatus.ACTIVE
+                );
 
         Instant from = date.atStartOfDay(ScheduleService.SERVICE_ZONE).toInstant();
         Instant to = date.plusDays(1).atStartOfDay(ScheduleService.SERVICE_ZONE).toInstant();
@@ -255,7 +261,8 @@ public class BookingService {
         Instant now = clock.instant();
         boolean acceptingReservations =
                 !now.isBefore(bookingWindow.bookingOpenAt())
-                        && now.isBefore(bookingWindow.bookingCloseAt());
+                        && now.isBefore(bookingWindow.bookingCloseAt())
+                        && currentReservationCount < bookingWindow.maxReservationsPerSong();
 
         int atoms = durationMinutes / ScheduleService.SLOT_MINUTES;
         List<BookingTimeOptionView> result = new ArrayList<>();
@@ -285,6 +292,8 @@ public class BookingService {
                 date,
                 durationMinutes,
                 bookingWindow.maxReservationMinutes(),
+                bookingWindow.maxReservationsPerSong(),
+                currentReservationCount,
                 acceptingReservations,
                 bookingWindow.stageTypeName(),
                 bookingWindow.bookingOpenAt(),
@@ -915,6 +924,8 @@ public class BookingService {
             LocalDate date,
             int durationMinutes,
             int maxReservationMinutes,
+            int maxReservationsPerSong,
+            long currentReservationCount,
             boolean acceptingReservations,
             String stageTypeName,
             Instant bookingOpenAt,
@@ -933,6 +944,8 @@ public class BookingService {
                     date,
                     durationMinutes,
                     maxReservationMinutes,
+                    0,
+                    0,
                     acceptingReservations,
                     null,
                     null,

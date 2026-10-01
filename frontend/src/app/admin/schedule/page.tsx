@@ -482,11 +482,11 @@ function RoundEditor({
           <span className="count-badge">{roundStateLabel(round.state)}</span>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_160px_auto] lg:items-end">
-          <label>
+        <div className="mt-4 grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px_auto] xl:items-end">
+          <label className="min-w-0">
             <span className="card-label">기본 예약 오픈</span>
             <input
-              className="field-input mt-2"
+              className="field-input mt-2 min-w-0 max-w-full"
               type="datetime-local"
               name="bookingOpenAt"
               defaultValue={toKoreanDateTimeLocal(round.bookingOpenAt)}
@@ -494,10 +494,10 @@ function RoundEditor({
             />
           </label>
 
-          <label>
+          <label className="min-w-0">
             <span className="card-label">기본 예약 종료</span>
             <input
-              className="field-input mt-2"
+              className="field-input mt-2 min-w-0 max-w-full"
               type="datetime-local"
               name="bookingCloseAt"
               defaultValue={toKoreanDateTimeLocal(round.bookingCloseAt)}
@@ -536,8 +536,8 @@ function RoundEditor({
             <p className="card-label">무대 종류별 예약 정책</p>
             <p className="mt-1 text-sm leading-6 text-slate-500">
               현재 활성 곡에서 사용 중인 무대만 자동으로 나타납니다.
-              예약 오픈·종료 시각과 1회 최대 예약 시간을 종류별로 따로 지정할 수 있고,
-              별도 설정이 없으면 위 회차 기본 설정을 사용합니다.
+              예약 오픈·종료 시각, 1회 최대 예약 시간과 회차 내 최대 예약 건수를
+              종류별로 따로 지정할 수 있고, 별도 설정이 없으면 위 기본 설정을 사용합니다.
             </p>
           </div>
           <span className="count-badge">{stageTypes.length}종류</span>
@@ -609,6 +609,7 @@ function StageWindowEditor({
   stageType,
   round,
   customWindow,
+  defaultMaxReservationsPerSong,
   disabled,
   onSave,
   onUseDefault,
@@ -618,14 +619,20 @@ function StageWindowEditor({
   customWindow:
     | Awaited<ReturnType<typeof scheduleAdminApi.stageWindows>>[number]
     | undefined;
+  defaultMaxReservationsPerSong: number;
   disabled: boolean;
   onSave: (
     bookingOpenAt: string,
     bookingCloseAt: string,
     maxReservationMinutes: number,
+    maxReservationsPerSong: number,
   ) => void;
   onUseDefault: () => void;
 }) {
+  const [maxReservationsPerSong, setMaxReservationsPerSong] = useState(
+    customWindow?.maxReservationsPerSong ?? defaultMaxReservationsPerSong,
+  );
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -636,6 +643,7 @@ function StageWindowEditor({
       new Date(`${openValue}:00+09:00`).toISOString(),
       new Date(`${closeValue}:00+09:00`).toISOString(),
       Number(form.get("stageMaxMinutes")),
+      maxReservationsPerSong,
     );
   }
 
@@ -651,11 +659,11 @@ function StageWindowEditor({
         </span>
       </div>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_160px_auto_auto] lg:items-end">
-        <label>
+      <div className="mt-3 grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px_150px_auto_auto] xl:items-end">
+        <label className="min-w-0">
           <span className="card-label">예약 오픈</span>
           <input
-            className="field-input mt-2"
+            className="field-input mt-2 min-w-0 max-w-full"
             type="datetime-local"
             name="stageBookingOpenAt"
             defaultValue={toKoreanDateTimeLocal(
@@ -665,10 +673,10 @@ function StageWindowEditor({
           />
         </label>
 
-        <label>
+        <label className="min-w-0">
           <span className="card-label">예약 종료</span>
           <input
-            className="field-input mt-2"
+            className="field-input mt-2 min-w-0 max-w-full"
             type="datetime-local"
             name="stageBookingCloseAt"
             defaultValue={toKoreanDateTimeLocal(
@@ -694,6 +702,20 @@ function StageWindowEditor({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="min-w-0">
+          <span className="card-label">회차 내 최대 예약</span>
+          <div className="mt-2">
+            <NumberWheelPicker
+              value={maxReservationsPerSong}
+              onChange={setMaxReservationsPerSong}
+              min={1}
+              max={99}
+              suffix="회"
+              disabled={disabled}
+            />
+          </div>
         </label>
 
         <button

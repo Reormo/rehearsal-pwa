@@ -65,7 +65,7 @@ function AdminSongsContent() {
   const refreshSongs = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["admin", "songs"] }),
-      queryClient.invalidateQueries({ queryKey: ["songs", "mine"] }),
+      queryClient.invalidateQueries({ queryKey: ["songs"] }),
     ]);
   };
 

@@ -390,6 +390,12 @@ export const adminApi = {
     });
   },
 
+  deleteSong(songId: number) {
+    return request<void>(`/api/admin/songs/${songId}`, {
+      method: "DELETE",
+    });
+  },
+
   addSongMember(songId: number, userId: number, sessionName: string) {
     return request<Song>(`/api/admin/songs/${songId}/members`, {
       method: "POST",
@@ -427,6 +433,10 @@ export const announcementApi = {
 export const songApi = {
   mine() {
     return request<Song[]>("/api/songs");
+  },
+
+  all() {
+    return request<Song[]>("/api/songs/all");
   },
 
   detail(songId: number) {

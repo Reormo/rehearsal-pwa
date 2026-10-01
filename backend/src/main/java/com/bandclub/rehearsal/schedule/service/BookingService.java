@@ -5,7 +5,6 @@ import com.bandclub.rehearsal.auth.service.MembershipService;
 import com.bandclub.rehearsal.common.exception.AppException;
 import com.bandclub.rehearsal.schedule.domain.BookingRound;
 import com.bandclub.rehearsal.schedule.domain.Reservation;
-import com.bandclub.rehearsal.schedule.domain.ReservationSettings;
 import com.bandclub.rehearsal.schedule.domain.ReservationSlot;
 import com.bandclub.rehearsal.schedule.domain.ReservationBoundary;
 import com.bandclub.rehearsal.schedule.domain.ReservationSource;
@@ -13,7 +12,6 @@ import com.bandclub.rehearsal.schedule.domain.ReservationStatus;
 import com.bandclub.rehearsal.schedule.domain.RoomException;
 import com.bandclub.rehearsal.schedule.repository.BookingRoundRepository;
 import com.bandclub.rehearsal.schedule.repository.ReservationRepository;
-import com.bandclub.rehearsal.schedule.repository.ReservationSettingsRepository;
 import com.bandclub.rehearsal.schedule.repository.ReservationSlotRepository;
 import com.bandclub.rehearsal.schedule.repository.RoomExceptionRepository;
 import com.bandclub.rehearsal.song.domain.Song;
@@ -46,7 +44,6 @@ public class BookingService {
     private final ScheduleService scheduleService;
     private final RoomOperatingHoursPolicy roomOperatingHoursPolicy;
     private final BookingRoundRepository roundRepository;
-    private final ReservationSettingsRepository settingsRepository;
     private final ReservationSlotRepository slotRepository;
     private final RoomExceptionRepository exceptionRepository;
     private final ReservationRepository reservationRepository;
@@ -60,7 +57,6 @@ public class BookingService {
             ScheduleService scheduleService,
             RoomOperatingHoursPolicy roomOperatingHoursPolicy,
             BookingRoundRepository roundRepository,
-            ReservationSettingsRepository settingsRepository,
             ReservationSlotRepository slotRepository,
             RoomExceptionRepository exceptionRepository,
             ReservationRepository reservationRepository,
@@ -73,7 +69,6 @@ public class BookingService {
         this.scheduleService = scheduleService;
         this.roomOperatingHoursPolicy = roomOperatingHoursPolicy;
         this.roundRepository = roundRepository;
-        this.settingsRepository = settingsRepository;
         this.slotRepository = slotRepository;
         this.exceptionRepository = exceptionRepository;
         this.reservationRepository = reservationRepository;
@@ -139,23 +134,17 @@ public class BookingService {
         validateDurationForWindow(durationMinutes, bookingWindow);
         validateBookingWindow(now, bookingWindow);
 
-        ReservationSettings settings = settingsRepository.findById(membership.getClubId())
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.CONFLICT,
-                        "RESERVATION_SETTINGS_NOT_READY",
-                        "예약 운영 설정이 준비되지 않았습니다."
-                ));
-
-        if (!settings.isAllowMultipleReservations()
-                && reservationRepository.existsByBookingRoundIdAndSongIdAndStatus(
-                round.getId(),
-                songId,
-                ReservationStatus.ACTIVE
-        )) {
+        long activeReservationCount =
+                reservationRepository.countByBookingRoundIdAndSongIdAndStatus(
+                        round.getId(),
+                        songId,
+                        ReservationStatus.ACTIVE
+                );
+        if (activeReservationCount >= bookingWindow.maxReservationsPerSong()) {
             throw new AppException(
                     HttpStatus.CONFLICT,
-                    "MULTIPLE_RESERVATIONS_NOT_ALLOWED",
-                    "이 회차에는 이미 해당 팀의 예약이 있습니다."
+                    "RESERVATION_LIMIT_REACHED",
+                    "이 무대 종류에서 해당 팀이 가질 수 있는 회차 내 최대 예약 건수에 도달했습니다."
             );
         }
 

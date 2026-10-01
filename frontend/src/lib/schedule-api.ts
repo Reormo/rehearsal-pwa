@@ -27,6 +27,7 @@ export type OperatingHoursUpdate = {
 
 export type ScheduleSettings = {
   allowMultipleReservations: boolean;
+  defaultMaxReservationsPerSong: number;
   defaultBookingOpenLeadMinutes: number;
   defaultMaxReservationMinutes: number;
   updatedBy: number | null;
@@ -41,6 +42,7 @@ export type StageBookingWindow = {
   bookingOpenAt: string;
   bookingCloseAt: string;
   maxReservationMinutes: number;
+  maxReservationsPerSong: number;
   updatedBy: number | null;
   updatedAt: string;
 };
@@ -210,6 +212,7 @@ export const scheduleAdminApi = {
 
   updateSettings(input: {
     allowMultipleReservations: boolean;
+    defaultMaxReservationsPerSong: number;
     defaultBookingOpenLeadMinutes: number;
     defaultMaxReservationMinutes: number;
   }) {
@@ -250,6 +253,7 @@ export const scheduleAdminApi = {
       bookingOpenAt: string;
       bookingCloseAt: string;
       maxReservationMinutes: number;
+      maxReservationsPerSong: number;
     },
   ) {
     return request<StageBookingWindow>(

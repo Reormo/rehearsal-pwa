@@ -30,9 +30,9 @@ public class SongController {
     }
 
     @GetMapping("/all")
-    public List<SongResponse> allSongs(@AuthenticationPrincipal Jwt jwt) {
+    public List<SongCatalogResponse> allSongs(@AuthenticationPrincipal Jwt jwt) {
         return songService.listActiveSongs(userId(jwt)).stream()
-                .map(SongResponse::from)
+                .map(SongCatalogResponse::from)
                 .toList();
     }
 
@@ -46,6 +46,36 @@ public class SongController {
 
     private long userId(Jwt jwt) {
         return Long.parseLong(jwt.getSubject());
+    }
+
+    public record SongCatalogResponse(
+            Long id,
+            String title,
+            Long stageTypeId,
+            String stageTypeName,
+            int memberCount,
+            String leaderName,
+            String leaderSessionName,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        static SongCatalogResponse from(SongService.SongView view) {
+            SongService.SongMemberView leader = view.members().stream()
+                    .filter(SongService.SongMemberView::leader)
+                    .findFirst()
+                    .orElse(null);
+            return new SongCatalogResponse(
+                    view.id(),
+                    view.title(),
+                    view.stageTypeId(),
+                    view.stageTypeName(),
+                    view.members().size(),
+                    leader == null ? null : leader.name(),
+                    leader == null ? null : leader.sessionName(),
+                    view.createdAt(),
+                    view.updatedAt()
+            );
+        }
     }
 
     public record SongResponse(

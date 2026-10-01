@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
+import { NumberWheelPicker } from "@/components/number-wheel-picker";
 import { adminApi, errorMessage } from "@/lib/api";
 import {
   BookingRound,
@@ -29,6 +30,8 @@ export default function AdminSchedulePage() {
 function AdminScheduleContent() {
   const queryClient = useQueryClient();
   const [allDayBlocked, setAllDayBlocked] = useState(false);
+  const [defaultReservationLimit, setDefaultReservationLimit] =
+    useState<number | null>(null);
 
   const exceptionRange = dateRange();
   const settingsQuery = useQuery({
@@ -118,6 +121,10 @@ function AdminScheduleContent() {
     roundMutation.error ??
     exceptionMutation.error ??
     deleteExceptionMutation.error;
+  const effectiveDefaultReservationLimit =
+    defaultReservationLimit ??
+    settingsQuery.data?.defaultMaxReservationsPerSong ??
+    1;
 
   return (
     <div className="space-y-7">
@@ -151,12 +158,12 @@ function AdminScheduleContent() {
       <section className="app-card">
         <p className="card-label">예약 정책</p>
         <h2 className="mt-2 text-lg font-bold text-slate-950">
-          동일 팀 복수 예약
+          기본 회차 내 최대 예약 건수
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          같은 팀이 한 회차에 예약을 여러 건 가질 수 있는지만 전역으로 관리합니다.
-          회차의 예약 오픈·종료 시각과 최대 예약 시간은 아래 준비된 회차에서 직접
-          설정합니다.
+          한 팀이 같은 회차에 가질 수 있는 활성 예약 수의 기본값입니다.
+          1회는 추가 중복 예약을 허용하지 않는다는 뜻이며, 아래 무대 종류별 정책에서
+          1~99회 사이의 값을 따로 지정할 수 있습니다.
         </p>
 
         {settingsQuery.isPending && (
@@ -170,9 +177,9 @@ function AdminScheduleContent() {
             className="mt-5"
             onSubmit={(event) => {
               event.preventDefault();
-              const form = new FormData(event.currentTarget);
               settingsMutation.mutate({
-                allowMultipleReservations: form.get("allowMultiple") === "on",
+                allowMultipleReservations: effectiveDefaultReservationLimit > 1,
+                defaultMaxReservationsPerSong: effectiveDefaultReservationLimit,
                 defaultBookingOpenLeadMinutes:
                   settingsQuery.data.defaultBookingOpenLeadMinutes,
                 defaultMaxReservationMinutes:
@@ -180,18 +187,19 @@ function AdminScheduleContent() {
               });
             }}
           >
-            <label className="block rounded-2xl border border-slate-200 p-4">
-              <span className="mt-1 flex items-center gap-3 text-sm font-semibold text-slate-700">
-                <input
-                  name="allowMultiple"
-                  type="checkbox"
-                  defaultChecked={
-                    settingsQuery.data.allowMultipleReservations
-                  }
+            <div className="max-w-xs">
+              <span className="card-label">기본 최대 예약</span>
+              <div className="mt-2">
+                <NumberWheelPicker
+                  value={effectiveDefaultReservationLimit}
+                  onChange={setDefaultReservationLimit}
+                  min={1}
+                  max={99}
+                  suffix="회"
+                  disabled={settingsMutation.isPending}
                 />
-                동일 팀의 회차 내 복수 예약 허용
-              </span>
-            </label>
+              </div>
+            </div>
 
             <button
               className="primary-button mt-4"
@@ -225,6 +233,7 @@ function AdminScheduleContent() {
               round={round}
               roundLabel={index === 0 ? "이번 회차" : "다음 회차"}
               stageTypes={stageTypes}
+              defaultMaxReservationsPerSong={effectiveDefaultReservationLimit}
               disabled={roundMutation.isPending}
               onSave={(
                 bookingOpenAt,
@@ -375,12 +384,14 @@ function RoundEditor({
   round,
   roundLabel,
   stageTypes,
+  defaultMaxReservationsPerSong,
   disabled,
   onSave,
 }: {
   round: BookingRound;
   roundLabel: "이번 회차" | "다음 회차";
   stageTypes: StageTypeSummary[];
+  defaultMaxReservationsPerSong: number;
   disabled: boolean;
   onSave: (
     bookingOpenAt: string,
@@ -401,16 +412,19 @@ function RoundEditor({
       bookingOpenAt,
       bookingCloseAt,
       maxReservationMinutes,
+      maxReservationsPerSong,
     }: {
       stageTypeId: number;
       bookingOpenAt: string;
       bookingCloseAt: string;
       maxReservationMinutes: number;
+      maxReservationsPerSong: number;
     }) =>
       scheduleAdminApi.updateStageWindow(round.id, stageTypeId, {
         bookingOpenAt,
         bookingCloseAt,
         maxReservationMinutes,
+        maxReservationsPerSong,
       }),
     onSuccess: async () => {
       await Promise.all([
@@ -468,11 +482,11 @@ function RoundEditor({
           <span className="count-badge">{roundStateLabel(round.state)}</span>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_160px_auto] lg:items-end">
-          <label>
+        <div className="mt-4 grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px_auto] xl:items-end">
+          <label className="min-w-0">
             <span className="card-label">기본 예약 오픈</span>
             <input
-              className="field-input mt-2"
+              className="field-input mt-2 min-w-0 max-w-full"
               type="datetime-local"
               name="bookingOpenAt"
               defaultValue={toKoreanDateTimeLocal(round.bookingOpenAt)}
@@ -480,10 +494,10 @@ function RoundEditor({
             />
           </label>
 
-          <label>
+          <label className="min-w-0">
             <span className="card-label">기본 예약 종료</span>
             <input
-              className="field-input mt-2"
+              className="field-input mt-2 min-w-0 max-w-full"
               type="datetime-local"
               name="bookingCloseAt"
               defaultValue={toKoreanDateTimeLocal(round.bookingCloseAt)}
@@ -522,8 +536,8 @@ function RoundEditor({
             <p className="card-label">무대 종류별 예약 정책</p>
             <p className="mt-1 text-sm leading-6 text-slate-500">
               현재 활성 곡에서 사용 중인 무대만 자동으로 나타납니다.
-              예약 오픈·종료 시각과 1회 최대 예약 시간을 종류별로 따로 지정할 수 있고,
-              별도 설정이 없으면 위 회차 기본 설정을 사용합니다.
+              예약 오픈·종료 시각, 1회 최대 예약 시간과 회차 내 최대 예약 건수를
+              종류별로 따로 지정할 수 있고, 별도 설정이 없으면 위 기본 설정을 사용합니다.
             </p>
           </div>
           <span className="count-badge">{stageTypes.length}종류</span>
@@ -554,10 +568,11 @@ function RoundEditor({
 
               return (
                 <StageWindowEditor
-                  key={`${stageType.id}-${customWindow?.bookingOpenAt ?? "default"}-${customWindow?.bookingCloseAt ?? "default"}`}
+                  key={`${stageType.id}-${customWindow?.bookingOpenAt ?? "default"}-${customWindow?.bookingCloseAt ?? "default"}-${customWindow?.maxReservationsPerSong ?? defaultMaxReservationsPerSong}`}
                   stageType={stageType}
                   round={round}
                   customWindow={customWindow}
+                  defaultMaxReservationsPerSong={defaultMaxReservationsPerSong}
                   disabled={
                     disabled ||
                     saveStageWindowMutation.isPending ||
@@ -567,12 +582,14 @@ function RoundEditor({
                     bookingOpenAt,
                     bookingCloseAt,
                     maxReservationMinutes,
+                    maxReservationsPerSong,
                   ) =>
                     saveStageWindowMutation.mutate({
                       stageTypeId: stageType.id,
                       bookingOpenAt,
                       bookingCloseAt,
                       maxReservationMinutes,
+                      maxReservationsPerSong,
                     })
                   }
                   onUseDefault={() =>
@@ -592,6 +609,7 @@ function StageWindowEditor({
   stageType,
   round,
   customWindow,
+  defaultMaxReservationsPerSong,
   disabled,
   onSave,
   onUseDefault,
@@ -601,14 +619,20 @@ function StageWindowEditor({
   customWindow:
     | Awaited<ReturnType<typeof scheduleAdminApi.stageWindows>>[number]
     | undefined;
+  defaultMaxReservationsPerSong: number;
   disabled: boolean;
   onSave: (
     bookingOpenAt: string,
     bookingCloseAt: string,
     maxReservationMinutes: number,
+    maxReservationsPerSong: number,
   ) => void;
   onUseDefault: () => void;
 }) {
+  const [maxReservationsPerSong, setMaxReservationsPerSong] = useState(
+    customWindow?.maxReservationsPerSong ?? defaultMaxReservationsPerSong,
+  );
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -619,6 +643,7 @@ function StageWindowEditor({
       new Date(`${openValue}:00+09:00`).toISOString(),
       new Date(`${closeValue}:00+09:00`).toISOString(),
       Number(form.get("stageMaxMinutes")),
+      maxReservationsPerSong,
     );
   }
 
@@ -634,11 +659,11 @@ function StageWindowEditor({
         </span>
       </div>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_160px_auto_auto] lg:items-end">
-        <label>
+      <div className="mt-3 grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px_150px_auto_auto] xl:items-end">
+        <label className="min-w-0">
           <span className="card-label">예약 오픈</span>
           <input
-            className="field-input mt-2"
+            className="field-input mt-2 min-w-0 max-w-full"
             type="datetime-local"
             name="stageBookingOpenAt"
             defaultValue={toKoreanDateTimeLocal(
@@ -648,10 +673,10 @@ function StageWindowEditor({
           />
         </label>
 
-        <label>
+        <label className="min-w-0">
           <span className="card-label">예약 종료</span>
           <input
-            className="field-input mt-2"
+            className="field-input mt-2 min-w-0 max-w-full"
             type="datetime-local"
             name="stageBookingCloseAt"
             defaultValue={toKoreanDateTimeLocal(
@@ -677,6 +702,20 @@ function StageWindowEditor({
               </option>
             ))}
           </select>
+        </label>
+
+        <label className="min-w-0">
+          <span className="card-label">회차 내 최대 예약</span>
+          <div className="mt-2">
+            <NumberWheelPicker
+              value={maxReservationsPerSong}
+              onChange={setMaxReservationsPerSong}
+              min={1}
+              max={99}
+              suffix="회"
+              disabled={disabled}
+            />
+          </div>
         </label>
 
         <button

@@ -132,10 +132,23 @@ public class AdminReservationService {
                     "보관된 곡에는 새 예약을 만들 수 없습니다."
             );
         }
-        validateDurationForWindow(
-                durationMinutes,
-                bookingWindowPolicy.resolve(round, song)
-        );
+        BookingWindowPolicy.ResolvedWindow bookingWindow =
+                bookingWindowPolicy.resolve(round, song);
+        validateDurationForWindow(durationMinutes, bookingWindow);
+
+        long activeReservationCount =
+                reservationRepository.countByBookingRoundIdAndSongIdAndStatus(
+                        round.getId(),
+                        songId,
+                        ReservationStatus.ACTIVE
+                );
+        if (activeReservationCount >= bookingWindow.maxReservationsPerSong()) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "RESERVATION_LIMIT_REACHED",
+                    "이 무대 종류에서 해당 팀이 가질 수 있는 회차 내 최대 예약 건수에 도달했습니다."
+            );
+        }
 
         List<ReservationSlot> lockedSlots = slotRepository.findRangeForUpdate(
                 round.getId(),

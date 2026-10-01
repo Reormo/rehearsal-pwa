@@ -11,7 +11,7 @@ import {
   UnavailableScheduleSlot,
 } from "@/lib/schedule-api";
 
-const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 export default function HomePage() {
   return (
@@ -233,10 +233,16 @@ function HomeRehearsalCalendar() {
       )}
 
       <div className="mt-4 grid grid-cols-7 gap-1 text-center">
-        {WEEKDAYS.map((weekday) => (
+        {WEEKDAYS.map((weekday, index) => (
           <div
             key={weekday}
-            className="py-2 text-xs font-bold text-slate-400"
+            className={`py-2 text-xs font-bold ${
+              index === 0
+                ? "text-red-500"
+                : index === 6
+                  ? "text-blue-500"
+                  : "text-slate-400"
+            }`}
           >
             {weekday}
           </div>
@@ -333,6 +339,13 @@ function HomeCalendarDay({
   selected: boolean;
   onClick: () => void;
 }) {
+  const weekendText =
+    date.getDay() === 0
+      ? "text-red-500"
+      : date.getDay() === 6
+        ? "text-blue-500"
+        : "text-slate-800";
+
   return (
     <button
       type="button"
@@ -340,7 +353,7 @@ function HomeCalendarDay({
       className={`flex min-h-12 items-center justify-center rounded-xl text-sm font-bold transition ${
         selected
           ? "bg-slate-950 text-white"
-          : "bg-white text-slate-800 hover:bg-slate-100"
+          : `bg-white ${weekendText} hover:bg-slate-100`
       } ${outside && !selected ? "opacity-30" : ""}`}
     >
       {date.getDate()}
@@ -389,11 +402,11 @@ function groupDayReservations(
 
 function calendarRange(month: Date) {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const mondayOffset = (first.getDay() + 6) % 7;
+  const sundayOffset = first.getDay();
   const start = new Date(
     first.getFullYear(),
     first.getMonth(),
-    first.getDate() - mondayOffset,
+    first.getDate() - sundayOffset,
   );
   const dates = Array.from({ length: 42 }, (_, index) => {
     return new Date(

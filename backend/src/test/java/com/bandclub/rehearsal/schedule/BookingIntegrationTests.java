@@ -126,7 +126,7 @@ class BookingIntegrationTests {
                         60
                 )
         );
-        assertEquals("MULTIPLE_RESERVATIONS_NOT_ALLOWED", error.getCode());
+        assertEquals("RESERVATION_LIMIT_REACHED", error.getCode());
     }
 
     @Test

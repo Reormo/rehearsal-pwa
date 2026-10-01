@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -128,6 +129,25 @@ public class AdminSongController {
         SongController.SongResponse response = SongController.SongResponse.from(songService.restoreSong(actorUserId, songId));
         actionLogService.record(actorUserId, "SONG_RESTORE", "SONG", songId, null, null, java.util.Map.of("status", response.status().name()));
         return response;
+    }
+
+    @DeleteMapping("/{songId}")
+    public ResponseEntity<Void> deleteArchived(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long songId
+    ) {
+        long actorUserId = userId(jwt);
+        songService.deleteArchivedSong(actorUserId, songId);
+        actionLogService.record(
+                actorUserId,
+                "SONG_DELETE",
+                "SONG",
+                songId,
+                null,
+                null,
+                null
+        );
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{songId}/members")

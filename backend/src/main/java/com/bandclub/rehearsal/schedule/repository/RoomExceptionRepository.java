@@ -11,6 +11,8 @@ public interface RoomExceptionRepository extends JpaRepository<RoomException, Lo
 
     Optional<RoomException> findByIdAndClubId(Long id, Long clubId);
 
+    long deleteByExceptionDateBefore(LocalDate date);
+
     List<RoomException> findAllByClubIdAndExceptionDateOrderByBlockedStartMinuteAsc(
             Long clubId,
             LocalDate exceptionDate

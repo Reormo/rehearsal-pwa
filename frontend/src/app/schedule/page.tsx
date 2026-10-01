@@ -23,7 +23,7 @@ import {
   UnavailableScheduleSlot,
 } from "@/lib/schedule-api";
 
-const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const ALLOWED_DURATIONS = [30, 60, 90, 120, 150, 180];
 
 export default function SchedulePage() {
@@ -260,10 +260,16 @@ function ScheduleContent({ user }: { user: AuthUser }) {
         )}
 
         <div className="mt-5 grid grid-cols-7 gap-1 text-center">
-          {WEEKDAYS.map((weekday) => (
+          {WEEKDAYS.map((weekday, index) => (
             <div
               key={weekday}
-              className="py-2 text-xs font-bold text-slate-400"
+              className={`py-2 text-xs font-bold ${
+                index === 0
+                  ? "text-red-500"
+                  : index === 6
+                    ? "text-blue-500"
+                    : "text-slate-400"
+              }`}
             >
               {weekday}
             </div>
@@ -338,8 +344,10 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 </p>
               )}
               <p className="mt-1 text-slate-500">
-                1회 최대 {effectiveMaxReservationMinutes}분 · 일반 슬롯{" "}
-                {dayQuery.data.standardSlots.length}개
+                1회 최대 {effectiveMaxReservationMinutes}분
+                {bookingOptionsQuery.data &&
+                  ` · 회차 내 예약 ${bookingOptionsQuery.data.currentReservationCount}/${bookingOptionsQuery.data.maxReservationsPerSong}건`}
+                {" · "}일반 슬롯 {dayQuery.data.standardSlots.length}개
               </p>
               {dayQuery.data.roomStatus === "PARTIAL_BLOCKED" && (
                 <p className="mt-2 font-semibold text-amber-700">
@@ -432,8 +440,11 @@ function ScheduleContent({ user }: { user: AuthUser }) {
               {bookingOptionsQuery.data &&
                 !bookingOptionsQuery.data.acceptingReservations && (
                   <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-800">
-                    현재 이 회차는 예약 접수 시간이 아닙니다. 시간표는 볼 수 있지만
-                    새 예약은 서버에서 허용하지 않습니다.
+                    {bookingOptionsQuery.data.maxReservationsPerSong > 0 &&
+                    bookingOptionsQuery.data.currentReservationCount >=
+                      bookingOptionsQuery.data.maxReservationsPerSong
+                      ? `이 팀은 이번 회차 최대 예약 ${bookingOptionsQuery.data.maxReservationsPerSong}건을 모두 사용했습니다.`
+                      : "현재 이 회차는 예약 접수 시간이 아닙니다. 시간표는 볼 수 있지만 새 예약은 서버에서 허용하지 않습니다."}
                   </p>
                 )}
               {bookingOptionsQuery.data?.acceptingReservations &&
@@ -642,7 +653,19 @@ function CalendarDay({
         !prepared ? "cursor-not-allowed opacity-25" : ""
       }`}
     >
-      <span className="text-xs font-bold">{date.getDate()}</span>
+      <span
+        className={`text-xs font-bold ${
+          selected
+            ? "text-white"
+            : date.getDay() === 0
+              ? "text-red-500"
+              : date.getDay() === 6
+                ? "text-blue-500"
+                : "text-slate-800"
+        }`}
+      >
+        {date.getDate()}
+      </span>
       <span
         className={`mt-1 block whitespace-nowrap text-[9px] font-semibold leading-4 ${
           selected
@@ -827,11 +850,11 @@ function bookingOptionsForSlot(
 
 function calendarRange(month: Date) {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const mondayOffset = (first.getDay() + 6) % 7;
+  const sundayOffset = first.getDay();
   const start = new Date(
     first.getFullYear(),
     first.getMonth(),
-    first.getDate() - mondayOffset,
+    first.getDate() - sundayOffset,
   );
   const dates = Array.from({ length: 42 }, (_, index) => {
     return new Date(

@@ -53,6 +53,18 @@ export type Song = {
   members: SongMember[];
 };
 
+export type SongCatalogItem = {
+  id: number;
+  title: string;
+  stageTypeId: number;
+  stageTypeName: string;
+  memberCount: number;
+  leaderName: string | null;
+  leaderSessionName: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Announcement = {
   id: number;
   title: string;
@@ -390,6 +402,12 @@ export const adminApi = {
     });
   },
 
+  deleteSong(songId: number) {
+    return request<void>(`/api/admin/songs/${songId}`, {
+      method: "DELETE",
+    });
+  },
+
   addSongMember(songId: number, userId: number, sessionName: string) {
     return request<Song>(`/api/admin/songs/${songId}/members`, {
       method: "POST",
@@ -427,6 +445,10 @@ export const announcementApi = {
 export const songApi = {
   mine() {
     return request<Song[]>("/api/songs");
+  },
+
+  all() {
+    return request<SongCatalogItem[]>("/api/songs/all");
   },
 
   detail(songId: number) {

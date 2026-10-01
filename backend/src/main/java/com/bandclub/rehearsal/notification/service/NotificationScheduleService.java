@@ -93,8 +93,7 @@ public class NotificationScheduleService {
                             + ":" + candidate.userId();
             String title = candidate.stageTypeName()
                     + " 예약 오픈이 곧 시작돼요";
-            String body = candidate.roundNo() + "회차 · "
-                    + candidate.stageTypeName()
+            String body = candidate.stageTypeName()
                     + " 팀 예약이 "
                     + DATE_TIME.format(
                     candidate.bookingOpenAt().atZone(SEOUL)
@@ -178,9 +177,7 @@ public class NotificationScheduleService {
                             + ":" + candidate.userId();
             String title = candidate.stageTypeName()
                     + " 예약이 열렸어요";
-            String body = candidate.roundNo()
-                    + "회차 · "
-                    + candidate.stageTypeName()
+            String body = candidate.stageTypeName()
                     + " 팀 예약이 시작되었습니다. 지금 시간표에서 예약할 수 있어요.";
 
             if (createNotification(

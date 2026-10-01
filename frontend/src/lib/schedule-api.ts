@@ -118,6 +118,8 @@ export type BookingOptions = {
   date: string;
   durationMinutes: number;
   maxReservationMinutes: number;
+  maxReservationsPerSong: number;
+  currentReservationCount: number;
   acceptingReservations: boolean;
   stageTypeName: string | null;
   bookingOpenAt: string | null;

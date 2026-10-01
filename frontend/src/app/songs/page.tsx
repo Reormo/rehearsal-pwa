@@ -177,50 +177,27 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {visibleSongs.map((song) => {
-          const leader = song.members.find((member) => member.leader);
-          return (
-            <article key={song.id} className="app-card">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="truncate text-xl font-black text-slate-950">
-                    {song.title}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    팀장 {leader ? `${leader.name} · ${leader.sessionName}` : "미지정"}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap justify-end gap-2">
-                  <span className="count-badge">{song.stageTypeName}</span>
-                  <span className="count-badge">{song.members.length}명</span>
-                </div>
+        {visibleSongs.map((song) => (
+          <article key={song.id} className="app-card">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate text-xl font-black text-slate-950">
+                  {song.title}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  팀장{" "}
+                  {song.leaderName
+                    ? `${song.leaderName} · ${song.leaderSessionName ?? "세션 미지정"}`
+                    : "미지정"}
+                </p>
               </div>
-
-              <div className="mt-5 divide-y divide-slate-100 border-t border-slate-100">
-                {song.members.map((member) => (
-                  <div
-                    key={member.userId}
-                    className="flex items-center justify-between gap-3 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-slate-900">
-                        {member.name}
-                        {member.leader && (
-                          <span className="ml-2 text-xs font-extrabold text-slate-500">
-                            팀장
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                      {member.sessionName}
-                    </span>
-                  </div>
-                ))}
+              <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                <span className="count-badge">{song.stageTypeName}</span>
+                <span className="count-badge">{song.memberCount}명</span>
               </div>
-            </article>
-          );
-        })}
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   );

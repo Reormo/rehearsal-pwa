@@ -35,3 +35,6 @@ ALTER TABLE booking_round_stage_windows
 ALTER TABLE booking_round_stage_windows
     ADD CONSTRAINT ck_booking_round_stage_windows_max_reservations_per_song
     CHECK (max_reservations_per_song BETWEEN 1 AND 99);
+
+CREATE INDEX idx_reservations_round_song_status
+    ON reservations (booking_round_id, song_id, status);

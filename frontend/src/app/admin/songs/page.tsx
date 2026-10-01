@@ -680,8 +680,13 @@ function MemberSearchField({
 function compareSongText(first: string, second: string) {
   const firstValue = first.trim();
   const secondValue = second.trim();
-  const firstGroup = /^[A-Za-z]/.test(firstValue) ? 0 : 1;
-  const secondGroup = /^[A-Za-z]/.test(secondValue) ? 0 : 1;
+  const textGroup = (value: string) => {
+    if (/^[A-Za-z]/.test(value)) return 0;
+    if (/^[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(value)) return 1;
+    return 2;
+  };
+  const firstGroup = textGroup(firstValue);
+  const secondGroup = textGroup(secondValue);
   if (firstGroup !== secondGroup) return firstGroup - secondGroup;
   return firstValue.localeCompare(secondValue, "ko-KR", {
     numeric: true,

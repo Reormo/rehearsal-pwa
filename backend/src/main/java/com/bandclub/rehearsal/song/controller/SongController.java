@@ -29,6 +29,13 @@ public class SongController {
                 .toList();
     }
 
+    @GetMapping("/all")
+    public List<SongResponse> allSongs(@AuthenticationPrincipal Jwt jwt) {
+        return songService.listActiveSongs(userId(jwt)).stream()
+                .map(SongResponse::from)
+                .toList();
+    }
+
     @GetMapping("/{songId}")
     public SongResponse mySong(
             @AuthenticationPrincipal Jwt jwt,

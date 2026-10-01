@@ -23,7 +23,7 @@ import {
   UnavailableScheduleSlot,
 } from "@/lib/schedule-api";
 
-const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const ALLOWED_DURATIONS = [30, 60, 90, 120, 150, 180];
 
 export default function SchedulePage() {
@@ -260,10 +260,16 @@ function ScheduleContent({ user }: { user: AuthUser }) {
         )}
 
         <div className="mt-5 grid grid-cols-7 gap-1 text-center">
-          {WEEKDAYS.map((weekday) => (
+          {WEEKDAYS.map((weekday, index) => (
             <div
               key={weekday}
-              className="py-2 text-xs font-bold text-slate-400"
+              className={`py-2 text-xs font-bold ${
+                index === 0
+                  ? "text-red-500"
+                  : index === 6
+                    ? "text-blue-500"
+                    : "text-slate-400"
+              }`}
             >
               {weekday}
             </div>
@@ -642,7 +648,19 @@ function CalendarDay({
         !prepared ? "cursor-not-allowed opacity-25" : ""
       }`}
     >
-      <span className="text-xs font-bold">{date.getDate()}</span>
+      <span
+        className={`text-xs font-bold ${
+          selected
+            ? "text-white"
+            : date.getDay() === 0
+              ? "text-red-500"
+              : date.getDay() === 6
+                ? "text-blue-500"
+                : "text-slate-800"
+        }`}
+      >
+        {date.getDate()}
+      </span>
       <span
         className={`mt-1 block whitespace-nowrap text-[9px] font-semibold leading-4 ${
           selected
@@ -827,11 +845,11 @@ function bookingOptionsForSlot(
 
 function calendarRange(month: Date) {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const mondayOffset = (first.getDay() + 6) % 7;
+  const sundayOffset = first.getDay();
   const start = new Date(
     first.getFullYear(),
     first.getMonth(),
-    first.getDate() - mondayOffset,
+    first.getDate() - sundayOffset,
   );
   const dates = Array.from({ length: 42 }, (_, index) => {
     return new Date(

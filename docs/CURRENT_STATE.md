@@ -2,13 +2,15 @@
 
 ## Current task
 
-Establish the repository-specific AI development harness for the 무혼 rehearsal reservation PWA.
+Establish a reusable AI development harness pattern, then apply it to the 무혼 rehearsal reservation PWA.
 
 ## Current branch
 
 `docs/muhon-agent-harness`
 
-Target base: `main`
+Target base:
+
+`main`
 
 Base commit at task start:
 
@@ -16,17 +18,39 @@ Base commit at task start:
 
 ## Completed work
 
-- Added repository-specific AI workflow rules in `AGENTS.md`.
-- Defined PATCH mode for normal ChatGPT work.
-- Defined DIRECT mode for Codex/local coding agents.
-- Fixed the default development base branch to `main`.
-- Added exact backend/frontend verification commands.
-- Added production database/Flyway safety rules.
-- Added authentication/security invariants.
-- Added scheduling/reservation invariants.
-- Added PWA/mobile UX constraints.
-- Added deployment handoff and production-safety rules.
-- Added explicit source-of-truth/conflict handling so agents do not silently reconcile stale documents.
+- Reworked the harness into two layers:
+  1. reusable generic AI development harness
+  2. 무혼-specific repository overrides
+- Added explicit PATCH mode for normal ChatGPT workflows.
+- Added explicit DIRECT mode for Codex/local coding agents.
+- Clarified Source of Truth:
+  - current implementation is established by code/Git/migrations/tests/deployment state
+  - desired behavior is established by human-approved policy/specification
+  - code drift does not silently become policy
+- Added exact base-commit recording for generated patches.
+- Added protections for existing local changes and destructive Git commands.
+- Added generic rules for:
+  - minimal change scope
+  - API contracts
+  - DB migrations
+  - testing/CI
+  - debugging
+  - security
+  - deployment
+  - documentation drift
+  - Definition of Done
+- Added 무혼-specific rules for:
+  - `main` as default base branch
+  - Java 21 / Spring Boot / PostgreSQL / Flyway / Next.js PWA stack
+  - exact backend/frontend verification commands
+  - HttpOnly cookie authentication invariants
+  - Flyway and production DB/volume safety
+  - 30-minute scheduling and 10:00-22:00 default room hours
+  - current 1-99 maximum reservation-count policy
+  - archived-song conditional hard delete behavior
+  - mobile/PWA UX constraints
+  - production domain and server-admin archive handoff
+  - mandatory `docs/CURRENT_STATE.md` handoff policy
 
 ## Recent implemented state
 
@@ -51,13 +75,16 @@ Recent behavior includes:
 
 ## Important decisions
 
+- The reusable harness and project-specific rules are conceptually separate layers.
+- The root `AGENTS.md` in this repository contains both the generic rules and the 무혼 overrides so agents need one entry point.
 - `main` is the default target/base branch for new work.
-- ChatGPT PATCH mode should prefer unified Git patches rather than whole-file PowerShell rewrite scripts.
+- ChatGPT PATCH mode should use unified Git patches and report exact base branch/commit.
 - Codex/local agents may edit directly after reading `AGENTS.md` and this file.
 - Existing production PostgreSQL data, volumes, environment variables, and routing must be preserved.
 - Already-deployed Flyway migrations are immutable; schema changes use new forward migrations.
 - Authentication remains HttpOnly-cookie based; auth tokens must not be moved to `localStorage`.
 - Product-policy conflicts must be reported rather than silently resolved.
+- Pre-existing unrelated documentation drift should be recorded and handled in a dedicated docs-sync task rather than mixed into feature work.
 
 ## Tests / CI status
 
@@ -69,7 +96,12 @@ For PR #15 before merge:
 - frontend static production build with `NEXT_STATIC_EXPORT=true`: passed
 - local UI inspection: completed
 
-No runtime tests are required solely for adding this documentation harness, but the harness PR diff should be reviewed and `git diff --check` should pass.
+For the harness documentation branch:
+
+- runtime code is unchanged
+- only documentation files are changed
+- Markdown structure/diff should be reviewed before merge
+- `git diff --check` should be run locally before merge
 
 ## Known documentation drift
 
@@ -82,9 +114,10 @@ These are known mismatches that future work must not silently "fix" without revi
 
 ## Remaining work
 
-- Review and merge the harness PR.
-- In a later dedicated documentation-sync task, reconcile the known policy/ERD/deployment documentation drift with the current approved behavior.
-- Keep this file updated when future agent-driven work changes important implementation or decisions.
+- Review PR #16.
+- Run local `git diff --check` after pulling the branch if desired.
+- Merge the harness PR when the rules are accepted.
+- In a later dedicated documentation-sync task, reconcile known policy/ERD/deployment drift with the current approved behavior.
 
 ## Blockers
 

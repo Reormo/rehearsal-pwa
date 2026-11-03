@@ -198,17 +198,18 @@ button:disabled {
   }
 }
 
-html[data-page-transition="right"] .page-transition-surface {
+.page-enter-from-right {
   animation: page-enter-from-right 360ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-html[data-page-transition="left"] .page-transition-surface {
+.page-enter-from-left {
   animation: page-enter-from-left 360ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-transition-surface {
-    animation: none !important;
+  .page-enter-from-right,
+  .page-enter-from-left {
+    animation: none;
   }
 }
 

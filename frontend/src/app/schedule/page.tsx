@@ -686,55 +686,63 @@ function CalendarDay({
   onClick: () => void;
 }) {
   const outside = date.getMonth() !== currentMonth;
-  const closed = summary?.roomStatus === "CLOSED";
-  const partial = summary?.roomStatus === "PARTIAL_BLOCKED";
   const prepared = Boolean(summary?.roundId);
+  const past = toIsoDate(date) < todayIso();
+  const upcoming = summary?.roundState === "UPCOMING";
+  const closedRound = summary?.roundState === "CLOSED";
+  const roomClosed = summary?.roomStatus === "CLOSED";
+  const active =
+    prepared &&
+    !past &&
+    !outside &&
+    !upcoming &&
+    !closedRound &&
+    !roomClosed;
+  const disabled = !active;
+  const statusLabel =
+    !past && !outside && prepared && upcoming
+      ? "준비 중"
+      : active
+        ? "예약 가능"
+        : null;
 
   return (
     <button
       type="button"
-      disabled={!prepared}
+      disabled={disabled}
       onClick={onClick}
       className={`min-h-16 overflow-hidden rounded-xl border px-1 py-2 text-left transition ${
-        selected
+        selected && active
           ? "border-slate-950 bg-slate-950 text-white"
-          : "border-slate-100 bg-white hover:border-slate-300"
-      } ${outside && !selected ? "opacity-35" : ""} ${
-        !prepared ? "cursor-not-allowed opacity-25" : ""
+          : "border-slate-100 bg-white"
+      } ${outside ? "opacity-30" : ""} ${
+        disabled ? "cursor-not-allowed" : "hover:border-slate-300"
       }`}
     >
       <span
         className={`text-xs font-bold ${
-          selected
+          selected && active
             ? "text-white"
             : date.getDay() === 0
               ? "text-red-500"
               : date.getDay() === 6
                 ? "text-blue-500"
-                : "text-slate-800"
+                : past || disabled
+                  ? "text-slate-400"
+                  : "text-slate-800"
         }`}
       >
         {date.getDate()}
       </span>
-      <span
-        className={`mt-1 block whitespace-nowrap text-[9px] font-semibold leading-4 ${
-          selected
-            ? "text-white/80"
-            : closed
-              ? "text-red-500"
-              : partial
-                ? "text-amber-600"
-                : "text-slate-400"
-        }`}
-      >
-        {closed
-          ? "휴관"
-          : partial
-            ? `예외 ${summary?.blockedPeriodCount ?? 0}`
-            : prepared
-              ? "10~22"
-              : "준비"}
-      </span>
+      {statusLabel && (
+        <span
+          className={`mt-1 block whitespace-nowrap text-[9px] font-semibold leading-4 ${
+            selected && active ? "text-white/80" : "text-slate-400"
+          }`}
+        >
+          {statusLabel}
+        </span>
+      )}
     </button>
   );
 }
@@ -925,6 +933,15 @@ function toIsoDate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function todayIso() {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function formatDateLabel(value: string) {

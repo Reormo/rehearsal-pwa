@@ -213,12 +213,6 @@ function ScheduleContent({ user }: { user: AuthUser }) {
 
   return (
     <div className="space-y-7">
-      <section>
-        <h1 className="text-2xl font-black tracking-tight text-slate-950">
-          합주 예약
-        </h1>
-      </section>
-
       <section className="app-card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

@@ -69,7 +69,10 @@ Completed locally on 2026-11-03:
 - frontend lint initially found 1 warning + 1 error in branch-added code:
   - unused admin reservation datetime helper
   - synchronous Android `setState` inside an effect
-- both lint findings were fixed on the branch; lint re-run is pending
+- both lint findings were fixed on the branch
+- frontend ESLint re-run: passed with no warnings/errors
+- frontend Vitest re-run after lint fixes: 5 files / 11 tests passed
+- frontend static production build re-run after lint fixes: passed
 
 This branch was edited directly through GitHub as explicitly requested.
 
@@ -129,15 +132,12 @@ Existing unrelated drift remains intentionally out of scope:
 
 ## Remaining work
 
-1. Pull this branch locally.
-2. Run backend tests.
-3. Run frontend tests, lint, and static production build.
-4. Inspect the requested UI changes in browser/mobile widths.
-5. Test Android popup behavior on the actual Galaxy device.
-6. Fix any failures found locally and push them to this branch.
-7. Open/review the PR only after verification.
-8. Merge to `main` only after approval.
-9. Create the final source ZIP from verified `main` and hand it to the server administrator.
+1. Inspect the requested UI changes in browser/mobile widths.
+2. Test Android popup behavior on the actual Galaxy device.
+3. Fix any failures found during manual verification and push them to this branch.
+4. Open/review the PR only after manual verification.
+5. Merge to `main` only after approval.
+6. Create the final source ZIP from verified `main` and hand it to the server administrator.
 
 ## Blockers
 

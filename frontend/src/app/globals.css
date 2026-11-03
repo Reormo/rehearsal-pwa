@@ -199,11 +199,11 @@ button:disabled {
 }
 
 html[data-page-transition="right"] .page-transition-surface {
-  animation: page-enter-from-right 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: page-enter-from-right 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html[data-page-transition="left"] .page-transition-surface {
-  animation: page-enter-from-left 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: page-enter-from-left 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

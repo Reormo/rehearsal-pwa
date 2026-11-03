@@ -23,6 +23,9 @@ Base commit:
   - main tabs (Home/Reservation/Notice/Admin/All) do not show an in-app back button
   - subpages show a top-left back button while keeping the notification bell on the right
   - bottom-tab navigation uses replace-style navigation so switching main tabs does not keep stacking browser history
+  - trailing slashes are normalized before route comparison, so tapping the currently active main tab is a complete no-op with no animation
+  - only exact bottom-navigation destinations are treated as main tabs; subpages alone show the in-app back button
+  - page transition duration is 300ms (slightly slower than the previous 220ms)
   - moving to a tab on the right uses a right-entry animation; moving to a tab on the left uses a left-entry animation
   - links from a main page into a subpage enter from the right; the in-app back action returns with a left-entry animation
   - OS/browser history cannot be forcibly cleared or the PWA forcibly closed, so Galaxy hardware-back exit behavior remains browser/OS controlled

@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { useState } from "react";
 import { RealtimeBridge } from "@/components/realtime-bridge";
+import { NavigationTransitionProvider } from "@/components/navigation-transition-provider";
 import { AuthUser, authApi } from "@/lib/api";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -28,8 +29,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RealtimeAuthObserver />
-      {children}
+      <NavigationTransitionProvider>
+        <RealtimeAuthObserver />
+        {children}
+      </NavigationTransitionProvider>
     </QueryClientProvider>
   );
 }

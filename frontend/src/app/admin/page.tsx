@@ -120,12 +120,6 @@ function AdminContent({
 
   return (
     <div className="space-y-7">
-      <section>
-        <h1 className="text-2xl font-black tracking-tight text-slate-950">
-          관리자
-        </h1>
-      </section>
-
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <AdminMenuCard
           href="/admin/songs"

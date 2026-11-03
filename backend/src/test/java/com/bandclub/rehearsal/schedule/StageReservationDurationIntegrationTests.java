@@ -76,7 +76,7 @@ class StageReservationDurationIntegrationTests {
                 superAdminId,
                 round.id(),
                 typeOneSong.stageTypeId(),
-                Instant.now().minusSeconds(60),
+                Instant.now().minusSeconds(1800).truncatedTo(java.time.temporal.ChronoUnit.HOURS),
                 roundClose,
                 60
         );
@@ -84,7 +84,7 @@ class StageReservationDurationIntegrationTests {
                 superAdminId,
                 round.id(),
                 typeTwoSong.stageTypeId(),
-                Instant.now().minusSeconds(60),
+                Instant.now().minusSeconds(1800).truncatedTo(java.time.temporal.ChronoUnit.HOURS),
                 roundClose,
                 120
         );

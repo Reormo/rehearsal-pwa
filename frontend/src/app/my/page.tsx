@@ -8,7 +8,6 @@ import { AuthGate } from "@/components/auth-gate";
 import { authApi, AuthUser, errorMessage } from "@/lib/api";
 
 const menuItems = [
-  { href: "/my/account", label: "내 계정", icon: "account" },
   { href: "/my/notifications", label: "알림 설정", icon: "notification" },
   { href: "/my/teams", label: "내 팀", icon: "team" },
   { href: "/songs", label: "전체 곡 보기", icon: "team" },

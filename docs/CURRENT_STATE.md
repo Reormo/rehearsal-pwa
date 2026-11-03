@@ -110,7 +110,8 @@ Completed locally on 2026-11-03:
 - frontend Vitest re-run after lint fixes: 5 files / 11 tests passed
 - frontend static production build re-run after lint fixes: passed
 - after the later mobile copy/eyebrow cleanup, frontend lint/test/build passed
-- after the newest navigation/header/transition refinement, frontend lint/test/build must be re-run before merge
+- after the newest navigation/header/transition refinement, frontend Vitest and static build passed, but ESLint rejected direct DOM mutation in AppShell
+- navigation transition state was then moved into a root React Context provider; frontend lint/test/build must be re-run after this structural fix
 
 This branch was edited directly through GitHub as explicitly requested.
 

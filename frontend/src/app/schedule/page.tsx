@@ -411,10 +411,6 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             <div className="mt-6 border-t border-slate-200 pt-6">
               <div>
                 <p className="card-label">3. 예약 길이 선택</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  선택한 팀은 최대 {effectiveMaxReservationMinutes}분까지 예약할 수
-                  있습니다.
-                </p>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {allowedDurations.map((duration) => (
@@ -443,7 +439,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 <p className="card-label">4. 시간 선택</p>
                 <button
                   type="button"
-                  className="secondary-button flex h-9 w-9 shrink-0 items-center justify-center p-0"
+                  className="secondary-button flex h-10 w-10 shrink-0 items-center justify-center p-0"
                   aria-label="예약 현황 새로고침"
                   title="예약 현황 새로고침"
                   disabled={refreshing}
@@ -452,7 +448,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 24 24"
-                    className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                    className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"

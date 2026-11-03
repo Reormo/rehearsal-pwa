@@ -102,7 +102,7 @@ function HomeContent({ user }: { user: AuthUser }) {
             href="/my/reservations"
             className="shrink-0 text-xs font-bold text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline"
           >
-            수정하기
+            전체보기
           </Link>
         </div>
 
@@ -119,7 +119,7 @@ function HomeContent({ user }: { user: AuthUser }) {
         )}
         {reservationsQuery.data && reservationsQuery.data.length > 0 && (
           <div className="mt-5 divide-y divide-slate-100 border-y border-slate-100">
-            {reservationsQuery.data.slice(0, 4).map((reservation) => (
+            {reservationsQuery.data.map((reservation) => (
               <div
                 key={reservation.id}
                 className="flex items-center justify-between gap-4 py-4"

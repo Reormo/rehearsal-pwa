@@ -251,14 +251,12 @@ function mainTabForPath(
 ) {
   if (pathname === "/") return "/";
 
-  return (
-    navItems
-      .filter((item) => item.href !== "/")
-      .find(
-        (item) =>
-          pathname === item.href || pathname.startsWith(`${item.href}/`),
-      )?.href ?? "/"
-  );
+  return navItems
+    .filter((item) => item.href !== "/")
+    .find(
+      (item) =>
+        pathname === item.href || pathname.startsWith(`${item.href}/`),
+    )?.href ?? null;
 }
 
 function NavIcon({

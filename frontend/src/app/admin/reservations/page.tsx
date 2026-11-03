@@ -122,8 +122,7 @@ function AdminReservationsContent() {
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">ADMIN · RESERVATIONS</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
             예약 강제 관리
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">

@@ -76,8 +76,7 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
     <div className="space-y-6">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">ALL SONGS</p>
-          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950">
+          <h1 className="text-2xl font-black tracking-tight text-slate-950">
             전체 곡 보기
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">

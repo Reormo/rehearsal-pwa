@@ -221,31 +221,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
               예약할 팀
             </h2>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="secondary-button flex h-9 w-9 shrink-0 items-center justify-center p-0"
-              aria-label="예약 현황 새로고침"
-              title="예약 현황 새로고침"
-              disabled={refreshing}
-              onClick={() => void refreshSchedule()}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path
-                  d="M20 11a8 8 0 1 0-2.34 5.66M20 11V5m0 6h-6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
+          <span aria-hidden="true" className="h-9 w-9" />
         </div>
 
         {leaderSongsQuery.isPending && (
@@ -463,8 +439,31 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             </div>
 
             <div className="mt-6">
-              <div>
+              <div className="flex items-center justify-between gap-3">
                 <p className="card-label">4. 시간 선택</p>
+                <button
+                  type="button"
+                  className="secondary-button flex h-9 w-9 shrink-0 items-center justify-center p-0"
+                  aria-label="예약 현황 새로고침"
+                  title="예약 현황 새로고침"
+                  disabled={refreshing}
+                  onClick={() => void refreshSchedule()}
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      d="M20 11a8 8 0 1 0-2.34 5.66M20 11V5m0 6h-6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
               </div>
 
               {!effectiveSongId && (
@@ -587,27 +586,6 @@ function ScheduleContent({ user }: { user: AuthUser }) {
 
             <div className="mt-6 rounded-2xl border border-slate-200 p-4">
               <p className="card-label">5. 예약 요청</p>
-              <p className="mt-2 flex items-start gap-2 text-sm font-semibold leading-6 text-amber-600">
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  className="mt-0.5 h-4 w-4 shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    d="M12 3 2.8 19h18.4L12 3Z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M12 9v4" strokeLinecap="round" />
-                  <path d="M12 17h.01" strokeLinecap="round" />
-                </svg>
-                <span>
-                  화면에 보였던 시간이더라도 다른 팀이 먼저 확정했다면 예약은 실패할 수 있습니다.
-                </span>
-              </p>
               {bookingMessage && (
                 <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{bookingMessage}</p>
               )}
@@ -637,6 +615,27 @@ function ScheduleContent({ user }: { user: AuthUser }) {
               >
                 {bookingMutation.isPending ? "예약 확정 중..." : "선착순 예약 확정"}
               </button>
+              <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-slate-400">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M12 3 2.8 19h18.4L12 3Z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M12 9v4" strokeLinecap="round" />
+                  <path d="M12 17h.01" strokeLinecap="round" />
+                </svg>
+                <span>
+                  화면에 보였던 시간이라도 다른 팀이 먼저 확정했다면 예약은 실패할 수 있습니다.
+                </span>
+              </p>
             </div>
 
           </>
@@ -645,12 +644,9 @@ function ScheduleContent({ user }: { user: AuthUser }) {
 
       <section className="app-card">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="card-label">MY REHEARSALS</p>
-            <h2 className="mt-2 text-xl font-bold text-slate-950">
-              내 예정 합주
-            </h2>
-          </div>
+          <h2 className="text-xl font-bold text-slate-950">
+            내 예정 합주
+          </h2>
           {myReservationsQuery.data && (
             <span className="count-badge">{myReservationsQuery.data.length}</span>
           )}

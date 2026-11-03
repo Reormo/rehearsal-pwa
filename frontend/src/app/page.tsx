@@ -34,17 +34,7 @@ function HomeContent({ user }: { user: AuthUser }) {
 
   return (
     <>
-      <section>
-        <p className="eyebrow">WELCOME</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-          {user.name}님, 안녕하세요.
-        </h1>
-        <p className="mt-3 text-sm text-slate-500">
-          예정된 합주와 전체 일정을 한눈에 확인하고 필요한 메뉴로 이동하세요.
-        </p>
-      </section>
-
-      <div className="mt-7 grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <section className="app-card">
           <p className="card-label">내 계정</p>
           <dl className="mt-4 space-y-3 text-sm">

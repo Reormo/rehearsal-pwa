@@ -53,7 +53,7 @@ export function AppShell({
 
   useEffect(() => {
     const handlePopState = () => {
-      setTransition("left");
+      document.documentElement.dataset.pageTransition = "left";
     };
 
     window.addEventListener("popstate", handlePopState);

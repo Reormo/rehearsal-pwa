@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
-import { errorMessage, Song, songApi } from "@/lib/api";
+import { errorMessage, songApi, type Song } from "@/lib/api";
 
 export default function MyTeamsPage() {
   return (

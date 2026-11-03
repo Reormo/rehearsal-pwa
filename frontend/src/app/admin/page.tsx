@@ -120,16 +120,6 @@ function AdminContent({
 
   return (
     <div className="space-y-7">
-      <section>
-        <p className="eyebrow">ADMIN</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-          관리자
-        </h1>
-        <p className="mt-3 text-sm text-slate-500">
-          회원, 곡, 공지, 합주 운영과 관리자 작업 이력을 한곳에서 관리합니다.
-        </p>
-      </section>
-
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <AdminMenuCard
           href="/admin/songs"

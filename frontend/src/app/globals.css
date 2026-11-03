@@ -176,6 +176,43 @@ button:disabled {
   color: #475569;
 }
 
+@keyframes page-enter-from-right {
+  from {
+    opacity: 0.35;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes page-enter-from-left {
+  from {
+    opacity: 0.35;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-enter-from-right {
+  animation: page-enter-from-right 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.page-enter-from-left {
+  animation: page-enter-from-left 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-from-right,
+  .page-enter-from-left {
+    animation: none;
+  }
+}
+
 @media (max-width: 520px) {
   .auth-page {
     align-items: stretch;

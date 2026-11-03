@@ -118,12 +118,13 @@ export function AppShell({
     );
     if (targetMainIndex >= 0) {
       event.preventDefault();
+      if (pathname === normalizedHref) return;
+
       const currentIndex = Math.max(
         0,
         navItems.findIndex((item) => item.href === mainTabHref),
       );
       setTransition(targetMainIndex >= currentIndex ? "right" : "left");
-      if (pathname === normalizedHref) return;
       router.replace(normalizedHref);
       return;
     }

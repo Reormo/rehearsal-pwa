@@ -17,6 +17,7 @@ const REMINDER_OPTIONS = [
 export function NotificationSettingsCard() {
   const queryClient = useQueryClient();
   const [pushSupported, setPushSupported] = useState(false);
+  const [androidDevice, setAndroidDevice] = useState(false);
   const [pushEnabledInBrowser, setPushEnabledInBrowser] = useState(false);
   const [pushPermission, setPushPermission] =
     useState<NotificationPermission>("default");
@@ -55,8 +56,13 @@ export function NotificationSettingsCard() {
     reminderMinutes == null ? "off" : String(reminderMinutes);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    setAndroidDevice(/Android/i.test(navigator.userAgent));
+
     if (
-      typeof window === "undefined" ||
       !("serviceWorker" in navigator) ||
       !("PushManager" in window) ||
       !("Notification" in window)
@@ -167,7 +173,7 @@ export function NotificationSettingsCard() {
       const result = await notificationApi.testPush();
       setPushMessage(
         result.successCount > 0
-          ? `테스트 Push를 ${result.successCount}개 기기에 보냈습니다. 앱이 열려 있으면 화면 상단 팝업도 함께 표시됩니다.`
+          ? `테스트 Push를 ${result.successCount}개 기기에 보냈습니다. 다른 앱을 사용하는 중에도 화면 위 팝업으로 표시되는지 확인해주세요.`
           : "Push 전송을 시도했지만 성공한 기기가 없습니다.",
       );
     } catch (error) {
@@ -243,6 +249,13 @@ export function NotificationSettingsCard() {
                 내 계정의 활성 Push 기기 {pushStatusQuery.data.activeSubscriptions}개
               </p>
             )}
+            {androidDevice && pushSupported && (
+              <p className="mt-2 max-w-md text-[11px] leading-5 text-slate-400">
+                갤럭시에서 다른 앱 위 팝업이 보이지 않으면 Android 알림 설정에서
+                무혼 또는 Chrome의 알림 팝업 표시와 알림 중요도를 확인해주세요.
+                별도의 &quot;다른 앱 위에 표시&quot; 권한은 필요하지 않습니다.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -278,7 +291,7 @@ export function NotificationSettingsCard() {
                 disabled={pushBusy}
                 onClick={() => void testPush()}
               >
-                테스트
+                팝업 테스트
               </button>
             )}
           </div>

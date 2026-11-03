@@ -21,13 +21,6 @@ export default function MyPage() {
       {(user) => (
         <AppShell user={user}>
           <div className="space-y-7">
-            <section>
-              <p className="eyebrow">ALL</p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-                전체
-              </h1>
-            </section>
-
             <nav
               aria-label="전체 메뉴"
               className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]"

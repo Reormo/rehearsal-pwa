@@ -60,8 +60,6 @@ export function NotificationSettingsCard() {
       return;
     }
 
-    setAndroidDevice(/Android/i.test(navigator.userAgent));
-
     if (
       !("serviceWorker" in navigator) ||
       !("PushManager" in window) ||
@@ -71,6 +69,7 @@ export function NotificationSettingsCard() {
     }
 
     void navigator.serviceWorker.getRegistration("/").then((registration) => {
+      setAndroidDevice(/Android/i.test(navigator.userAgent));
       setPushSupported(true);
       setPushPermission(Notification.permission);
       return registration?.pushManager.getSubscription();

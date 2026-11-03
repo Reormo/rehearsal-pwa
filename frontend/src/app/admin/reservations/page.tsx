@@ -143,8 +143,7 @@ function AdminReservationsContent() {
       {error && <p className="error-box">{errorMessage(error)}</p>}
 
       <section className="app-card">
-        <p className="card-label">직접 예약</p>
-        <h2 className="mt-2 text-lg font-bold text-slate-950">관리자 예약 생성</h2>
+        <h2 className="text-lg font-bold text-slate-950">관리자 예약 생성</h2>
         <form
           className="mt-5 grid gap-3 sm:grid-cols-2"
           onSubmit={(event) => {
@@ -209,10 +208,7 @@ function AdminReservationsContent() {
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="card-label">예정 예약</p>
-            <h2 className="mt-2 text-lg font-bold text-slate-950">전체 활성 예약</h2>
-          </div>
+          <h2 className="text-lg font-bold text-slate-950">전체 활성 예약</h2>
           {reservationsQuery.data && (
             <span className="count-badge">
               {filteredReservations.length}/{reservationsQuery.data.length}

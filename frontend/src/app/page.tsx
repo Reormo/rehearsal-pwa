@@ -68,7 +68,7 @@ function HomeContent({ user }: { user: AuthUser }) {
             href="/my/reservations"
             className="shrink-0 text-xs font-bold text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline"
           >
-            전체보기
+            수정하기
           </Link>
         </div>
 

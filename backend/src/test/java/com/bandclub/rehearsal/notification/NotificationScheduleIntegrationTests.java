@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.mock;
 @Testcontainers
 @SpringBootTest
 @ActiveProfiles("test")
+@Transactional
 class NotificationScheduleIntegrationTests {
 
     @Container

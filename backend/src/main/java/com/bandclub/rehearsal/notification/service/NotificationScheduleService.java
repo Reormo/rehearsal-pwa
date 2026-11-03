@@ -17,6 +17,8 @@ public class NotificationScheduleService {
             Duration.ofMinutes(2);
     private static final Duration BOOKING_PRE_NOTICE =
             Duration.ofMinutes(10);
+    private static final Duration REHEARSAL_REMINDER_LOOKBACK =
+            Duration.ofMinutes(2);
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter DATE_TIME =
             DateTimeFormatter.ofPattern("M월 d일 HH:mm");
@@ -90,6 +92,7 @@ public class NotificationScheduleService {
             String dedupeKey =
                     "booking-open-10:" + candidate.roundId()
                             + ":" + candidate.stageTypeId()
+                            + ":" + candidate.bookingOpenAt().getEpochSecond()
                             + ":" + candidate.userId();
             String title = candidate.stageTypeName()
                     + " 예약 오픈이 곧 시작돼요";
@@ -109,7 +112,7 @@ public class NotificationScheduleService {
                     dedupeKey,
                     now
             )) {
-                webPushService.sendToUser(
+                webPushService.sendTimeSensitiveToUser(
                         candidate.userId(),
                         title,
                         body,
@@ -174,6 +177,7 @@ public class NotificationScheduleService {
             String dedupeKey =
                     "booking-open:" + candidate.roundId()
                             + ":" + candidate.stageTypeId()
+                            + ":" + candidate.bookingOpenAt().getEpochSecond()
                             + ":" + candidate.userId();
             String title = candidate.stageTypeName()
                     + " 예약이 열렸어요";
@@ -189,7 +193,7 @@ public class NotificationScheduleService {
                     dedupeKey,
                     now
             )) {
-                webPushService.sendToUser(
+                webPushService.sendTimeSensitiveToUser(
                         candidate.userId(),
                         title,
                         body,
@@ -229,6 +233,10 @@ public class NotificationScheduleService {
                       r.start_at
                       - (uns.rehearsal_reminder_minutes * interval '1 minute')
                   ) <= ?
+                  and (
+                      r.start_at
+                      - (uns.rehearsal_reminder_minutes * interval '1 minute')
+                  ) > ?
                 order by r.start_at asc, uns.user_id asc
                 """,
                 (rs, rowNum) -> new RehearsalReminderCandidate(
@@ -240,7 +248,8 @@ public class NotificationScheduleService {
                         rs.getInt("rehearsal_reminder_minutes")
                 ),
                 Timestamp.from(now),
-                Timestamp.from(now)
+                Timestamp.from(now),
+                Timestamp.from(now.minus(REHEARSAL_REMINDER_LOOKBACK))
         );
 
         int created = 0;
@@ -269,7 +278,7 @@ public class NotificationScheduleService {
                     dedupeKey,
                     now
             )) {
-                webPushService.sendToUser(
+                webPushService.sendTimeSensitiveToUser(
                         candidate.userId(),
                         title,
                         body,

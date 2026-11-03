@@ -18,6 +18,13 @@ Base commit:
 
 ### Booking / member UX
 
+- Reservation calendar state cleanup:
+  - past dates and inactive dates now show only the date number
+  - upcoming prepared week dates are disabled and labeled `준비 중`
+  - active bookable week dates are labeled `예약 가능`
+  - the previous `10~22` per-day label was removed
+- Home upcoming rehearsal action copy changed from `전체보기` back to `수정하기`.
+
 - Header/title refinement after UI review:
   - fixed app header now carries the current page title instead of animating a duplicate body title
   - Home header alone uses the brand name `무혼`
@@ -131,6 +138,7 @@ Completed locally on 2026-11-03:
 - navigation transition state was then moved into a root React Context provider; frontend lint/test/build must be re-run after this structural fix
 - after the main-tab heading/account-card refinement, frontend lint/test/build must be re-run again before merge
 - after moving titles into the fixed header and removing the duplicate account menu item, frontend lint/test/build must be re-run again before merge
+- after reservation-calendar state cleanup and Home action-copy change, frontend lint/test/build must be re-run again before merge
 
 This branch was edited directly through GitHub as explicitly requested.
 

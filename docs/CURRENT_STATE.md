@@ -18,6 +18,15 @@ Base commit:
 
 ### Booking / member UX
 
+- Main-tab first-content layout refinement:
+  - `전체` now starts with an account summary card showing name, login ID, account type, and logout
+  - the old account summary card was removed from Home to avoid duplication
+  - Home starts with a bold `홈` heading
+  - Reservation starts with a bold `합주 예약` heading
+  - Announcements starts with a bold `공지` heading
+  - Admin starts with a bold `관리자` heading
+  - the detailed `내 계정` menu item remains available for password/account-management actions
+
 - Mobile UI/navigation refinement after the second browser review:
   - shared authenticated header is centered on `무혼`
   - main tabs (Home/Reservation/Notice/Admin/All) do not show an in-app back button
@@ -112,6 +121,7 @@ Completed locally on 2026-11-03:
 - after the later mobile copy/eyebrow cleanup, frontend lint/test/build passed
 - after the newest navigation/header/transition refinement, frontend Vitest and static build passed, but ESLint rejected direct DOM mutation in AppShell
 - navigation transition state was then moved into a root React Context provider; frontend lint/test/build must be re-run after this structural fix
+- after the main-tab heading/account-card refinement, frontend lint/test/build must be re-run again before merge
 
 This branch was edited directly through GitHub as explicitly requested.
 

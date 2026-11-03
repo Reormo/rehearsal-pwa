@@ -89,6 +89,7 @@ Completed locally on 2026-11-03:
 - frontend ESLint re-run: passed with no warnings/errors
 - frontend Vitest re-run after lint fixes: 5 files / 11 tests passed
 - frontend static production build re-run after lint fixes: passed
+- after the later mobile copy/eyebrow cleanup, frontend lint/test/build must be re-run before merge
 
 This branch was edited directly through GitHub as explicitly requested.
 
@@ -151,12 +152,13 @@ Existing unrelated drift remains intentionally out of scope:
 
 ## Remaining work
 
-1. Inspect the requested UI changes in browser/mobile widths.
-2. Test Android popup behavior on the actual Galaxy device.
-3. Fix any failures found during manual verification and push them to this branch.
-4. Open/review the PR only after manual verification.
-5. Merge to `main` only after approval.
-6. Create the final source ZIP from verified `main` and hand it to the server administrator.
+1. Re-run frontend lint, tests, and static build after the latest mobile copy cleanup.
+2. Inspect the requested UI changes in browser/mobile widths.
+3. Test Android popup behavior on the actual Galaxy device.
+4. Fix any failures found during manual verification and push them to this branch.
+5. Open/review the PR only after manual verification.
+6. Merge to `main` only after approval.
+7. Create the final source ZIP from verified `main` and hand it to the server administrator.
 
 ## Blockers
 

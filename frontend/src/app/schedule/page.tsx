@@ -222,7 +222,6 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            <span className="count-badge">팀장 {leaderSongs.length}팀</span>
             <button
               type="button"
               className="secondary-button flex h-9 w-9 shrink-0 items-center justify-center p-0"
@@ -464,19 +463,8 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             </div>
 
             <div className="mt-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="card-label">4. 시간 선택</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    일반 예약 슬롯, 잔여 슬롯, 예약할 수 없는 시간을 한 시간표에서
-                    확인하고 선택한 {effectiveDuration}분 예약의 시작 시각을 고릅니다.
-                  </p>
-                </div>
-                {bookingOptionsQuery.data && (
-                  <span className="count-badge">
-                    시작 가능 {bookingOptionsQuery.data.options.length}개
-                  </span>
-                )}
+              <div>
+                <p className="card-label">4. 시간 선택</p>
               </div>
 
               {!effectiveSongId && (
@@ -512,11 +500,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                   </p>
                 )}
 
-              <div className="mt-5">
-                <p className="card-label">일반 예약 슬롯</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  선택한 {effectiveDuration}분 예약의 시작 시간을 선택하세요.
-                </p>
+              <div className="mt-4">
                 {bookingOptionsForSlots(
                   dayQuery.data.standardSlots,
                   bookingOptionsQuery.data?.options ?? [],
@@ -603,10 +587,26 @@ function ScheduleContent({ user }: { user: AuthUser }) {
 
             <div className="mt-6 rounded-2xl border border-slate-200 p-4">
               <p className="card-label">5. 예약 요청</p>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                버튼을 누른 순간 서버가 팀과 30분 원자 슬롯을 다시 확인하고 잠급니다.
-                화면에 보였던 시간이더라도 다른 팀이 먼저 확정했다면 예약은 실패할 수
-                있습니다.
+              <p className="mt-2 flex items-start gap-2 text-sm font-semibold leading-6 text-amber-600">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="mt-0.5 h-4 w-4 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M12 3 2.8 19h18.4L12 3Z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M12 9v4" strokeLinecap="round" />
+                  <path d="M12 17h.01" strokeLinecap="round" />
+                </svg>
+                <span>
+                  화면에 보였던 시간이더라도 다른 팀이 먼저 확정했다면 예약은 실패할 수 있습니다.
+                </span>
               </p>
               {bookingMessage && (
                 <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{bookingMessage}</p>

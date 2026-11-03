@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { AuthUser } from "@/lib/api";
 import { notificationApi } from "@/lib/notification-api";
 
@@ -15,9 +15,7 @@ type NavIconName =
   | "menu"
   | "bell";
 
-type PageTransitionDirection = "left" | "right" | null;
-
-let pendingPageTransition: PageTransitionDirection = null;
+type PageTransitionDirection = "left" | "right";
 
 export function AppShell({
   user,
@@ -29,9 +27,6 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
-  const [transitionDirection, setTransitionDirection] =
-    useState<PageTransitionDirection>(() => pendingPageTransition);
-
   const unreadCountQuery = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: notificationApi.unreadCount,
@@ -57,20 +52,16 @@ export function AppShell({
   const isMainTab = navItems.some((item) => item.href === pathname);
 
   useEffect(() => {
-    pendingPageTransition = null;
-
     const handlePopState = () => {
-      pendingPageTransition = "left";
-      setTransitionDirection("left");
+      setTransition("left");
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [pathname]);
+  }, []);
 
-  function setTransition(direction: Exclude<PageTransitionDirection, null>) {
-    pendingPageTransition = direction;
-    setTransitionDirection(direction);
+  function setTransition(direction: PageTransitionDirection) {
+    document.documentElement.dataset.pageTransition = direction;
   }
 
   function navigateMainTab(
@@ -140,13 +131,6 @@ export function AppShell({
     router.back();
   }
 
-  const transitionClass =
-    transitionDirection === "right"
-      ? "page-enter-from-right"
-      : transitionDirection === "left"
-        ? "page-enter-from-left"
-        : "";
-
   return (
     <div className="min-h-dvh overflow-x-clip bg-slate-50">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
@@ -205,7 +189,13 @@ export function AppShell({
         className="mx-auto w-full max-w-5xl px-5 py-7 pb-32"
         onClickCapture={captureContentNavigation}
       >
-        <div key={pathname} className={transitionClass}>
+        <div
+          key={pathname}
+          className="page-transition-surface"
+          onAnimationEnd={() => {
+            delete document.documentElement.dataset.pageTransition;
+          }}
+        >
           {children}
         </div>
       </main>

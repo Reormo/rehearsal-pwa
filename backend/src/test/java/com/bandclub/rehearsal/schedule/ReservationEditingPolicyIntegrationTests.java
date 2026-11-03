@@ -216,7 +216,7 @@ class ReservationEditingPolicyIntegrationTests {
         return scheduleService.updateRound(
                 superAdminId,
                 nextRound.id(),
-                Instant.now().minusSeconds(60),
+                Instant.now().minusSeconds(1800).truncatedTo(java.time.temporal.ChronoUnit.HOURS),
                 maxMinutes
         );
     }

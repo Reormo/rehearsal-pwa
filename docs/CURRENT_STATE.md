@@ -23,13 +23,17 @@ Base commit:
   - main tabs (Home/Reservation/Notice/Admin/All) do not show an in-app back button
   - subpages show a top-left back button while keeping the notification bell on the right
   - bottom-tab navigation uses replace-style navigation so switching main tabs does not keep stacking browser history
-  - trailing slashes are normalized before route comparison, so tapping the currently active main tab is a complete no-op with no animation
+  - static-export path variants (trailing slash, index.html, .html) are normalized before route comparison
+  - the currently active main tab is rendered as a non-link button, so tapping it is a complete no-op with no navigation or animation
+  - only exact bottom-navigation destinations are treated as main tabs; subpages alone show the in-app back button
+  - page transition duration is 360ms
   - only exact bottom-navigation destinations are treated as main tabs; subpages alone show the in-app back button
   - page transition duration is 300ms (slightly slower than the previous 220ms)
   - moving to a tab on the right uses a right-entry animation; moving to a tab on the left uses a left-entry animation
   - links from a main page into a subpage enter from the right; the in-app back action returns with a left-entry animation
   - OS/browser history cannot be forcibly cleared or the PWA forcibly closed, so Galaxy hardware-back exit behavior remains browser/OS controlled
-  - reservation refresh moved beside `4. 시간 선택`
+  - reservation refresh moved beside `4. 시간 선택` and the icon/button were enlarged
+  - the helper text under `3. 예약 길이 선택` was removed
   - reservation race warning moved below the submit button, reduced to small neutral text, and keeps a compact warning icon
   - redundant small-label + large-title pairs were removed from Home and obvious admin/swap sections
   - schedule `MY REHEARSALS` duplicate label was removed

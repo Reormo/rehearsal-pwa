@@ -489,6 +489,7 @@ function RoundEditor({
               className="field-input mt-2 min-w-0 max-w-full"
               type="datetime-local"
               name="bookingOpenAt"
+              step={1800}
               defaultValue={toKoreanDateTimeLocal(round.bookingOpenAt)}
               required
             />
@@ -500,6 +501,7 @@ function RoundEditor({
               className="field-input mt-2 min-w-0 max-w-full"
               type="datetime-local"
               name="bookingCloseAt"
+              step={1800}
               defaultValue={toKoreanDateTimeLocal(round.bookingCloseAt)}
               required
             />
@@ -666,6 +668,7 @@ function StageWindowEditor({
             className="field-input mt-2 min-w-0 max-w-full"
             type="datetime-local"
             name="stageBookingOpenAt"
+            step={1800}
             defaultValue={toKoreanDateTimeLocal(
               customWindow?.bookingOpenAt ?? round.bookingOpenAt,
             )}
@@ -679,6 +682,7 @@ function StageWindowEditor({
             className="field-input mt-2 min-w-0 max-w-full"
             type="datetime-local"
             name="stageBookingCloseAt"
+            step={1800}
             defaultValue={toKoreanDateTimeLocal(
               customWindow?.bookingCloseAt ?? round.bookingCloseAt,
             )}

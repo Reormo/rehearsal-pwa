@@ -155,8 +155,7 @@ function AdminScheduleContent() {
       )}
 
       <section className="app-card">
-        <p className="card-label">예약 정책</p>
-        <h2 className="mt-2 text-lg font-bold text-slate-950">
+        <h2 className="text-lg font-bold text-slate-950">
           기본 회차 내 최대 예약 건수
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -212,9 +211,8 @@ function AdminScheduleContent() {
       </section>
 
       <section className="app-card">
-        <p className="card-label">예약 회차</p>
-        <h2 className="mt-2 text-lg font-bold text-slate-950">
-          준비된 회차
+        <h2 className="text-lg font-bold text-slate-950">
+          예약 회차
         </h2>
         <p className="mt-2 text-sm text-slate-500">
           운영 화면에는 이번 회차와 다음 회차만 표시됩니다. 월요일 00:00이 되면

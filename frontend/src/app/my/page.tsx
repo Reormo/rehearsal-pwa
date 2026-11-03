@@ -1,8 +1,11 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { AppShell } from "@/components/app-shell";
+import { useRouter } from "next/navigation";
+import { AppShell, roleLabel } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
+import { authApi, AuthUser, errorMessage } from "@/lib/api";
 
 const menuItems = [
   { href: "/my/account", label: "내 계정", icon: "account" },
@@ -20,8 +23,59 @@ export default function MyPage() {
     <AuthGate>
       {(user) => (
         <AppShell user={user}>
-          <div className="space-y-7">
-            <nav
+          <MyContent user={user} />
+        </AppShell>
+      )}
+    </AuthGate>
+  );
+}
+
+function MyContent({ user }: { user: AuthUser }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const logoutMutation = useMutation({
+    mutationFn: authApi.logout,
+    onSuccess: () => {
+      queryClient.clear();
+      router.replace("/login");
+    },
+  });
+
+  return (
+    <div className="space-y-7">
+      <section className="app-card">
+        <dl className="space-y-4 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">이름</dt>
+            <dd className="font-semibold text-slate-950">{user.name}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">아이디</dt>
+            <dd className="font-semibold text-slate-950">{user.loginId}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">계정 유형</dt>
+            <dd className="font-semibold text-slate-950">
+              {roleLabel(user.role)}
+            </dd>
+          </div>
+        </dl>
+
+        <button
+          className="secondary-button mt-6 w-full"
+          type="button"
+          disabled={logoutMutation.isPending}
+          onClick={() => logoutMutation.mutate()}
+        >
+          {logoutMutation.isPending ? "로그아웃 중..." : "로그아웃"}
+        </button>
+        {logoutMutation.isError && (
+          <p className="error-box mt-3">{errorMessage(logoutMutation.error)}</p>
+        )}
+      </section>
+
+      <nav
               aria-label="전체 메뉴"
               className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]"
             >
@@ -53,11 +107,8 @@ export default function MyPage() {
                   </svg>
                 </Link>
               ))}
-            </nav>
-          </div>
-        </AppShell>
-      )}
-    </AuthGate>
+      </nav>
+    </div>
   );
 }
 

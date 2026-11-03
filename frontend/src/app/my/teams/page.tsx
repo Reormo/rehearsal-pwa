@@ -30,8 +30,7 @@ function TeamsContent({ userId }: { userId: number }) {
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">ALL · TEAMS</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
             내 팀
           </h1>
         </div>

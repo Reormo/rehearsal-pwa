@@ -398,11 +398,6 @@ function koreanLocalToInstant(value: string) {
   return new Date(`${value}:00+09:00`).toISOString();
 }
 
-function toKoreanDateTimeLocal(value: string) {
-  const parts = toKoreanDateTimeParts(value);
-  return `${parts.date}T${parts.hour}:${parts.minute}`;
-}
-
 function toKoreanDateTimeParts(value: string) {
   const parts = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Seoul",

@@ -23,6 +23,12 @@ Base commit:
   - No "refreshing" / "just refreshed" copy is rendered, so the layout does not jump.
 - Simplified booking-window display to compact "예약 시작 / 예약 마감" rows.
 - Shows whether the visible window is a stage-specific setting or the round default.
+- Primary tab headers are simplified to one bold section name (`홈 / 예약 / 공지 / 관리자 / 전체`); redundant user/role, WELCOME/SCHEDULE labels, and intro copy were removed from the five main tab pages.
+- Booking-window timestamps now render with weekday, e.g. `10.31(토) 20:00`.
+- Booking summary now shows only duplicate-reservation usage:
+  - normal limit: `중복 예약 0/2건`
+  - 99-limit mode: denominator hidden, e.g. `중복 예약 50건`
+- The booking-team select is constrained to the page width; native picker presentation still follows the browser/OS.
 - Home now shows all upcoming rehearsals instead of only four.
 - Home link copy changed from "수정하기" to "전체보기".
 - Member rehearsal cards no longer expose internal reservation IDs.

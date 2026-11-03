@@ -18,6 +18,16 @@ Base commit:
 
 ### Booking / member UX
 
+- Simplified authenticated page headers and reservation copy after mobile UI review:
+  - the shared top bar keeps only the current tab title (Home/Reservation/Notice/Admin/All)
+  - removed English eyebrow labels above authenticated page titles (for example MY REHEARSALS / ADMIN · SCHEDULE / NOTIFICATIONS)
+  - removed the booking-page leader-team count badge
+  - removed the time-selection helper paragraph, "start available" count, and general-slot heading/helper copy
+  - booking-open/close display uses compact `M.D(weekday) HH:mm`
+  - duplicate reservation display uses `중복 예약 current/max건`, except max=99 shows only `중복 예약 current건`
+  - booking-submit helper was replaced with a single amber warning line and warning icon
+- Native team selection remains a browser `<select>`; desktop Chrome device emulation may render its popup outside the narrow emulated viewport, while real iPhone Safari/PWA uses the OS-native picker presentation.
+
 - Added a fixed-size icon-only refresh button to the booking page.
   - Refetches calendar, selected-day schedule, booking options, and my reservations.
   - No "refreshing" / "just refreshed" copy is rendered, so the layout does not jump.
@@ -103,6 +113,9 @@ npm.cmd run build
 
 ### Manual UI / device checks
 
+- shared top bar shows only the active tab title
+- authenticated page titles have no English eyebrow labels
+- booking team picker width/presentation on actual iPhone Safari/PWA (not only Chrome device emulation)
 - booking refresh while waiting for booking-open time
 - booking refresh after another reservation occupies a slot
 - compact booking-open/close display

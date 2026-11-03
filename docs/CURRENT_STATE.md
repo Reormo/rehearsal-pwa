@@ -29,6 +29,11 @@ Base commit:
 - My Teams cards expand on tap/click to show members, sessions, and leader status.
 - All Songs cards now reserve a stable two-line title area so long song titles do not misalign the grid.
 - Admin member search/password inputs include autocomplete hints to reduce credential autofill prompts.
+- Admin reservation editing now uses separate date/hour/minute controls.
+  - Minute selection contains only `00` and `30`.
+  - The action button is labeled `설정` and submits immediately without a confirmation dialog.
+  - Change reason is optional in the UI; when omitted, the audit reason defaults to `관리자 예약 시간 변경`.
+  - Backend reservation validation already enforces 00/30-minute start boundaries.
 
 ### Operating hours / time input
 
@@ -89,6 +94,7 @@ npm.cmd run build
 - Home upcoming rehearsal list
 - admin member search autofill behavior
 - 30-minute datetime picker behavior on desktop/Android/iPhone
+- admin reservation edit date/hour/00·30-minute controls and immediate `설정` apply
 - stage-specific booking-open alert
 - stale reminder suppression
 - Galaxy popup test while another app is in the foreground

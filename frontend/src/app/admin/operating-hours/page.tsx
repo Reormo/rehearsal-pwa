@@ -141,8 +141,7 @@ function OperatingHoursContent() {
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">ADMIN · ROOM HOURS</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
             날짜별 운영시간
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">

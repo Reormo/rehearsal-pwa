@@ -60,9 +60,18 @@ Base commit:
 
 ## Verification status
 
-Not yet claimed as passed.
+Local verification is in progress.
 
-This branch was edited directly through GitHub as explicitly requested. The development environment used here cannot clone/run the repository runtime, so the required local verification is intentionally pending.
+Completed locally on 2026-11-03:
+- backend full Gradle tests: passed (`BUILD SUCCESSFUL`)
+- frontend Vitest: 5 files / 11 tests passed
+- frontend static production build with `NEXT_STATIC_EXPORT=true`: passed
+- frontend lint initially found 1 warning + 1 error in branch-added code:
+  - unused admin reservation datetime helper
+  - synchronous Android `setState` inside an effect
+- both lint findings were fixed on the branch; lint re-run is pending
+
+This branch was edited directly through GitHub as explicitly requested.
 
 Required local verification before merge:
 

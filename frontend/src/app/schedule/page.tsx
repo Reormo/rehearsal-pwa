@@ -175,18 +175,79 @@ function ScheduleContent({ user }: { user: AuthUser }) {
     clearBookingFeedback();
   }
 
+  async function refreshSchedule() {
+    setSelectedStartAt(null);
+    clearBookingFeedback();
+
+    await Promise.all([
+      queryClient.refetchQueries({
+        queryKey: ["schedule", "calendar", range.from, range.to],
+        exact: true,
+      }),
+      queryClient.refetchQueries({
+        queryKey: ["schedule", "day", selectedDate],
+        exact: true,
+      }),
+      queryClient.refetchQueries({
+        queryKey: [
+          "schedule",
+          "booking-options",
+          selectedDate,
+          effectiveDuration,
+          effectiveSongId,
+        ],
+        exact: true,
+      }),
+      queryClient.refetchQueries({
+        queryKey: ["schedule", "my-reservations"],
+        exact: true,
+      }),
+    ]);
+  }
+
+  const refreshing =
+    calendarQuery.isFetching ||
+    dayQuery.isFetching ||
+    bookingOptionsQuery.isFetching ||
+    myReservationsQuery.isFetching;
+
   return (
     <div className="space-y-7">
-      <section>
-        <p className="eyebrow">SCHEDULE</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-          합주 예약 · 시간표
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">
-          시간표는 30분 원자 슬롯으로 관리합니다. 팀장이 예약 길이를 고르면 실제
-          예약 시작 시각은 30분 간격으로 다시 계산하고, 서버가 요청 순간 빈 슬롯을
-          잠가 선착순을 확정합니다.
-        </p>
+      <section className="flex items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow">SCHEDULE</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+            합주 예약 · 시간표
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            시간표는 30분 원자 슬롯으로 관리합니다. 팀장이 예약 길이를 고르면 실제
+            예약 시작 시각은 30분 간격으로 다시 계산하고, 서버가 요청 순간 빈 슬롯을
+            잠가 선착순을 확정합니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="secondary-button flex h-11 w-11 shrink-0 items-center justify-center p-0"
+          aria-label="예약 현황 새로고침"
+          title="예약 현황 새로고침"
+          disabled={refreshing}
+          onClick={() => void refreshSchedule()}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              d="M20 11a8 8 0 1 0-2.34 5.66M20 11V5m0 6h-6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </section>
 
       <section className="app-card">
@@ -320,33 +381,40 @@ function ScheduleContent({ user }: { user: AuthUser }) {
         {dayQuery.data && (
           <>
             <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm">
-              <p className="font-semibold text-slate-800">
-                {dayQuery.data.round.roundNo}회차 ·{" "}
-                {formatDateLabel(dayQuery.data.round.startDate)} ~{" "}
-                {formatDateLabel(dayQuery.data.round.endDate)}
-              </p>
-              {bookingOptionsQuery.data?.stageTypeName &&
-              bookingOptionsQuery.data.bookingOpenAt &&
-              bookingOptionsQuery.data.bookingCloseAt ? (
-                <p className="mt-1 text-slate-500">
-                  {bookingOptionsQuery.data.stageTypeName} 예약 기간 ·{" "}
-                  {formatDateTime(bookingOptionsQuery.data.bookingOpenAt)} ~{" "}
-                  {formatDateTime(bookingOptionsQuery.data.bookingCloseAt)}
-                  {bookingOptionsQuery.data.customStageWindow
-                    ? " · 무대별 기간"
-                    : " · 회차 기본 기간"}
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-slate-800">
+                  {bookingOptionsQuery.data?.stageTypeName ?? "예약 안내"}
                 </p>
-              ) : (
-                <p className="mt-1 text-slate-500">
-                  기본 예약 기간 ·{" "}
-                  {formatDateTime(dayQuery.data.round.bookingOpenAt)} ~{" "}
-                  {formatDateTime(dayQuery.data.round.bookingCloseAt)}
+                <span className="count-badge">
+                  {bookingOptionsQuery.data?.customStageWindow
+                    ? "무대별 설정"
+                    : "기본 설정"}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <p className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                  <span className="text-slate-400">예약 시작</span>
+                  <strong className="text-slate-800">
+                    {formatCompactDateTime(
+                      bookingOptionsQuery.data?.bookingOpenAt ??
+                        dayQuery.data.round.bookingOpenAt,
+                    )}
+                  </strong>
                 </p>
-              )}
-              <p className="mt-1 text-slate-500">
+                <p className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                  <span className="text-slate-400">예약 마감</span>
+                  <strong className="text-slate-800">
+                    {formatCompactDateTime(
+                      bookingOptionsQuery.data?.bookingCloseAt ??
+                        dayQuery.data.round.bookingCloseAt,
+                    )}
+                  </strong>
+                </p>
+              </div>
+              <p className="mt-2 text-slate-500">
                 1회 최대 {effectiveMaxReservationMinutes}분
                 {bookingOptionsQuery.data &&
-                  ` · 회차 내 예약 ${bookingOptionsQuery.data.currentReservationCount}/${bookingOptionsQuery.data.maxReservationsPerSong}건`}
+                  ` · 예약 ${bookingOptionsQuery.data.currentReservationCount}/${bookingOptionsQuery.data.maxReservationsPerSong}건`}
                 {" · "}일반 슬롯 {dayQuery.data.standardSlots.length}개
               </p>
               {dayQuery.data.roomStatus === "PARTIAL_BLOCKED" && (
@@ -886,14 +954,14 @@ function formatDateLabel(value: string) {
   }).format(new Date(year, month - 1, day));
 }
 
-function formatDateTime(value: string) {
+function formatCompactDateTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
-    month: "short",
+    month: "numeric",
     day: "numeric",
-    weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   }).format(new Date(value));
 }
 

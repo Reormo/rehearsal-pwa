@@ -95,8 +95,7 @@ function AdminAnnouncementsContent() {
   return (
     <div className="space-y-7">
       <section>
-        <p className="eyebrow">ADMIN · NOTICE</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-950">
           공지 관리
         </h1>
         <p className="mt-3 text-sm text-slate-500">

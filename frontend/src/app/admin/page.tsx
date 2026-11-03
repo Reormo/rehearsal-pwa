@@ -234,6 +234,8 @@ function AdminContent({
           <input
             className="field-input mt-2"
             type="search"
+            name="member-name-search"
+            autoComplete="off"
             value={memberSearch}
             onChange={(event) => setMemberSearch(event.target.value)}
             placeholder="이름 검색"
@@ -445,6 +447,8 @@ function MemberRow({
           <input
             className="field-input"
             type="password"
+            name={`reset-password-${member.userId}`}
+            autoComplete="new-password"
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
             minLength={8}

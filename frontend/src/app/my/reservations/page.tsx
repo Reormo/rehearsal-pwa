@@ -169,15 +169,12 @@ function ReservationCard({
 
   return (
     <article className="app-card">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="card-label">{reservation.source === "ADMIN" ? "관리자 예약" : "팀 예약"}</p>
-          <h2 className="mt-1 text-lg font-bold text-slate-950">{reservation.songTitle}</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-700">
-            {formatKoreanDateTime(reservation.startAt)} ~ {formatTime(reservation.endAt)} · {duration}분
-          </p>
-        </div>
-        <span className="count-badge">#{reservation.id}</span>
+      <div>
+        <p className="card-label">{reservation.source === "ADMIN" ? "관리자 예약" : "팀 예약"}</p>
+        <h2 className="mt-1 text-lg font-bold text-slate-950">{reservation.songTitle}</h2>
+        <p className="mt-2 text-sm font-semibold text-slate-700">
+          {formatKoreanDateTime(reservation.startAt)} ~ {formatTime(reservation.endAt)} · {duration}분
+        </p>
       </div>
 
       {!editable ? (

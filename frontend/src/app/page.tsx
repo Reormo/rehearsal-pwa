@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { AuthGate } from "@/components/auth-gate";
-import { AppShell, roleLabel } from "@/components/app-shell";
+import { AppShell } from "@/components/app-shell";
 import { AuthUser, errorMessage } from "@/lib/api";
 import {
   scheduleApi,
@@ -34,26 +34,13 @@ function HomeContent({ user }: { user: AuthUser }) {
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className="app-card">
-          <p className="card-label">내 계정</p>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">아이디</dt>
-              <dd className="font-semibold text-slate-900">{user.loginId}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">권한</dt>
-              <dd className="font-semibold text-slate-900">
-                {roleLabel(user.role)}
-              </dd>
-            </div>
-          </dl>
-          <Link href="/my" className="secondary-button mt-5 w-full">
-            내 계정 관리
-          </Link>
-        </section>
+      <section>
+        <h1 className="text-2xl font-black tracking-tight text-slate-950">
+          홈
+        </h1>
+      </section>
 
+      <div className="mt-5">
         {isAdmin ? (
           <section className="app-card">
             <h2 className="text-lg font-bold text-slate-950">

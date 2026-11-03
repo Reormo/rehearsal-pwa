@@ -24,7 +24,8 @@ export function AppShell({
   user: AuthUser;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = normalizePathname(rawPathname);
   const router = useRouter();
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const unreadCountQuery = useQuery({
@@ -79,7 +80,7 @@ export function AppShell({
     }
 
     event.preventDefault();
-    if (pathname === targetHref) return;
+    if (pathname === normalizePathname(targetHref)) return;
 
     const currentIndex = Math.max(
       0,
@@ -111,7 +112,10 @@ export function AppShell({
       return;
     }
 
-    const targetMainIndex = navItems.findIndex((item) => item.href === href);
+    const normalizedHref = normalizePathname(href);
+    const targetMainIndex = navItems.findIndex(
+      (item) => normalizePathname(item.href) === normalizedHref,
+    );
     if (targetMainIndex >= 0) {
       event.preventDefault();
       const currentIndex = Math.max(
@@ -119,7 +123,8 @@ export function AppShell({
         navItems.findIndex((item) => item.href === mainTabHref),
       );
       setTransition(targetMainIndex >= currentIndex ? "right" : "left");
-      router.replace(href);
+      if (pathname === normalizedHref) return;
+      router.replace(normalizedHref);
       return;
     }
 
@@ -239,14 +244,25 @@ function mainTabForPath(
   pathname: string,
   navItems: Array<{ href: string }>,
 ) {
-  if (pathname === "/") return "/";
+  const normalizedPathname = normalizePathname(pathname);
+  if (normalizedPathname === "/") return "/";
 
-  return navItems
-    .filter((item) => item.href !== "/")
-    .find(
-      (item) =>
-        pathname === item.href || pathname.startsWith(`${item.href}/`),
-    )?.href ?? null;
+  return (
+    navItems
+      .filter((item) => item.href !== "/")
+      .find((item) => {
+        const normalizedHref = normalizePathname(item.href);
+        return (
+          normalizedPathname === normalizedHref ||
+          normalizedPathname.startsWith(`${normalizedHref}/`)
+        );
+      })?.href ?? null
+  );
+}
+
+function normalizePathname(pathname: string) {
+  if (pathname === "/") return "/";
+  return pathname.replace(/\/+$/, "") || "/";
 }
 
 function NavIcon({

@@ -181,10 +181,7 @@ function AdminContent({
 
       <section className="app-card">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="card-label">가입 신청</p>
-            <h2 className="mt-2 text-lg font-bold text-slate-950">승인 대기</h2>
-          </div>
+          <h2 className="text-lg font-bold text-slate-950">가입 신청</h2>
           <span className="count-badge">{applicationsQuery.data?.length ?? 0}</span>
         </div>
 
@@ -212,10 +209,7 @@ function AdminContent({
 
       <section className="app-card">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="card-label">회원</p>
-            <h2 className="mt-2 text-lg font-bold text-slate-950">전체 회원</h2>
-          </div>
+          <h2 className="text-lg font-bold text-slate-950">전체 회원</h2>
           <span className="count-badge">{membersQuery.data?.length ?? 0}</span>
         </div>
 

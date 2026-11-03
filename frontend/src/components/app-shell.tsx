@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { AuthUser } from "@/lib/api";
+import { useNavigationTransition } from "@/components/navigation-transition-provider";
 import { notificationApi } from "@/lib/notification-api";
 
 type NavIconName =
@@ -14,8 +14,6 @@ type NavIconName =
   | "admin"
   | "menu"
   | "bell";
-
-type PageTransitionDirection = "left" | "right";
 
 export function AppShell({
   user,
@@ -27,6 +25,8 @@ export function AppShell({
   const rawPathname = usePathname();
   const pathname = normalizePathname(rawPathname);
   const router = useRouter();
+  const { direction, startTransition, clearTransition } =
+    useNavigationTransition();
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const unreadCountQuery = useQuery({
     queryKey: ["notifications", "unread-count"],
@@ -54,19 +54,6 @@ export function AppShell({
     (item) => normalizePathname(item.href) === pathname,
   );
 
-  useEffect(() => {
-    const handlePopState = () => {
-      document.documentElement.dataset.pageTransition = "left";
-    };
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  function setTransition(direction: PageTransitionDirection) {
-    document.documentElement.dataset.pageTransition = direction;
-  }
-
   function navigateMainTab(
     event: React.MouseEvent<HTMLAnchorElement>,
     targetHref: string,
@@ -89,7 +76,7 @@ export function AppShell({
       navItems.findIndex((item) => item.href === mainTabHref),
     );
     const targetIndex = navItems.findIndex((item) => item.href === targetHref);
-    setTransition(targetIndex >= currentIndex ? "right" : "left");
+    startTransition(targetIndex >= currentIndex ? "right" : "left");
     router.replace(targetHref);
   }
 
@@ -126,16 +113,16 @@ export function AppShell({
         0,
         navItems.findIndex((item) => item.href === mainTabHref),
       );
-      setTransition(targetMainIndex >= currentIndex ? "right" : "left");
+      startTransition(targetMainIndex >= currentIndex ? "right" : "left");
       router.replace(normalizedHref);
       return;
     }
 
-    setTransition("right");
+    startTransition("right");
   }
 
   function goBack() {
-    setTransition("left");
+    startTransition("left");
     router.back();
   }
 
@@ -175,7 +162,7 @@ export function AppShell({
 
           <Link
             href="/notifications"
-            onClick={() => setTransition("right")}
+            onClick={() => startTransition("right")}
             aria-label={
               unreadCount > 0
                 ? `알림 ${unreadCount > 99 ? "99개 이상" : `${unreadCount}개`}`
@@ -199,10 +186,14 @@ export function AppShell({
       >
         <div
           key={pathname}
-          className="page-transition-surface"
-          onAnimationEnd={() => {
-            delete document.documentElement.dataset.pageTransition;
-          }}
+          className={
+            direction === "right"
+              ? "page-transition-surface page-enter-from-right"
+              : direction === "left"
+                ? "page-transition-surface page-enter-from-left"
+                : "page-transition-surface"
+          }
+          onAnimationEnd={clearTransition}
         >
           {children}
         </div>

@@ -18,6 +18,14 @@ Base commit:
 
 ### Booking / member UX
 
+- Header/title refinement after UI review:
+  - fixed app header now carries the current page title instead of animating a duplicate body title
+  - Home header alone uses the brand name `무혼`
+  - main-tab headers are `합주 예약`, `공지`, `관리자`, and `전체`
+  - route-specific subpages also expose their page title in the fixed header
+  - duplicate body titles were removed from Home/Reservation/Announcements/Admin main tabs
+  - `내 계정` was removed from the All-tab menu because account identity/logout information is already shown in the account summary card
+
 - Main-tab first-content layout refinement:
   - `전체` now starts with an account summary card showing name, login ID, account type, and logout
   - the old account summary card was removed from Home to avoid duplication
@@ -122,6 +130,7 @@ Completed locally on 2026-11-03:
 - after the newest navigation/header/transition refinement, frontend Vitest and static build passed, but ESLint rejected direct DOM mutation in AppShell
 - navigation transition state was then moved into a root React Context provider; frontend lint/test/build must be re-run after this structural fix
 - after the main-tab heading/account-card refinement, frontend lint/test/build must be re-run again before merge
+- after moving titles into the fixed header and removing the duplicate account menu item, frontend lint/test/build must be re-run again before merge
 
 This branch was edited directly through GitHub as explicitly requested.
 

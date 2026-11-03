@@ -18,6 +18,19 @@ Base commit:
 
 ### Booking / member UX
 
+- Mobile UI/navigation refinement after the second browser review:
+  - shared authenticated header is centered on `무혼`
+  - main tabs (Home/Reservation/Notice/Admin/All) do not show an in-app back button
+  - subpages show a top-left back button while keeping the notification bell on the right
+  - bottom-tab navigation uses replace-style navigation so switching main tabs does not keep stacking browser history
+  - moving to a tab on the right uses a right-entry animation; moving to a tab on the left uses a left-entry animation
+  - links from a main page into a subpage enter from the right; the in-app back action returns with a left-entry animation
+  - OS/browser history cannot be forcibly cleared or the PWA forcibly closed, so Galaxy hardware-back exit behavior remains browser/OS controlled
+  - reservation refresh moved beside `4. 시간 선택`
+  - reservation race warning moved below the submit button, reduced to small neutral text, and keeps a compact warning icon
+  - redundant small-label + large-title pairs were removed from Home and obvious admin/swap sections
+  - schedule `MY REHEARSALS` duplicate label was removed
+
 - Simplified authenticated page headers and reservation copy after mobile UI review:
   - the shared top bar keeps only the current tab title (Home/Reservation/Notice/Admin/All)
   - removed English eyebrow labels above authenticated page titles (for example MY REHEARSALS / ADMIN · SCHEDULE / NOTIFICATIONS)
@@ -89,7 +102,8 @@ Completed locally on 2026-11-03:
 - frontend ESLint re-run: passed with no warnings/errors
 - frontend Vitest re-run after lint fixes: 5 files / 11 tests passed
 - frontend static production build re-run after lint fixes: passed
-- after the later mobile copy/eyebrow cleanup, frontend lint/test/build must be re-run before merge
+- after the later mobile copy/eyebrow cleanup, frontend lint/test/build passed
+- after the newest navigation/header/transition refinement, frontend lint/test/build must be re-run before merge
 
 This branch was edited directly through GitHub as explicitly requested.
 
@@ -152,13 +166,14 @@ Existing unrelated drift remains intentionally out of scope:
 
 ## Remaining work
 
-1. Re-run frontend lint, tests, and static build after the latest mobile copy cleanup.
-2. Inspect the requested UI changes in browser/mobile widths.
-3. Test Android popup behavior on the actual Galaxy device.
-4. Fix any failures found during manual verification and push them to this branch.
-5. Open/review the PR only after manual verification.
-6. Merge to `main` only after approval.
-7. Create the final source ZIP from verified `main` and hand it to the server administrator.
+1. Pull the newest navigation/header changes.
+2. Re-run frontend lint, tests, and static build.
+3. Inspect the header/back-button rules and left/right transitions in browser/mobile widths.
+4. Test Android popup behavior on the actual Galaxy device.
+5. Fix any failures found during manual verification and push them to this branch.
+6. Open/review the PR only after manual verification.
+7. Merge to `main` only after approval.
+8. Create the final source ZIP from verified `main` and hand it to the server administrator.
 
 ## Blockers
 

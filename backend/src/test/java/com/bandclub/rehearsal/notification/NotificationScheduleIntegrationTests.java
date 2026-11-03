@@ -138,6 +138,107 @@ class NotificationScheduleIntegrationTests {
     }
 
     @Test
+    void stageSpecificBookingWindowCanNotifyAgainAfterOpenTimeChanges() {
+        long userId = superAdminId();
+        long clubId = clubId(userId);
+        Instant now = Instant.parse("2030-01-12T10:00:00Z");
+
+        long roundId = insertRound(
+                clubId,
+                9003,
+                LocalDate.of(2030, 1, 14),
+                now.plusSeconds(600),
+                now.plusSeconds(60 * 60 * 24 * 8)
+        );
+        long songId = insertSong(clubId, userId, now);
+        insertSongMember(songId, userId, now);
+
+        NotificationScheduleService service =
+                new NotificationScheduleService(
+                        jdbcTemplate,
+                        mock(WebPushService.class)
+                );
+
+        assertEquals(1, service.process(now).bookingPreOpenCreated());
+
+        long stageTypeId = jdbcTemplate.queryForObject(
+                "select stage_type_id from songs where id = ?",
+                Long.class,
+                songId
+        );
+        Instant customOpenAt = now.plusSeconds(60 * 60);
+        insertStageWindow(
+                roundId,
+                stageTypeId,
+                userId,
+                customOpenAt,
+                now.plusSeconds(60 * 60 * 24 * 8),
+                now
+        );
+
+        assertEquals(
+                1,
+                service.process(customOpenAt.minusSeconds(600))
+                        .bookingPreOpenCreated()
+        );
+    }
+
+    @Test
+    void rehearsalReminderIsSkippedWhenItsConfiguredTimeIsAlreadyTooOld() {
+        long userId = superAdminId();
+        long clubId = clubId(userId);
+        Instant now = Instant.parse("2030-02-08T08:00:00Z");
+        LocalDate date = LocalDate.of(2030, 2, 11);
+
+        long roundId = insertRound(
+                clubId,
+                9004,
+                date,
+                now.minusSeconds(3600),
+                now.plusSeconds(60 * 60 * 24 * 10)
+        );
+        long songId = insertSong(clubId, userId, now);
+        insertSongMember(songId, userId, now);
+
+        jdbcTemplate.update(
+                """
+                update user_notification_settings
+                set rehearsal_reminder_minutes = 30,
+                    updated_at = ?
+                where user_id = ?
+                """,
+                Timestamp.from(now),
+                userId
+        );
+
+        Instant startAt = now.plusSeconds(10 * 60);
+        insertReservation(
+                roundId,
+                songId,
+                userId,
+                startAt,
+                startAt.plusSeconds(60 * 60),
+                now
+        );
+
+        NotificationScheduleService service =
+                new NotificationScheduleService(
+                        jdbcTemplate,
+                        mock(WebPushService.class)
+                );
+
+        assertEquals(0, service.process(now).rehearsalRemindersCreated());
+
+        long count = notificationRepository
+                .findAllByUserIdAndDismissedAtIsNullOrderByCreatedAtDesc(userId)
+                .stream()
+                .filter(item -> item.getType().equals("REHEARSAL_REMINDER"))
+                .count();
+
+        assertEquals(0, count);
+    }
+
+    @Test
     void newAnnouncementCreatesInternalNotificationForClubMember() {
         long userId = superAdminId();
         long clubId = clubId(userId);
@@ -204,6 +305,39 @@ class NotificationScheduleIntegrationTests {
                 Timestamp.from(bookingCloseAt),
                 Timestamp.from(bookingOpenAt.minusSeconds(3600)),
                 Timestamp.from(bookingOpenAt.minusSeconds(3600))
+        );
+    }
+
+    private void insertStageWindow(
+            long roundId,
+            long stageTypeId,
+            long userId,
+            Instant bookingOpenAt,
+            Instant bookingCloseAt,
+            Instant now
+    ) {
+        jdbcTemplate.update(
+                """
+                insert into booking_round_stage_windows (
+                    booking_round_id,
+                    stage_type_id,
+                    booking_open_at,
+                    booking_close_at,
+                    max_reservation_minutes,
+                    max_reservations_per_song,
+                    updated_by,
+                    created_at,
+                    updated_at
+                )
+                values (?, ?, ?, ?, 90, 1, ?, ?, ?)
+                """,
+                roundId,
+                stageTypeId,
+                Timestamp.from(bookingOpenAt),
+                Timestamp.from(bookingCloseAt),
+                userId,
+                Timestamp.from(now),
+                Timestamp.from(now)
         );
     }
 

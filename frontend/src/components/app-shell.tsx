@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AuthUser } from "@/lib/api";
 import { notificationApi } from "@/lib/notification-api";
 
@@ -14,6 +15,10 @@ type NavIconName =
   | "menu"
   | "bell";
 
+type PageTransitionDirection = "left" | "right" | null;
+
+let pendingPageTransition: PageTransitionDirection = null;
+
 export function AppShell({
   user,
   children,
@@ -22,14 +27,17 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  const [transitionDirection, setTransitionDirection] =
+    useState<PageTransitionDirection>(() => pendingPageTransition);
+
   const unreadCountQuery = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: notificationApi.unreadCount,
     refetchInterval: 30_000,
   });
   const unreadCount = unreadCountQuery.data?.count ?? 0;
-  const sectionTitle = sectionTitleForPath(pathname);
 
   const navItems: Array<{
     href: string;
@@ -45,16 +53,137 @@ export function AppShell({
     { href: "/my", label: "전체", icon: "menu" },
   ];
 
+  const mainTabHref = mainTabForPath(pathname, navItems);
+  const isMainTab = navItems.some((item) => item.href === pathname);
+
+  useEffect(() => {
+    pendingPageTransition = null;
+
+    const handlePopState = () => {
+      pendingPageTransition = "left";
+      setTransitionDirection("left");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [pathname]);
+
+  function setTransition(direction: Exclude<PageTransitionDirection, null>) {
+    pendingPageTransition = direction;
+    setTransitionDirection(direction);
+  }
+
+  function navigateMainTab(
+    event: React.MouseEvent<HTMLAnchorElement>,
+    targetHref: string,
+  ) {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    if (pathname === targetHref) return;
+
+    const currentIndex = Math.max(
+      0,
+      navItems.findIndex((item) => item.href === mainTabHref),
+    );
+    const targetIndex = navItems.findIndex((item) => item.href === targetHref);
+    setTransition(targetIndex >= currentIndex ? "right" : "left");
+    router.replace(targetHref);
+  }
+
+  function captureContentNavigation(event: React.MouseEvent<HTMLElement>) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const anchor = target.closest("a");
+    const href = anchor?.getAttribute("href");
+    if (!anchor || !href || !href.startsWith("/") || href.startsWith("//")) {
+      return;
+    }
+
+    const targetMainIndex = navItems.findIndex((item) => item.href === href);
+    if (targetMainIndex >= 0) {
+      event.preventDefault();
+      const currentIndex = Math.max(
+        0,
+        navItems.findIndex((item) => item.href === mainTabHref),
+      );
+      setTransition(targetMainIndex >= currentIndex ? "right" : "left");
+      router.replace(href);
+      return;
+    }
+
+    setTransition("right");
+  }
+
+  function goBack() {
+    setTransition("left");
+    router.back();
+  }
+
+  const transitionClass =
+    transitionDirection === "right"
+      ? "page-enter-from-right"
+      : transitionDirection === "left"
+        ? "page-enter-from-left"
+        : "";
+
   return (
-    <div className="min-h-dvh bg-slate-50">
+    <div className="min-h-dvh overflow-x-clip bg-slate-50">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-          <h1 className="truncate text-xl font-black tracking-tight text-slate-950">
-            {sectionTitle}
-          </h1>
+        <div className="mx-auto grid h-16 max-w-5xl grid-cols-[40px_1fr_40px] items-center px-5">
+          {isMainTab ? (
+            <span aria-hidden="true" className="h-10 w-10" />
+          ) : (
+            <button
+              type="button"
+              className="flex h-10 w-10 touch-manipulation items-center justify-center rounded-full text-slate-700 transition-[background-color,transform] duration-150 hover:bg-slate-100 active:scale-90"
+              aria-label="뒤로 가기"
+              onClick={goBack}
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  d="m15 18-6-6 6-6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+
+          <div className="text-center text-xl font-black tracking-tight text-slate-950">
+            무혼
+          </div>
 
           <Link
             href="/notifications"
+            onClick={() => setTransition("right")}
             aria-label={
               unreadCount > 0
                 ? `알림 ${unreadCount > 99 ? "99개 이상" : `${unreadCount}개`}`
@@ -72,7 +201,14 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl px-5 py-7 pb-32">{children}</main>
+      <main
+        className="mx-auto w-full max-w-5xl px-5 py-7 pb-32"
+        onClickCapture={captureContentNavigation}
+      >
+        <div key={pathname} className={transitionClass}>
+          {children}
+        </div>
+      </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
         <div
@@ -82,14 +218,13 @@ export function AppShell({
           }}
         >
           {navItems.map((item) => {
-            const active =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
+            const active = mainTabHref === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                replace
+                onClick={(event) => navigateMainTab(event, item.href)}
                 aria-current={active ? "page" : undefined}
                 className={`flex h-20 min-w-0 touch-manipulation select-none flex-col items-center justify-center gap-0.5 transition-[color,transform] duration-150 ease-out active:scale-90 ${
                   active ? "text-slate-950" : "text-slate-400"
@@ -107,6 +242,22 @@ export function AppShell({
         </div>
       </nav>
     </div>
+  );
+}
+
+function mainTabForPath(
+  pathname: string,
+  navItems: Array<{ href: string }>,
+) {
+  if (pathname === "/") return "/";
+
+  return (
+    navItems
+      .filter((item) => item.href !== "/")
+      .find(
+        (item) =>
+          pathname === item.href || pathname.startsWith(`${item.href}/`),
+      )?.href ?? "/"
   );
 }
 
@@ -198,14 +349,6 @@ function NavIcon({
       <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
     </svg>
   );
-}
-
-function sectionTitleForPath(pathname: string) {
-  if (pathname === "/") return "홈";
-  if (pathname.startsWith("/schedule")) return "예약";
-  if (pathname.startsWith("/announcements")) return "공지";
-  if (pathname.startsWith("/admin")) return "관리자";
-  return "전체";
 }
 
 export function roleLabel(role: AuthUser["role"]) {

@@ -62,8 +62,7 @@ function AccountContent({
   return (
     <div className="space-y-7">
       <section>
-        <p className="eyebrow">ALL · ACCOUNT</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-950">
           내 계정
         </h1>
       </section>

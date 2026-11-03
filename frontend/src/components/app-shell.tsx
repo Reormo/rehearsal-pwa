@@ -156,8 +156,8 @@ export function AppShell({
             </button>
           )}
 
-          <div className="text-center text-xl font-black tracking-tight text-slate-950">
-            무혼
+          <div className="truncate text-center text-xl font-black tracking-tight text-slate-950">
+            {headerTitleForPath(pathname)}
           </div>
 
           <Link
@@ -255,6 +255,34 @@ export function AppShell({
       </nav>
     </div>
   );
+}
+
+function headerTitleForPath(pathname: string) {
+  const normalized = normalizePathname(pathname);
+
+  const titles: Record<string, string> = {
+    "/": "무혼",
+    "/schedule": "합주 예약",
+    "/announcements": "공지",
+    "/admin": "관리자",
+    "/my": "전체",
+    "/notifications": "알림",
+    "/songs": "전체 곡 보기",
+    "/my/account": "내 계정",
+    "/my/notifications": "알림 설정",
+    "/my/teams": "내 팀",
+    "/my/reservations": "합주 관리",
+    "/my/swaps": "일정 교환",
+    "/admin/songs": "곡 / 팀 관리",
+    "/admin/schedule": "합주 운영 설정",
+    "/admin/reservations": "예약 강제 관리",
+    "/admin/announcements": "공지 관리",
+    "/admin/swaps": "일정 교환 관리",
+    "/admin/logs": "관리자 작업 이력",
+    "/admin/operating-hours": "날짜별 운영시간",
+  };
+
+  return titles[normalized] ?? "무혼";
 }
 
 function mainTabForPath(

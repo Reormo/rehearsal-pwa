@@ -107,14 +107,9 @@ function AdminAnnouncementsContent() {
 
       <form className="app-card space-y-4" onSubmit={submit}>
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="card-label">
-              {form.id === null ? "새 공지" : "공지 수정"}
-            </p>
-            <h2 className="mt-2 text-lg font-bold text-slate-950">
-              {form.id === null ? "공지 작성" : form.title || "제목 없음"}
-            </h2>
-          </div>
+          <h2 className="text-lg font-bold text-slate-950">
+            {form.id === null ? "공지 작성" : form.title || "공지 수정"}
+          </h2>
           {form.id !== null && (
             <button
               className="secondary-button small-button"

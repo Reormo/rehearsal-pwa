@@ -50,7 +50,9 @@ export function AppShell({
   ];
 
   const mainTabHref = mainTabForPath(pathname, navItems);
-  const isMainTab = navItems.some((item) => item.href === pathname);
+  const isMainTab = navItems.some(
+    (item) => normalizePathname(item.href) === pathname,
+  );
 
   useEffect(() => {
     const handlePopState = () => {
@@ -214,7 +216,37 @@ export function AppShell({
           }}
         >
           {navItems.map((item) => {
+            const normalizedHref = normalizePathname(item.href);
             const active = mainTabHref === item.href;
+            const currentDestination = pathname === normalizedHref;
+            const content = (
+              <>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center">
+                  <NavIcon name={item.icon} className="h-7 w-7" />
+                </span>
+                <span className="h-4 text-[11px] font-bold leading-4">
+                  {item.label}
+                </span>
+              </>
+            );
+            const className = `flex h-20 min-w-0 touch-manipulation select-none flex-col items-center justify-center gap-0.5 transition-[color,transform] duration-150 ease-out ${
+              active ? "text-slate-950" : "text-slate-400"
+            }`;
+
+            if (currentDestination) {
+              return (
+                <button
+                  key={item.href}
+                  type="button"
+                  aria-current="page"
+                  aria-label={`${item.label} 현재 탭`}
+                  className={className}
+                >
+                  {content}
+                </button>
+              );
+            }
+
             return (
               <Link
                 key={item.href}
@@ -222,16 +254,9 @@ export function AppShell({
                 replace
                 onClick={(event) => navigateMainTab(event, item.href)}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-20 min-w-0 touch-manipulation select-none flex-col items-center justify-center gap-0.5 transition-[color,transform] duration-150 ease-out active:scale-90 ${
-                  active ? "text-slate-950" : "text-slate-400"
-                }`}
+                className={`${className} active:scale-90`}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center">
-                  <NavIcon name={item.icon} className="h-7 w-7" />
-                </span>
-                <span className="h-4 text-[11px] font-bold leading-4">
-                  {item.label}
-                </span>
+                {content}
               </Link>
             );
           })}
@@ -262,8 +287,11 @@ function mainTabForPath(
 }
 
 function normalizePathname(pathname: string) {
-  if (pathname === "/") return "/";
-  return pathname.replace(/\/+$/, "") || "/";
+  let normalized = pathname.split("?")[0]?.split("#")[0] ?? pathname;
+  normalized = normalized.replace(/\/index\.html$/, "");
+  normalized = normalized.replace(/\.html$/, "");
+  normalized = normalized.replace(/\/+$/, "");
+  return normalized || "/";
 }
 
 function NavIcon({

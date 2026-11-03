@@ -213,43 +213,6 @@ function ScheduleContent({ user }: { user: AuthUser }) {
 
   return (
     <div className="space-y-7">
-      <section className="flex items-start justify-between gap-4">
-        <div>
-          <p className="eyebrow">SCHEDULE</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-            합주 예약 · 시간표
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-500">
-            시간표는 30분 원자 슬롯으로 관리합니다. 팀장이 예약 길이를 고르면 실제
-            예약 시작 시각은 30분 간격으로 다시 계산하고, 서버가 요청 순간 빈 슬롯을
-            잠가 선착순을 확정합니다.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="secondary-button flex h-11 w-11 shrink-0 items-center justify-center p-0"
-          aria-label="예약 현황 새로고침"
-          title="예약 현황 새로고침"
-          disabled={refreshing}
-          onClick={() => void refreshSchedule()}
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              d="M20 11a8 8 0 1 0-2.34 5.66M20 11V5m0 6h-6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-      </section>
-
       <section className="app-card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -258,7 +221,32 @@ function ScheduleContent({ user }: { user: AuthUser }) {
               예약할 팀
             </h2>
           </div>
-          <span className="count-badge">팀장 {leaderSongs.length}팀</span>
+          <div className="flex items-center gap-2">
+            <span className="count-badge">팀장 {leaderSongs.length}팀</span>
+            <button
+              type="button"
+              className="secondary-button flex h-9 w-9 shrink-0 items-center justify-center p-0"
+              aria-label="예약 현황 새로고침"
+              title="예약 현황 새로고침"
+              disabled={refreshing}
+              onClick={() => void refreshSchedule()}
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  d="M20 11a8 8 0 1 0-2.34 5.66M20 11V5m0 6h-6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {leaderSongsQuery.isPending && (
@@ -274,7 +262,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
           </p>
         ) : (
           <select
-            className="field-input mt-4"
+            className="field-input mt-4 w-full max-w-full min-w-0"
             value={effectiveSongId ?? ""}
             onChange={(event) => {
               setSelectedSongId(Number(event.target.value));
@@ -411,12 +399,14 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                   </strong>
                 </p>
               </div>
-              <p className="mt-2 text-slate-500">
-                1회 최대 {effectiveMaxReservationMinutes}분
-                {bookingOptionsQuery.data &&
-                  ` · 예약 ${bookingOptionsQuery.data.currentReservationCount}/${bookingOptionsQuery.data.maxReservationsPerSong}건`}
-                {" · "}일반 슬롯 {dayQuery.data.standardSlots.length}개
-              </p>
+              {bookingOptionsQuery.data && (
+                <p className="mt-2 text-slate-500">
+                  {formatDuplicateReservationCount(
+                    bookingOptionsQuery.data.currentReservationCount,
+                    bookingOptionsQuery.data.maxReservationsPerSong,
+                  )}
+                </p>
+              )}
               {dayQuery.data.roomStatus === "PARTIAL_BLOCKED" && (
                 <p className="mt-2 font-semibold text-amber-700">
                   일부 시간 사용 불가
@@ -955,14 +945,30 @@ function formatDateLabel(value: string) {
 }
 
 function formatCompactDateTime(value: string) {
-  return new Intl.DateTimeFormat("ko-KR", {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
-    month: "numeric",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(value));
+  }).formatToParts(new Date(value));
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+
+  return `${Number(values.month)}.${Number(values.day)}(${values.weekday}) ${values.hour}:${values.minute}`;
+}
+
+function formatDuplicateReservationCount(
+  currentReservationCount: number,
+  maxReservationsPerSong: number,
+) {
+  if (maxReservationsPerSong === 99) {
+    return `중복 예약 ${currentReservationCount}건`;
+  }
+  return `중복 예약 ${currentReservationCount}/${maxReservationsPerSong}건`;
 }
 
 function formatReservationDate(value: string) {

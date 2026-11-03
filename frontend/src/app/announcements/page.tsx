@@ -25,12 +25,6 @@ function AnnouncementsContent() {
 
   return (
     <div className="space-y-6">
-      <section>
-        <h1 className="text-2xl font-black tracking-tight text-slate-950">
-          공지
-        </h1>
-      </section>
-
       {query.isPending && <Message>공지를 불러오는 중...</Message>}
       {query.isError && <p className="error-box">{errorMessage(query.error)}</p>}
       {query.data?.length === 0 && <Message>등록된 공지가 없습니다.</Message>}

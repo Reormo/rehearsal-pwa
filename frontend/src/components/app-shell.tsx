@@ -29,6 +29,7 @@ export function AppShell({
     refetchInterval: 30_000,
   });
   const unreadCount = unreadCountQuery.data?.count ?? 0;
+  const sectionTitle = sectionTitleForPath(pathname);
 
   const navItems: Array<{
     href: string;
@@ -48,12 +49,9 @@ export function AppShell({
     <div className="min-h-dvh bg-slate-50">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-slate-950">{user.name}</p>
-            <p className="mt-0.5 text-xs font-medium text-slate-500">
-              {roleLabel(user.role)}
-            </p>
-          </div>
+          <h1 className="truncate text-xl font-black tracking-tight text-slate-950">
+            {sectionTitle}
+          </h1>
 
           <Link
             href="/notifications"
@@ -200,6 +198,14 @@ function NavIcon({
       <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
     </svg>
   );
+}
+
+function sectionTitleForPath(pathname: string) {
+  if (pathname === "/") return "홈";
+  if (pathname.startsWith("/schedule")) return "예약";
+  if (pathname.startsWith("/announcements")) return "공지";
+  if (pathname.startsWith("/admin")) return "관리자";
+  return "전체";
 }
 
 export function roleLabel(role: AuthUser["role"]) {

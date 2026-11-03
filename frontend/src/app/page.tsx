@@ -56,12 +56,11 @@ function HomeContent({ user }: { user: AuthUser }) {
 
         {isAdmin ? (
           <section className="app-card">
-            <p className="card-label">관리자 기능</p>
-            <h2 className="mt-3 text-lg font-bold text-slate-950">
-              가입 신청과 회원을 관리하세요.
+            <h2 className="text-lg font-bold text-slate-950">
+              관리자 기능
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              초대코드 재발급, 가입 승인·거절, 권한 변경과 회원 관리가 가능합니다.
+              초대코드, 가입 신청, 권한과 회원을 관리할 수 있습니다.
             </p>
             <Link href="/admin" className="primary-button mt-5 w-full">
               관리자 화면
@@ -69,12 +68,11 @@ function HomeContent({ user }: { user: AuthUser }) {
           </section>
         ) : (
           <section className="app-card">
-            <p className="card-label">합주 예약</p>
-            <h2 className="mt-3 text-lg font-bold text-slate-950">
-              팀장으로 지정된 팀의 합주를 예약하세요.
+            <h2 className="text-lg font-bold text-slate-950">
+              합주 예약
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              예약 페이지에서 팀과 날짜, 시간을 선택해 합주를 잡을 수 있습니다.
+              팀장으로 지정된 팀의 날짜와 시간을 선택해 합주를 예약할 수 있습니다.
             </p>
           </section>
         )}
@@ -82,12 +80,9 @@ function HomeContent({ user }: { user: AuthUser }) {
 
       <section className="app-card mt-4">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="card-label">내 예정 합주</p>
-            <h2 className="mt-2 text-lg font-bold text-slate-950">
-              앞으로 잡힌 합주
-            </h2>
-          </div>
+          <h2 className="text-lg font-bold text-slate-950">
+            내 예정 합주
+          </h2>
           <Link
             href="/my/reservations"
             className="shrink-0 text-xs font-bold text-slate-500 underline-offset-4 hover:text-slate-950 hover:underline"
@@ -186,15 +181,9 @@ function HomeRehearsalCalendar() {
 
   return (
     <section className="app-card mt-4 select-none">
-      <div>
-        <p className="card-label">전체 합주 일정</p>
-        <h2 className="mt-2 text-lg font-bold text-slate-950">
-          날짜별 합주 보기
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          날짜를 누르면 그날 예약된 모든 팀의 합주를 시간순으로 확인할 수 있습니다.
-        </p>
-      </div>
+      <h2 className="text-lg font-bold text-slate-950">
+        전체 합주 일정
+      </h2>
 
       <div className="mt-5 flex items-center justify-between gap-4">
         <button

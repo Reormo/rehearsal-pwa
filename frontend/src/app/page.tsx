@@ -34,13 +34,7 @@ function HomeContent({ user }: { user: AuthUser }) {
 
   return (
     <>
-      <section>
-        <h1 className="text-2xl font-black tracking-tight text-slate-950">
-          홈
-        </h1>
-      </section>
-
-      <div className="mt-5">
+      <div>
         {isAdmin ? (
           <section className="app-card">
             <h2 className="text-lg font-bold text-slate-950">

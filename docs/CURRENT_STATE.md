@@ -16,6 +16,13 @@ Base commit:
 
 ## Completed work on this branch
 
+### Refresh icon size follow-up (2026-11-05)
+
+- Corrected the previously oversized refresh glyph: switched to a conventional 20px thin-line two-arrow refresh symbol, matching the approved small icon-only mock.
+- Kept the borderless/backgroundless 44px touch area and the existing refresh action / disabled and spinning states.
+- Only presentation changed; verify locally before merge.
+
+
 ### Refresh icon-only control (2026-11-05)
 
 - Removed the visible border and button background from the booking-time refresh control while retaining its accessible button, 44px touch target, refresh/spin behavior, and focus indicator.

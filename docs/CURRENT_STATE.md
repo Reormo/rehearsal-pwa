@@ -16,6 +16,16 @@ Base commit:
 
 ## Completed work on this branch
 
+### Announcements list/detail and schedule UI stabilization (2026-11-05)
+
+- Announcements now show only a two-line, wrapping title and short preview; selecting a card opens the static-export-compatible `/announcements/detail?id=...` child route with the full text and author information.
+- Full announcement text wraps even long unbroken characters, preventing mobile horizontal overflow. Announcement detail stays under the Notices footer tab.
+- Rehearsal schedule dialog uses a stable, viewport-bounded height and a fixed scrollbar gutter; the embedded day details have minimum height to reduce layout shift as dates change.
+- UPCOMING booking rounds display one amber status message instead of two; other booking closure reasons remain.
+- Booking refresh button dimensions remain unchanged; the SVG is larger with a fuller stroke.
+- Added preview-text tests and modal sizing assertion; remote commit requires local tests, lint, static build and mobile inspection.
+
+
 ### Nested-page navigation, schedule modal and booking-calendar selection (2026-11-05)
 
 - "전체 팀 보기" in My Teams is now "전체 곡 보기" and links to `/songs` for every role.
@@ -220,6 +230,9 @@ Existing unrelated drift remains intentionally out of scope:
 4. Confirm the actual production deployment path before infrastructure changes.
 
 ## Remaining work
+
+Verify announcement list/detail navigation (including long numeric text and direct deep link), notice-tab highlight, schedule modal position during date changes and on narrow devices, UPCOMING notice deduplication, and the larger refresh glyph. Run frontend Vitest, lint, and static build before merge.
+
 
 For this commit, validate local admin/member My Teams navigation, /songs footer selection, dialog month/day and close behavior, child-to-child/parent transitions, UPCOMING dates, and refresh icon size. Run frontend Vitest, lint, and static production build before merging.
 

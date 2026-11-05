@@ -452,13 +452,13 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 24 24"
-                    className={`h-7 w-7 ${refreshing ? "animate-spin" : ""}`}
+                    className={`h-8 w-8 ${refreshing ? "animate-spin" : ""}`}
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
+                    strokeWidth="2.4"
                   >
                     <path
-                      d="M20 11a8 8 0 1 0-2.34 5.66M20 11V5m0 6h-6"
+                      d="M21 12a9 9 0 1 0-2.64 6.36M21 12V5m0 7h-7"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
@@ -488,7 +488,8 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 </p>
               )}
               {bookingOptionsQuery.data &&
-                !bookingOptionsQuery.data.acceptingReservations && (
+                !bookingOptionsQuery.data.acceptingReservations &&
+                selectedSummary?.roundState !== "UPCOMING" && (
                   <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-800">
                     {bookingOptionsQuery.data.maxReservationsPerSong > 0 &&
                     bookingOptionsQuery.data.currentReservationCount >=

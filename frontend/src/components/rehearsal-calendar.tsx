@@ -118,7 +118,7 @@ export function RehearsalCalendar({ embedded = false }: { embedded?: boolean }) 
         })}
       </div>
 
-      <div className="mt-6 border-t border-slate-200 pt-5">
+      <div className={embedded ? "mt-6 min-h-[200px] border-t border-slate-200 pt-5" : "mt-6 border-t border-slate-200 pt-5"}>
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="card-label">선택한 날짜</p>

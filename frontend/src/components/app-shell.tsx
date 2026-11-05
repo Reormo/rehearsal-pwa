@@ -272,6 +272,7 @@ function headerTitleForPath(pathname: string) {
     "/": "무혼",
     "/schedule": "합주 예약",
     "/announcements": "공지",
+    "/announcements/detail": "공지 상세",
     "/admin": "관리자",
     "/my": "전체",
     "/notifications": "알림",

@@ -20,6 +20,7 @@ describe("RehearsalScheduleModal", () => {
     expect(screen.getByRole("dialog", { name: "전체 합주 일정" })).toBeInTheDocument();
     expect(screen.getByText("달력 내용")).toBeInTheDocument();
     expect(document.body.style.overflow).toBe("hidden");
+    expect(screen.getByRole("dialog")).toHaveClass("h-[calc(100dvh-2rem)]", "[scrollbar-gutter:stable]");
     fireEvent.click(screen.getByRole("button", { name: "전체 합주 일정 닫기" }));
     expect(onClose).toHaveBeenCalledOnce();
   });

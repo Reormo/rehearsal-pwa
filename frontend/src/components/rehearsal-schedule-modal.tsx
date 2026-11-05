@@ -56,7 +56,7 @@ export function RehearsalScheduleModal({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="rehearsal-schedule-title"
-        className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl sm:p-6"
+        className="h-[calc(100dvh-2rem)] max-h-[720px] w-full max-w-xl overscroll-contain overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl [scrollbar-gutter:stable] sm:p-6"
       >
         <div className="sticky top-0 z-10 mb-3 flex items-center justify-between gap-3 border-b border-slate-100 bg-white pb-3">
           <h2 id="rehearsal-schedule-title" className="text-xl font-black text-slate-950">

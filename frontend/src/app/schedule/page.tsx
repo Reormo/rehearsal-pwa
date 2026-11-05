@@ -443,7 +443,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 <p className="card-label">4. 시간 선택</p>
                 <button
                   type="button"
-                  className="secondary-button flex h-10 w-10 shrink-0 items-center justify-center p-0"
+                  className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-700 transition-[color,transform] duration-150 hover:text-slate-950 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700"
                   aria-label="예약 현황 새로고침"
                   title="예약 현황 새로고침"
                   disabled={refreshing}

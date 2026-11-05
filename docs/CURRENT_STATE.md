@@ -16,6 +16,13 @@ Base commit:
 
 ## Completed work on this branch
 
+### Refresh icon-only control (2026-11-05)
+
+- Removed the visible border and button background from the booking-time refresh control while retaining its accessible button, 44px touch target, refresh/spin behavior, and focus indicator.
+- Kept the current 32px glyph; no booking logic or backend changes.
+- Awaiting local visual and automated verification after GitHub DIRECT commit.
+
+
 ### Announcements list/detail and schedule UI stabilization (2026-11-05)
 
 - Announcements now show only a two-line, wrapping title and short preview; selecting a card opens the static-export-compatible `/announcements/detail?id=...` child route with the full text and author information.

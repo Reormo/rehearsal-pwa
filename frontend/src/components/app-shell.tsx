@@ -193,7 +193,11 @@ export function AppShell({
                 ? "page-transition-surface page-enter-from-left"
                 : "page-transition-surface"
           }
-          onAnimationEnd={clearTransition}
+          onAnimationEnd={(event) => {
+            if (event.target === event.currentTarget) {
+              clearTransition();
+            }
+          }}
         >
           {children}
         </div>

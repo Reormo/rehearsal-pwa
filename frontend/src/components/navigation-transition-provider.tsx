@@ -1,14 +1,21 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   createContext,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 export type PageTransitionDirection = "left" | "right";
+
+type PendingTransition = {
+  direction: PageTransitionDirection;
+  fromPathname: string;
+};
 
 type NavigationTransitionValue = {
   direction: PageTransitionDirection | null;
@@ -24,12 +31,21 @@ export function NavigationTransitionProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [direction, setDirection] =
-    useState<PageTransitionDirection | null>(null);
+  const pathname = usePathname();
+  const lastRenderedPathname = useRef(pathname);
+  const [pendingTransition, setPendingTransition] =
+    useState<PendingTransition | null>(null);
+
+  useEffect(() => {
+    lastRenderedPathname.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     const handlePopState = () => {
-      setDirection("left");
+      setPendingTransition({
+        direction: "left",
+        fromPathname: lastRenderedPathname.current,
+      });
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -38,11 +54,19 @@ export function NavigationTransitionProvider({
 
   const value = useMemo(
     () => ({
-      direction,
-      startTransition: setDirection,
-      clearTransition: () => setDirection(null),
+      // Do not animate the page we are leaving while the destination loads.
+      direction:
+        pendingTransition && pendingTransition.fromPathname !== pathname
+          ? pendingTransition.direction
+          : null,
+      startTransition: (direction: PageTransitionDirection) =>
+        setPendingTransition({
+          direction,
+          fromPathname: lastRenderedPathname.current,
+        }),
+      clearTransition: () => setPendingTransition(null),
     }),
-    [direction],
+    [pathname, pendingTransition],
   );
 
   return (

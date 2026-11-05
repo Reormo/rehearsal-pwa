@@ -16,6 +16,15 @@ Base commit:
 
 ## Completed work on this branch
 
+### First-visit tab animation stabilization (2026-11-05)
+
+- Deferred page-entry animation until the destination pathname is rendered; the outgoing screen no longer animates while Next.js prepares a previously unvisited route.
+- Kept existing left/right tab and browser-back directions, transition duration, and page layout.
+- Limited animation-end clearing to the page surface itself, not bubbled child animations.
+- Added provider regression tests for first navigation, direction changes, and browser back.
+- Pushed as a GitHub DIRECT change for local user verification; no local build, lint, or UI test has been run for this commit yet.
+
+
 ### Booking / member UX
 
 - Reservation calendar state cleanup:
@@ -200,6 +209,9 @@ Existing unrelated drift remains intentionally out of scope:
 4. Confirm the actual production deployment path before infrastructure changes.
 
 ## Remaining work
+
+Before merge: locally validate first-visit tab transitions (Home → Reservation / Notice, then return), browser back, and repeat navigation in dev and production builds. Run `npm.cmd run test:run`, `npm.cmd run lint`, and `NEXT_STATIC_EXPORT=true npm.cmd run build`. If first-visit jitter remains, investigate Next.js dev compilation and page loading layout changes separately.
+
 
 1. Pull the newest navigation/header changes.
 2. Re-run frontend lint, tests, and static build.

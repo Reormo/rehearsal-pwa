@@ -104,6 +104,10 @@ function ScheduleContent({ user }: { user: AuthUser }) {
     enabled: Boolean(dayQuery.data?.round.id && effectiveSongId),
   });
 
+  const bookingAllowedOnSelectedDate =
+    selectedSummary?.roundState !== "UPCOMING" &&
+    (bookingOptionsQuery.data?.acceptingReservations ?? false);
+
   const effectiveMaxReservationMinutes =
     bookingOptionsQuery.data?.maxReservationMinutes ??
     dayQuery.data?.round.maxReservationMinutes ??
@@ -448,7 +452,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 24 24"
-                    className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+                    className={`h-7 w-7 ${refreshing ? "animate-spin" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -462,6 +466,11 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 </button>
               </div>
 
+              {selectedSummary?.roundState === "UPCOMING" && (
+                <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-800">
+                  예약 준비 중인 날짜입니다. 시간표는 볼 수 있지만 예약 슬롯은 선택할 수 없습니다.
+                </p>
+              )}
               {!effectiveSongId && (
                 <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">
                   시간표는 확인할 수 있지만 예약하려면 먼저 팀장으로 지정된 팀이
@@ -514,7 +523,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                         option={option}
                         selected={effectiveStartAt === option.startAt}
                         disabled={
-                          !(bookingOptionsQuery.data?.acceptingReservations ?? false)
+                          !bookingAllowedOnSelectedDate
                         }
                         onSelect={() => {
                           setSelectedStartAt(option.startAt);
@@ -552,9 +561,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                           bookingOptionsQuery.data?.options ?? [],
                         )}
                         selectedStartAt={effectiveStartAt}
-                        acceptingReservations={
-                          bookingOptionsQuery.data?.acceptingReservations ?? false
-                        }
+                        acceptingReservations={bookingAllowedOnSelectedDate}
                         onSelect={(startAt) => {
                           setSelectedStartAt(startAt);
                           clearBookingFeedback();
@@ -596,7 +603,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 disabled={
                   !effectiveSongId ||
                   !effectiveStartAt ||
-                  !bookingOptionsQuery.data?.acceptingReservations ||
+                  !bookingAllowedOnSelectedDate ||
                   bookingMutation.isPending
                 }
                 onClick={() => {
@@ -691,14 +698,14 @@ function CalendarDay({
   const upcoming = summary?.roundState === "UPCOMING";
   const closedRound = summary?.roundState === "CLOSED";
   const roomClosed = summary?.roomStatus === "CLOSED";
-  const active =
+  const selectable =
     prepared &&
     !past &&
     !outside &&
-    !upcoming &&
     !closedRound &&
     !roomClosed;
-  const disabled = !active;
+  const active = selectable && !upcoming;
+  const disabled = !selectable;
   const statusLabel =
     !past && !outside && prepared && upcoming
       ? "준비 중"
@@ -712,7 +719,7 @@ function CalendarDay({
       disabled={disabled}
       onClick={onClick}
       className={`min-h-16 overflow-hidden rounded-xl border px-1 py-2 text-left transition ${
-        selected && active
+        selected && selectable
           ? "border-slate-950 bg-slate-950 text-white"
           : "border-slate-100 bg-white"
       } ${outside ? "opacity-30" : ""} ${
@@ -721,7 +728,7 @@ function CalendarDay({
     >
       <span
         className={`text-xs font-bold ${
-          selected && active
+          selected && selectable
             ? "text-white"
             : date.getDay() === 0
               ? "text-red-500"
@@ -737,7 +744,7 @@ function CalendarDay({
       {statusLabel && (
         <span
           className={`mt-1 block whitespace-nowrap text-[9px] font-semibold leading-4 ${
-            selected && active ? "text-white/80" : "text-slate-400"
+            selected && selectable ? "text-white/80" : "text-slate-400"
           }`}
         >
           {statusLabel}

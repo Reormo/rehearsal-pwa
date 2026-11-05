@@ -10,7 +10,7 @@ import { authApi, AuthUser, errorMessage } from "@/lib/api";
 const menuItems = [
   { href: "/my/notifications", label: "알림 설정", icon: "notification" },
   { href: "/my/teams", label: "내 팀", icon: "team" },
-  { href: "/songs", label: "전체 곡 보기", icon: "team" },
+  { href: "/songs", label: "전체 곡 보기", icon: "music" },
   { href: "/my/reservations", label: "합주 관리", icon: "rehearsal" },
   { href: "/my/swaps", label: "일정 교환", icon: "swap" },
 ] as const;
@@ -139,6 +139,16 @@ function MenuIcon({ name }: { name: MenuIconName }) {
         <circle cx="17" cy="9" r="2" />
         <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
         <path d="M14.5 15.5A4.5 4.5 0 0 1 20.5 20" />
+      </svg>
+    );
+  }
+
+  if (name === "music") {
+    return (
+      <svg {...common}>
+        <path d="M9 18V6l12-3v12" />
+        <ellipse cx="6" cy="18" rx="3" ry="2" />
+        <ellipse cx="18" cy="15" rx="3" ry="2" />
       </svg>
     );
   }

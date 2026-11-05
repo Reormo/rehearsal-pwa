@@ -56,7 +56,9 @@ export function NavigationTransitionProvider({
     () => ({
       // Do not animate the page we are leaving while the destination loads.
       direction:
-        pendingTransition && pendingTransition.fromPathname !== pathname
+        pendingTransition &&
+        pendingTransition.fromPathname !== pathname &&
+        !(isSubpage(pendingTransition.fromPathname) && isSubpage(pathname))
           ? pendingTransition.direction
           : null,
       startTransition: (direction: PageTransitionDirection) =>
@@ -84,4 +86,9 @@ export function useNavigationTransition() {
     );
   }
   return value;
+}
+
+function isSubpage(pathname: string) {
+  const normalized = pathname.replace(/\/index\.html$/, "").replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+  return !["/", "/schedule", "/announcements", "/admin", "/my"].includes(normalized);
 }

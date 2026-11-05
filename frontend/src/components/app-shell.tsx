@@ -118,7 +118,11 @@ export function AppShell({
       return;
     }
 
-    startTransition("right");
+    if (isMainTab) {
+      startTransition("right");
+    } else {
+      clearTransition();
+    }
   }
 
   function goBack() {
@@ -295,6 +299,7 @@ function mainTabForPath(
 ) {
   const normalizedPathname = normalizePathname(pathname);
   if (normalizedPathname === "/") return "/";
+  if (normalizedPathname === "/songs") return "/my";
 
   return (
     navItems

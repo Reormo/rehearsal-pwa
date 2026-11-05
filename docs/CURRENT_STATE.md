@@ -16,6 +16,17 @@ Base commit:
 
 ## Completed work on this branch
 
+### Nested-page navigation, schedule modal and booking-calendar selection (2026-11-05)
+
+- "전체 팀 보기" in My Teams is now "전체 곡 보기" and links to `/songs` for every role.
+- `/songs` is treated as a child of the All tab, preserving the active footer icon.
+- My Reservations now opens a dark-backdrop schedule dialog; its calendar and daily schedule reuse the Home component.
+- Child-to-child navigation (including browser back) has no slide; tab and tab-to-child animations remain.
+- UPCOMING booking dates are selectable, but selecting and submitting reservation slots remains disabled; refresh SVG enlarged without changing button dimensions.
+- The All menu has distinct icons for My Teams and All Songs.
+- Added regression tests for nested transitions and dialog dismissal/focus. Local automated tests have not yet run.
+
+
 ### First-visit tab animation stabilization (2026-11-05)
 
 - Deferred page-entry animation until the destination pathname is rendered; the outgoing screen no longer animates while Next.js prepares a previously unvisited route.
@@ -209,6 +220,9 @@ Existing unrelated drift remains intentionally out of scope:
 4. Confirm the actual production deployment path before infrastructure changes.
 
 ## Remaining work
+
+For this commit, validate local admin/member My Teams navigation, /songs footer selection, dialog month/day and close behavior, child-to-child/parent transitions, UPCOMING dates, and refresh icon size. Run frontend Vitest, lint, and static production build before merging.
+
 
 Before merge: locally validate first-visit tab transitions (Home → Reservation / Notice, then return), browser back, and repeat navigation in dev and production builds. Run `npm.cmd run test:run`, `npm.cmd run lint`, and `NEXT_STATIC_EXPORT=true npm.cmd run build`. If first-visit jitter remains, investigate Next.js dev compilation and page loading layout changes separately.
 

@@ -70,6 +70,33 @@ describe("NavigationTransitionProvider", () => {
     expect(screen.getByTestId("direction")).toHaveTextContent("left");
   });
 
+  it("does not animate navigation between two subpages", () => {
+    navigation.pathname = "/my/teams";
+    const view = render(tree());
+    fireEvent.click(screen.getByRole("button", { name: "Go right" }));
+    navigation.pathname = "/songs";
+    view.rerender(tree());
+    expect(screen.getByTestId("direction")).toHaveTextContent("none");
+  });
+
+  it("animates a subpage returning to its parent tab", () => {
+    navigation.pathname = "/my/teams";
+    const view = render(tree());
+    fireEvent.click(screen.getByRole("button", { name: "Go right" }));
+    navigation.pathname = "/my";
+    view.rerender(tree());
+    expect(screen.getByTestId("direction")).toHaveTextContent("right");
+  });
+
+  it("keeps browser back between subpages instantaneous", () => {
+    navigation.pathname = "/my/reservations";
+    const view = render(tree());
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    navigation.pathname = "/my/teams";
+    view.rerender(tree());
+    expect(screen.getByTestId("direction")).toHaveTextContent("none");
+  });
+
   it("preserves left-entry animation for browser back navigation", () => {
     navigation.pathname = "/schedule";
     const view = render(tree());

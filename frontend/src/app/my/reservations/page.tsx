@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
+import { RehearsalScheduleModal } from "@/components/rehearsal-schedule-modal";
 import { errorMessage, songApi } from "@/lib/api";
 import {
   Reservation,
@@ -26,6 +27,8 @@ export default function MyReservationsPage() {
 
 function ReservationsContent({ userId }: { userId: number }) {
   const queryClient = useQueryClient();
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const closeScheduleModal = useCallback(() => setScheduleModalOpen(false), []);
   const reservationsQuery = useQuery({
     queryKey: ["reservations", "mine"],
     queryFn: scheduleApi.myReservations,
@@ -87,6 +90,7 @@ function ReservationsContent({ userId }: { userId: number }) {
     cancelMutation.isPending;
 
   return (
+    <>
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -102,9 +106,9 @@ function ReservationsContent({ userId }: { userId: number }) {
           <Link href="/my/swaps" className="primary-button">
             일정 교환
           </Link>
-          <Link href="/schedule" className="secondary-button">
+          <button type="button" className="secondary-button" onClick={() => setScheduleModalOpen(true)}>
             전체 시간표 보기
-          </Link>
+          </button>
         </div>
       </section>
 
@@ -136,6 +140,8 @@ function ReservationsContent({ userId }: { userId: number }) {
         ))}
       </div>
     </div>
+    {scheduleModalOpen && <RehearsalScheduleModal onClose={closeScheduleModal} />}
+    </>
   );
 }
 

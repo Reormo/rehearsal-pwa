@@ -35,7 +35,7 @@ function TeamsContent({ userId }: { userId: number }) {
           </h1>
         </div>
         <Link href="/songs" className="secondary-button">
-          전체 팀 보기
+          전체 곡 보기
         </Link>
       </section>
 

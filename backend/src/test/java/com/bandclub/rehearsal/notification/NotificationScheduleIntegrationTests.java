@@ -4,6 +4,8 @@ import com.bandclub.rehearsal.auth.repository.UserRepository;
 import com.bandclub.rehearsal.notification.repository.NotificationRepository;
 import com.bandclub.rehearsal.notification.service.NotificationScheduleService;
 import com.bandclub.rehearsal.notification.service.WebPushService;
+import com.bandclub.rehearsal.schedule.service.StageBookingWindowService;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,6 +44,12 @@ class NotificationScheduleIntegrationTests {
 
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    StageBookingWindowService stageBookingWindowService;
+
+    @Autowired
+    EntityManager entityManager;
 
     @Test
     void bookingOpenNotificationsAreIdempotent() {
@@ -92,8 +100,8 @@ class NotificationScheduleIntegrationTests {
         long buskingStageId = insertStageType(clubId, "버스킹", now);
 
         Instant defaultOpenAt = now.plusSeconds(600);
-        Instant customOpenAt = now.plusSeconds(3600);
-        Instant closeAt = now.plusSeconds(60 * 60 * 24 * 8);
+        Instant customOpenAt = now.plusSeconds(4200);
+        Instant closeAt = Instant.parse("2030-04-14T12:00:00Z");
         long roundId = insertRound(
                 clubId,
                 9011,
@@ -101,14 +109,21 @@ class NotificationScheduleIntegrationTests {
                 defaultOpenAt,
                 closeAt
         );
-        insertStageWindow(
-                roundId,
-                buskingStageId,
-                festivalLeaderId,
-                customOpenAt,
-                closeAt,
-                now
+        // Exercise the real admin save service instead of direct SQL.
+        var savedWindow = stageBookingWindowService.upsert(
+                festivalLeaderId, roundId, buskingStageId,
+                customOpenAt, closeAt, 90, 1
         );
+        entityManager.flush();
+        assertEquals(customOpenAt, savedWindow.bookingOpenAt());
+        assertEquals(buskingStageId, savedWindow.stageTypeId());
+        assertEquals(customOpenAt, jdbcTemplate.queryForObject(
+                """
+                select booking_open_at from booking_round_stage_windows
+                where booking_round_id = ? and stage_type_id = ?
+                """,
+                Timestamp.class, roundId, buskingStageId
+        ).toInstant());
 
         long festivalSong = insertSongForStage(
                 clubId, festivalLeaderId, festivalStageId, "축제 알림 테스트곡", now

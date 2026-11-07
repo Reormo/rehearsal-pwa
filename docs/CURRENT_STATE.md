@@ -16,6 +16,14 @@ Base commit:
 
 ## Completed work on this branch
 
+### Stage alert live diagnosis (2026-11-07)
+
+- Confirmed reported symptom: a saved Busking override appeared to be ignored at notification time; this is **not yet resolved** by the existing implementation or tests.
+- Upgraded the two-stage regression case to exercise `StageBookingWindowService.upsert` (real admin-save path) instead of inserting the stage window directly with SQL. It asserts stored window then independently validates the default Festival and custom Busking 10-minute/open alerts.
+- Added `docs/BOOKING_NOTIFICATION_DIAGNOSTICS.md` with safe SELECT-only queries for the affected round, actual stored override, eligible leader count, and emitted booking notifications. These are necessary to distinguish a wrong-round save or old/pre-change alert from missing Push delivery.
+- No production code or DB schema changed; local Docker/Testcontainers tests have NOT been executed yet.
+
+
 ### Stage-specific booking notification regression coverage (2026-11-07)
 
 - Reviewed `NotificationScheduleService`: the existing scheduler already uses `coalesce(stage_override, round_default)` independently per song stage type, filters `song_members.is_leader = true`, and deduplicates by round + stage type + effective open time + recipient.

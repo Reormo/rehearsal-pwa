@@ -16,6 +16,14 @@ Base commit:
 
 ## Completed work on this branch
 
+### Stage-specific booking notification regression coverage (2026-11-07)
+
+- Reviewed `NotificationScheduleService`: the existing scheduler already uses `coalesce(stage_override, round_default)` independently per song stage type, filters `song_members.is_leader = true`, and deduplicates by round + stage type + effective open time + recipient.
+- Added a PostgreSQL integration regression case for Festival (default) and Busking (custom): pre-open and open notifications must fire at separate times, reach only the matching stage leaders, not reach ordinary team members, and avoid repeat delivery.
+- No production notification logic, DB schema, configuration, or frontend behavior changed. Live symptom may reflect deployed code, stored stage settings, or leader assignments and still requires production verification without exposing user data.
+- Local backend tests have NOT been run in this GitHub-only session; run the targeted Gradle test and full suite before deploying.
+
+
 ### Refresh icon size follow-up (2026-11-05)
 
 - Corrected the previously oversized refresh glyph: switched to a conventional 20px thin-line two-arrow refresh symbol, matching the approved small icon-only mock.

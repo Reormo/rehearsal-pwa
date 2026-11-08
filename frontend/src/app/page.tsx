@@ -7,6 +7,7 @@ import { AppShell } from "@/components/app-shell";
 import { AuthUser, errorMessage } from "@/lib/api";
 import { scheduleApi } from "@/lib/schedule-api";
 import { RehearsalCalendar } from "@/components/rehearsal-calendar";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 export default function HomePage() {
   return (
@@ -68,7 +69,9 @@ function HomeContent({ user }: { user: AuthUser }) {
         </div>
 
         {reservationsQuery.isPending && (
-          <p className="mt-5 text-sm text-slate-400">예정 합주를 불러오는 중...</p>
+          <div className="mt-5">
+            <LoadingIndicator label="예정 합주를 불러오는 중..." />
+          </div>
         )}
         {reservationsQuery.isError && (
           <p className="error-box mt-5">{errorMessage(reservationsQuery.error)}</p>

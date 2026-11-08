@@ -2,6 +2,7 @@ package com.bandclub.rehearsal.auth.controller;
 
 import com.bandclub.rehearsal.auth.domain.ClubRole;
 import com.bandclub.rehearsal.auth.domain.SignupStatus;
+import com.bandclub.rehearsal.auth.security.LoginAttemptLimiter;
 import com.bandclub.rehearsal.auth.service.AuthCookieService;
 import com.bandclub.rehearsal.auth.service.AuthService;
 import com.bandclub.rehearsal.common.exception.AppException;
@@ -22,10 +23,16 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthCookieService cookieService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
-    public AuthController(AuthService authService, AuthCookieService cookieService) {
+    public AuthController(
+            AuthService authService,
+            AuthCookieService cookieService,
+            LoginAttemptLimiter loginAttemptLimiter
+    ) {
         this.authService = authService;
         this.cookieService = cookieService;
+        this.loginAttemptLimiter = loginAttemptLimiter;
     }
 
     @PostMapping("/signup")
@@ -41,7 +48,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthUserResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthUserResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        loginAttemptLimiter.checkAndRecord(request.loginId(), servletRequest.getRemoteAddr());
         AuthService.LoginResult result = authService.login(request.loginId(), request.password());
         return withTokens(result);
     }

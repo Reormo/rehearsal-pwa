@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { errorMessage } from "@/lib/api";
+import { LoadingIndicator } from "@/components/loading-indicator";
 import { scheduleApi, type UnavailableScheduleSlot } from "@/lib/schedule-api";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -82,6 +83,11 @@ export function RehearsalCalendar({ embedded = false }: { embedded?: boolean }) 
         </button>
       </div>
 
+      {calendarQuery.isPending && (
+        <div className="mt-3">
+          <LoadingIndicator compact label="달력을 불러오는 중..." />
+        </div>
+      )}
       {calendarQuery.isError && (
         <p className="error-box mt-4">{errorMessage(calendarQuery.error)}</p>
       )}
@@ -140,9 +146,9 @@ export function RehearsalCalendar({ embedded = false }: { embedded?: boolean }) 
         )}
 
         {dayQuery.isPending && dayQuery.fetchStatus !== "idle" && (
-          <p className="mt-4 text-sm text-slate-400">
-            합주 일정을 불러오는 중...
-          </p>
+          <div className="mt-4">
+            <LoadingIndicator label="합주 일정을 불러오는 중..." />
+          </div>
         )}
 
         {dayQuery.isError && (

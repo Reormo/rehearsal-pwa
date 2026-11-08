@@ -25,7 +25,7 @@ public class SongController {
     @GetMapping
     public List<SongResponse> mySongs(@AuthenticationPrincipal Jwt jwt) {
         return songService.listMySongs(userId(jwt)).stream()
-                .map(SongResponse::from)
+                .map(SongResponse::forMember)
                 .toList();
     }
 
@@ -41,7 +41,7 @@ public class SongController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable Long songId
     ) {
-        return SongResponse.from(songService.getMySong(userId(jwt), songId));
+        return SongResponse.forMember(songService.getMySong(userId(jwt), songId));
     }
 
     private long userId(Jwt jwt) {
@@ -89,6 +89,24 @@ public class SongController {
             Instant updatedAt,
             List<SongMemberResponse> members
     ) {
+        static SongResponse forMember(SongService.SongView view) {
+            SongResponse result = from(view);
+            return new SongResponse(
+                    result.id(), result.title(), result.stageTypeId(),
+                    result.stageTypeName(), result.status(), result.archivedAt(),
+                    result.createdAt(), result.updatedAt(),
+                    result.members().stream()
+                            .map(member -> new SongMemberResponse(
+                                    member.userId(),
+                                    null,
+                                    member.name(),
+                                    member.sessionName(),
+                                    member.leader()
+                            ))
+                            .toList()
+            );
+        }
+
         static SongResponse from(SongService.SongView view) {
             return new SongResponse(
                     view.id(),

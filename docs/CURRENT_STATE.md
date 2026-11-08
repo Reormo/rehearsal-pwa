@@ -16,6 +16,16 @@ Base commit:
 
 ## Completed work on this branch
 
+### First-visit loading feedback and low-risk security hardening (2026-11-09)
+
+- Added a compact, delayed (220ms) loading spinner for the initial authenticated landing view, Home reservations and Home rehearsal-calendar fetches. Previously cached content does not show the indicator; original navigation transitions and layout remain intact. Reduced-motion preference disables spinner rotation.
+- Added a single-instance in-memory login attempt limiter: 8 attempts per login identifier + observed peer address per 10 minutes; subsequent attempts receive HTTP 429 without revealing account existence. A multi-instance deployment still needs a shared edge/distributed limiter, and the server administrator must verify real client-IP forwarding.
+- Member-facing song endpoints now omit other members' login IDs; administrative song APIs retain IDs needed for team management.
+- Added Caddy security headers (nosniff, clickjacking protection, privacy-oriented referrer and permissions policy, restrictive frame/object/form CSP directives) and noindex directives. This does not replace authentication or make the site undiscoverable immediately.
+- Added backend limiter/privacy regression tests and an auth-loading test. No schema changes, production data changes, or authentication-cookie changes.
+- **Pending local validation:** backend full tests, frontend Vitest/lint/static build, Caddy config validation and Docker build, first-visit PWA check, admin song screen, and HTTP 429 behavior. Do not deploy/merge until these pass.
+
+
 ### Stage alert live diagnosis (2026-11-07)
 
 - Confirmed reported symptom: a saved Busking override appeared to be ignored at notification time; this is **not yet resolved** by the existing implementation or tests.

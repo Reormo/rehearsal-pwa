@@ -1,5 +1,22 @@
 # Current State
 
+## Active feature handoff — MT Easter Egg (2026-11-18)
+
+- Branch: `feat/mt-games-easter-egg` based on main `79b966690bb4144da0e9ea3ac64097fb77593495`; **not merged or deployed**.
+- Added new Flyway V16 schema and authenticated `/api/mt/**` for MT events, teams, buzzer and typing.
+- Added participant `/mt`, `/mt/buzzer`, `/mt/typing`; host `/mt/host`, `/mt/host/teams`, `/mt/host/questions`.
+- Hidden entry: tap account name 5 times on `/my`; direct `/mt` link also works. No navbar items added.
+- MC currently requires existing ADMIN or SUPER_ADMIN. Feature flags default OFF and lock game details.
+- Buzzer ordering is atomic at the server via PostgreSQL event row lock. Multiple members can press for one MT team.
+- Typing is messenger-style, allows re-submission, ranks only latest submission per member, preserves text and team snapshots.
+- Tests added: `MtIntegrationTests` (visibility, claim, retries, Unicode, latest submission).
+- **Verification pending:** backend full Gradle tests with Docker/Postgres, frontend Vitest/lint/static build, Android/iOS manual check. Tests have not been executed in this environment.
+- **Safety:** no modifications to reservation/notification/auth flows or existing DB migrations; only new V16 and MT endpoints. See `docs/MT_GAMES.md` for test and operation steps.
+- Continue with local validation and user review; do not merge into main or deploy until approved.
+
+---
+
+
 ## Current task
 
 Polish rehearsal booking/admin UX and fix time-sensitive notification behavior before the next server handoff.

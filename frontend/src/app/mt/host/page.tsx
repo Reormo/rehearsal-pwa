@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MtLayout, MtHeader, MtCard, MtError, MtSwitch } from "@/components/mt-layout";
 import { errorMessage } from "@/lib/api";
@@ -20,11 +20,6 @@ export default function MtHostPage() {
   const [newEvent,setNewEvent]=useState("무혼 MT");
   const [selectedQuestion,setSelectedQuestion]=useState<number|null>(null);
 
-  useEffect(()=>{
-    if(questions.data?.length && !questions.data.some(q=>q.id===selectedQuestion))
-      setSelectedQuestion(questions.data[0].id);
-  },[questions.data,selectedQuestion]);
-
   async function run(task:()=>Promise<unknown>){
     if(busy)return;
     setBusy(true);setError("");
@@ -32,12 +27,11 @@ export default function MtHostPage() {
     catch(e){setError(errorMessage(e));}
     finally{setBusy(false);}
   }
-  useEffect(()=>{
-    if(host.data?.typingOpen && results.data?.questionId)
-      setSelectedQuestion(results.data.questionId);
-  },[host.data?.typingOpen,results.data?.questionId]);
-  const selected=questions.data?.find(q=>q.id===selectedQuestion);
-  const visibleResults=results.data?.questionId===selectedQuestion?results.data:null;
+  const currentQuestionId = host.data?.typingOpen ? results.data?.questionId : null;
+  const displayedQuestionId = currentQuestionId ??
+    (questions.data?.some(q=>q.id===selectedQuestion)?selectedQuestion:questions.data?.[0]?.id??null);
+  const selected=questions.data?.find(q=>q.id===displayedQuestionId);
+  const visibleResults=results.data?.questionId===displayedQuestionId?results.data:null;
   const excluded=new Set(host.data?.excludedTeamIds??[]);
   return <MtLayout hostOnly>{()=> <>
     <MtHeader title="MT 관리"/>
@@ -117,7 +111,7 @@ export default function MtHostPage() {
               <span className="text-sm text-slate-500">기준 문장</span>
               <Link href="/mt/host/questions" className="text-sm font-semibold text-blue-600">문장 관리</Link>
             </div>
-            <select aria-label="문제 선택" value={selectedQuestion??""}
+            <select aria-label="문제 선택" value={displayedQuestionId??""}
               disabled={busy||Boolean(host.data.typingOpen)}
               onChange={e=>setSelectedQuestion(Number(e.target.value))}
               className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm">
@@ -127,8 +121,8 @@ export default function MtHostPage() {
             <p className="mb-3 text-sm font-semibold text-slate-500">{host.data.typingOpen?"접수 중":"접수 대기 / 종료"}</p>
             <div className="grid grid-cols-2 gap-2">
               <button className="rounded-xl bg-slate-900 p-3 font-bold text-white disabled:opacity-40"
-                disabled={busy||!selectedQuestion||!host.data.typingVisible||Boolean(host.data.typingOpen)}
-                onClick={()=>run(()=>mtApi.startTyping(selectedQuestion!))}>접수 시작</button>
+                disabled={busy||!displayedQuestionId||!host.data.typingVisible||Boolean(host.data.typingOpen)}
+                onClick={()=>run(()=>mtApi.startTyping(displayedQuestionId!))}>접수 시작</button>
               <button className="rounded-xl border border-slate-200 p-3 font-bold text-slate-700 disabled:opacity-40"
                 disabled={busy||!host.data.typingOpen}
                 onClick={()=>run(mtApi.closeTyping)}>접수 종료</button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MtLayout, MtHeader, MtCard, MtError } from "@/components/mt-layout";
 import { errorMessage } from "@/lib/api";
@@ -9,14 +9,13 @@ import { mtApi } from "@/lib/mt-api";
 export default function MtQuestionsPage() {
   const client=useQueryClient();
   const questions=useQuery({queryKey:["mt","questions"],queryFn:mtApi.questions});
-  const host=useQuery({queryKey:["mt","host"],queryFn:mtApi.host,refetchInterval:1500});
   const [selectedId,setSelectedId]=useState<number|null>(null);
-  const [editing,setEditing]=useState("");
+  const [editDrafts,setEditDrafts]=useState<Record<number,string>>({});
   const [newText,setNewText]=useState("");
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const selected=questions.data?.find(q=>q.id===selectedId)??questions.data?.[0];
-  useEffect(()=>{setEditing(selected?.text??"")},[selected?.id,selected?.text]);
+  const editing=selected?(editDrafts[selected.id]??selected.text):"";
 
   async function run(fn:()=>Promise<unknown>) {
     setBusy(true);setError("");
@@ -55,7 +54,7 @@ export default function MtQuestionsPage() {
     </MtCard>
     {selected&&<MtCard>
       <h2 className="mb-3 font-bold text-slate-900">문장 편집</h2>
-      <textarea aria-label="기준 문장" value={editing} maxLength={500} rows={5} onChange={e=>setEditing(e.target.value)}
+      <textarea aria-label="기준 문장" value={editing} maxLength={500} rows={5} onChange={e=>setEditDrafts(p=>({...p,[selected.id]:e.target.value}))}
         className="w-full rounded-xl border border-slate-200 p-3 text-base text-slate-900"/>
       <div className="mt-3 flex items-center justify-between gap-2">
         <button disabled={busy} onClick={()=>{

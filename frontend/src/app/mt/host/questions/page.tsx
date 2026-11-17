@@ -24,8 +24,6 @@ export default function MtQuestionsPage() {
     catch(e){setError(errorMessage(e))}
     finally{setBusy(false);}
   }
-  const running=Boolean(host.data?.typingOpen&&host.data?.currentRoundId);
-  // Editing other questions is safe. The backend separately protects the actual running question.
   return <MtLayout hostOnly>{()=> <>
     <MtHeader title="문장 관리" back="/mt/host"/>
     {error&&<div className="mb-3"><MtError message={error}/></div>}
@@ -59,7 +57,6 @@ export default function MtQuestionsPage() {
       <h2 className="mb-3 font-bold text-slate-900">문장 편집</h2>
       <textarea aria-label="기준 문장" value={editing} maxLength={500} rows={5} onChange={e=>setEditing(e.target.value)}
         className="w-full rounded-xl border border-slate-200 p-3 text-base text-slate-900"/>
-      {running&&<p className="mt-2 text-xs text-slate-500">진행 중인 문제는 수정할 수 없어요.</p>}
       <div className="mt-3 flex items-center justify-between gap-2">
         <button disabled={busy} onClick={()=>{
           if(window.confirm("이 문제를 삭제할까요? 이전 제출 기록은 유지됩니다."))

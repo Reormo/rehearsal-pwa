@@ -7,6 +7,7 @@ import com.bandclub.rehearsal.notification.repository.PushSubscriptionRepository
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import nl.martijndwars.webpush.PushService;
+import nl.martijndwars.webpush.Urgency;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,7 @@ public class WebPushService {
     private static final Logger log =
             LoggerFactory.getLogger(WebPushService.class);
     private static final int PUSH_TTL_SECONDS = 3600;
+    private static final int TIME_SENSITIVE_PUSH_TTL_SECONDS = 300;
 
     private final NotificationProperties properties;
     private final PushSubscriptionRepository repository;
@@ -58,6 +60,44 @@ public class WebPushService {
             String linkPath,
             String tag
     ) {
+        return sendToUser(
+                userId,
+                title,
+                body,
+                linkPath,
+                tag,
+                PUSH_TTL_SECONDS,
+                Urgency.NORMAL
+        );
+    }
+
+    public DeliveryResult sendTimeSensitiveToUser(
+            Long userId,
+            String title,
+            String body,
+            String linkPath,
+            String tag
+    ) {
+        return sendToUser(
+                userId,
+                title,
+                body,
+                linkPath,
+                tag,
+                TIME_SENSITIVE_PUSH_TTL_SECONDS,
+                Urgency.HIGH
+        );
+    }
+
+    private DeliveryResult sendToUser(
+            Long userId,
+            String title,
+            String body,
+            String linkPath,
+            String tag,
+            int ttlSeconds,
+            Urgency urgency
+    ) {
         if (pushService == null) {
             return new DeliveryResult(0, 0, 0);
         }
@@ -72,15 +112,16 @@ public class WebPushService {
         for (PushSubscription subscription : subscriptions) {
             try {
                 nl.martijndwars.webpush.Notification notification =
-                        new nl.martijndwars.webpush.Notification(
-                                subscription.getEndpoint(),
-                                subscription.getP256dhKey(),
-                                subscription.getAuthKey(),
-                                payload.getBytes(
+                        nl.martijndwars.webpush.Notification.builder()
+                                .endpoint(subscription.getEndpoint())
+                                .userPublicKey(subscription.getP256dhKey())
+                                .userAuth(subscription.getAuthKey())
+                                .payload(payload.getBytes(
                                         java.nio.charset.StandardCharsets.UTF_8
-                                ),
-                                PUSH_TTL_SECONDS
-                        );
+                                ))
+                                .ttl(ttlSeconds)
+                                .urgency(urgency)
+                                .build();
 
                 var response = pushService.send(notification);
                 int status = response.getStatusLine().getStatusCode();
@@ -133,10 +174,10 @@ public class WebPushService {
             );
         }
 
-        DeliveryResult result = sendToUser(
+        DeliveryResult result = sendTimeSensitiveToUser(
                 userId,
                 "무혼 푸시 팝업 테스트",
-                "이 알림이 보이면 Web Push가 정상입니다. 앱이 열려 있으면 상단 팝업도 함께 표시됩니다.",
+                "다른 앱을 사용 중일 때도 화면 위 팝업으로 표시되는지 확인해주세요.",
                 "/my",
                 "push-test-" + clock.instant().toEpochMilli()
         );

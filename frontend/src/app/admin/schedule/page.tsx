@@ -130,8 +130,7 @@ function AdminScheduleContent() {
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">ADMIN · SCHEDULE</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
             합주 운영 설정
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">
@@ -156,8 +155,7 @@ function AdminScheduleContent() {
       )}
 
       <section className="app-card">
-        <p className="card-label">예약 정책</p>
-        <h2 className="mt-2 text-lg font-bold text-slate-950">
+        <h2 className="text-lg font-bold text-slate-950">
           기본 회차 내 최대 예약 건수
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -213,9 +211,8 @@ function AdminScheduleContent() {
       </section>
 
       <section className="app-card">
-        <p className="card-label">예약 회차</p>
-        <h2 className="mt-2 text-lg font-bold text-slate-950">
-          준비된 회차
+        <h2 className="text-lg font-bold text-slate-950">
+          예약 회차
         </h2>
         <p className="mt-2 text-sm text-slate-500">
           운영 화면에는 이번 회차와 다음 회차만 표시됩니다. 월요일 00:00이 되면
@@ -489,6 +486,7 @@ function RoundEditor({
               className="field-input mt-2 min-w-0 max-w-full"
               type="datetime-local"
               name="bookingOpenAt"
+              step={1800}
               defaultValue={toKoreanDateTimeLocal(round.bookingOpenAt)}
               required
             />
@@ -500,6 +498,7 @@ function RoundEditor({
               className="field-input mt-2 min-w-0 max-w-full"
               type="datetime-local"
               name="bookingCloseAt"
+              step={1800}
               defaultValue={toKoreanDateTimeLocal(round.bookingCloseAt)}
               required
             />
@@ -666,6 +665,7 @@ function StageWindowEditor({
             className="field-input mt-2 min-w-0 max-w-full"
             type="datetime-local"
             name="stageBookingOpenAt"
+            step={1800}
             defaultValue={toKoreanDateTimeLocal(
               customWindow?.bookingOpenAt ?? round.bookingOpenAt,
             )}
@@ -679,6 +679,7 @@ function StageWindowEditor({
             className="field-input mt-2 min-w-0 max-w-full"
             type="datetime-local"
             name="stageBookingCloseAt"
+            step={1800}
             defaultValue={toKoreanDateTimeLocal(
               customWindow?.bookingCloseAt ?? round.bookingCloseAt,
             )}

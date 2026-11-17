@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ApiError, AuthUser, authApi, errorMessage } from "@/lib/api";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 export function AuthGate({
   children,
@@ -29,7 +30,11 @@ export function AuthGate({
   }, [meQuery.error, router]);
 
   if (meQuery.isLoading) {
-    return <FullScreenMessage>로그인 상태를 확인하고 있어요.</FullScreenMessage>;
+    return (
+      <FullScreenMessage>
+        <LoadingIndicator label="로그인 상태를 확인하고 있어요." />
+      </FullScreenMessage>
+    );
   }
 
   if (meQuery.isPending) {

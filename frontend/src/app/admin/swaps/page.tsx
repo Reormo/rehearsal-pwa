@@ -73,8 +73,7 @@ function AdminSwapsContent() {
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">ADMIN · SWAPS</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
             일정 교환 관리
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">
@@ -106,10 +105,7 @@ function AdminSwapsContent() {
       </section>
 
       <section className="space-y-3">
-        <div>
-          <p className="card-label">전체 교환 요청</p>
-          <h2 className="mt-2 text-lg font-bold text-slate-950">교환 신청 내역</h2>
-        </div>
+        <h2 className="text-lg font-bold text-slate-950">전체 교환 요청</h2>
         {swapsQuery.isPending && <p className="app-card text-sm text-slate-400">불러오는 중...</p>}
         {swapsQuery.data?.length === 0 && (
           <p className="app-card text-sm text-slate-500">교환 요청이 없습니다.</p>

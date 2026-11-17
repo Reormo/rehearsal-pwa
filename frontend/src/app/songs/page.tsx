@@ -76,8 +76,7 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
     <div className="space-y-6">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">ALL SONGS</p>
-          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950">
+          <h1 className="text-2xl font-black tracking-tight text-slate-950">
             전체 곡 보기
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -128,8 +127,8 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
         <div className="mt-4 flex items-end gap-2">
           <label className="field-label min-w-36">
             정렬
-                        <div className="relative">
-<select
+            <div className="relative">
+              <select
               className="field-input appearance-none pr-11"
               value={sortKey}
               onChange={(event) =>
@@ -139,7 +138,7 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
               <option value="LATEST">최신순</option>
               <option value="NAME">이름순</option>
               <option value="STAGE">종류순</option>
-            </select>
+              </select>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 20 20"
@@ -188,12 +187,20 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid items-stretch gap-4 md:grid-cols-2">
         {visibleSongs.map((song) => (
-          <article key={song.id} className="app-card">
-            <div className="flex items-start justify-between gap-3">
+          <article key={song.id} className="app-card h-full">
+            <div className="flex h-full flex-col">
               <div className="min-w-0">
-                <h2 className="truncate text-xl font-black text-slate-950">
+                <h2
+                  className="min-h-14 overflow-hidden break-words text-xl font-black leading-7 text-slate-950"
+                  title={song.title}
+                  style={{
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 2,
+                  }}
+                >
                   {song.title}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
@@ -203,7 +210,7 @@ function SongsContent({ isAdmin }: { isAdmin: boolean }) {
                     : "미지정"}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <div className="mt-auto flex flex-wrap justify-end gap-2 pt-4">
                 <span className="count-badge">{song.stageTypeName}</span>
                 <span className="count-badge">{song.memberCount}명</span>
               </div>

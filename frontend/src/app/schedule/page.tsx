@@ -104,6 +104,10 @@ function ScheduleContent({ user }: { user: AuthUser }) {
     enabled: Boolean(dayQuery.data?.round.id && effectiveSongId),
   });
 
+  const bookingAllowedOnSelectedDate =
+    selectedSummary?.roundState !== "UPCOMING" &&
+    (bookingOptionsQuery.data?.acceptingReservations ?? false);
+
   const effectiveMaxReservationMinutes =
     bookingOptionsQuery.data?.maxReservationMinutes ??
     dayQuery.data?.round.maxReservationMinutes ??
@@ -145,7 +149,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             "schedule",
             "booking-options",
             selectedDate,
-            effectiveDuration,
+            durationMinutes,
             effectiveSongId,
           ],
         }),
@@ -175,20 +179,44 @@ function ScheduleContent({ user }: { user: AuthUser }) {
     clearBookingFeedback();
   }
 
+  async function refreshSchedule() {
+    setSelectedStartAt(null);
+    clearBookingFeedback();
+
+    await Promise.all([
+      queryClient.refetchQueries({
+        queryKey: ["schedule", "calendar", range.from, range.to],
+        exact: true,
+      }),
+      queryClient.refetchQueries({
+        queryKey: ["schedule", "day", selectedDate],
+        exact: true,
+      }),
+      queryClient.refetchQueries({
+        queryKey: [
+          "schedule",
+          "booking-options",
+          selectedDate,
+          durationMinutes,
+          effectiveSongId,
+        ],
+        exact: true,
+      }),
+      queryClient.refetchQueries({
+        queryKey: ["schedule", "my-reservations"],
+        exact: true,
+      }),
+    ]);
+  }
+
+  const refreshing =
+    calendarQuery.isFetching ||
+    dayQuery.isFetching ||
+    bookingOptionsQuery.isFetching ||
+    myReservationsQuery.isFetching;
+
   return (
     <div className="space-y-7">
-      <section>
-        <p className="eyebrow">SCHEDULE</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-          합주 예약 · 시간표
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">
-          시간표는 30분 원자 슬롯으로 관리합니다. 팀장이 예약 길이를 고르면 실제
-          예약 시작 시각은 30분 간격으로 다시 계산하고, 서버가 요청 순간 빈 슬롯을
-          잠가 선착순을 확정합니다.
-        </p>
-      </section>
-
       <section className="app-card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -197,7 +225,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
               예약할 팀
             </h2>
           </div>
-          <span className="count-badge">팀장 {leaderSongs.length}팀</span>
+          <span aria-hidden="true" className="h-9 w-9" />
         </div>
 
         {leaderSongsQuery.isPending && (
@@ -213,7 +241,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
           </p>
         ) : (
           <select
-            className="field-input mt-4"
+            className="field-input mt-4 w-full max-w-full min-w-0"
             value={effectiveSongId ?? ""}
             onChange={(event) => {
               setSelectedSongId(Number(event.target.value));
@@ -320,35 +348,44 @@ function ScheduleContent({ user }: { user: AuthUser }) {
         {dayQuery.data && (
           <>
             <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm">
-              <p className="font-semibold text-slate-800">
-                {dayQuery.data.round.roundNo}회차 ·{" "}
-                {formatDateLabel(dayQuery.data.round.startDate)} ~{" "}
-                {formatDateLabel(dayQuery.data.round.endDate)}
-              </p>
-              {bookingOptionsQuery.data?.stageTypeName &&
-              bookingOptionsQuery.data.bookingOpenAt &&
-              bookingOptionsQuery.data.bookingCloseAt ? (
-                <p className="mt-1 text-slate-500">
-                  {bookingOptionsQuery.data.stageTypeName} 예약 기간 ·{" "}
-                  {formatDateTime(bookingOptionsQuery.data.bookingOpenAt)} ~{" "}
-                  {formatDateTime(bookingOptionsQuery.data.bookingCloseAt)}
-                  {bookingOptionsQuery.data.customStageWindow
-                    ? " · 무대별 기간"
-                    : " · 회차 기본 기간"}
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-slate-800">
+                  {bookingOptionsQuery.data?.stageTypeName ?? "예약 안내"}
                 </p>
-              ) : (
-                <p className="mt-1 text-slate-500">
-                  기본 예약 기간 ·{" "}
-                  {formatDateTime(dayQuery.data.round.bookingOpenAt)} ~{" "}
-                  {formatDateTime(dayQuery.data.round.bookingCloseAt)}
+                <span className="count-badge">
+                  {bookingOptionsQuery.data?.customStageWindow
+                    ? "무대별 설정"
+                    : "기본 설정"}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <p className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                  <span className="text-slate-400">예약 시작</span>
+                  <strong className="text-slate-800">
+                    {formatCompactDateTime(
+                      bookingOptionsQuery.data?.bookingOpenAt ??
+                        dayQuery.data.round.bookingOpenAt,
+                    )}
+                  </strong>
+                </p>
+                <p className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                  <span className="text-slate-400">예약 마감</span>
+                  <strong className="text-slate-800">
+                    {formatCompactDateTime(
+                      bookingOptionsQuery.data?.bookingCloseAt ??
+                        dayQuery.data.round.bookingCloseAt,
+                    )}
+                  </strong>
+                </p>
+              </div>
+              {bookingOptionsQuery.data && (
+                <p className="mt-2 text-slate-500">
+                  {formatDuplicateReservationCount(
+                    bookingOptionsQuery.data.currentReservationCount,
+                    bookingOptionsQuery.data.maxReservationsPerSong,
+                  )}
                 </p>
               )}
-              <p className="mt-1 text-slate-500">
-                1회 최대 {effectiveMaxReservationMinutes}분
-                {bookingOptionsQuery.data &&
-                  ` · 회차 내 예약 ${bookingOptionsQuery.data.currentReservationCount}/${bookingOptionsQuery.data.maxReservationsPerSong}건`}
-                {" · "}일반 슬롯 {dayQuery.data.standardSlots.length}개
-              </p>
               {dayQuery.data.roomStatus === "PARTIAL_BLOCKED" && (
                 <p className="mt-2 font-semibold text-amber-700">
                   일부 시간 사용 불가
@@ -378,10 +415,6 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             <div className="mt-6 border-t border-slate-200 pt-6">
               <div>
                 <p className="card-label">3. 예약 길이 선택</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  선택한 팀은 최대 {effectiveMaxReservationMinutes}분까지 예약할 수
-                  있습니다.
-                </p>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {allowedDurations.map((duration) => (
@@ -406,21 +439,39 @@ function ScheduleContent({ user }: { user: AuthUser }) {
             </div>
 
             <div className="mt-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="card-label">4. 시간 선택</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    일반 예약 슬롯, 잔여 슬롯, 예약할 수 없는 시간을 한 시간표에서
-                    확인하고 선택한 {effectiveDuration}분 예약의 시작 시각을 고릅니다.
-                  </p>
-                </div>
-                {bookingOptionsQuery.data && (
-                  <span className="count-badge">
-                    시작 가능 {bookingOptionsQuery.data.options.length}개
-                  </span>
-                )}
+              <div className="flex items-center justify-between gap-3">
+                <p className="card-label">4. 시간 선택</p>
+                <button
+                  type="button"
+                  className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full border-0 bg-transparent p-0 text-slate-700 transition-[color,transform] duration-150 hover:text-slate-950 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700"
+                  aria-label="예약 현황 새로고침"
+                  title="예약 현황 새로고침"
+                  disabled={refreshing}
+                  onClick={() => void refreshSchedule()}
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 6.4 2.6L21 8" />
+                    <path d="M21 3v5h-5" />
+                    <path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-6.4-2.6L3 16" />
+                    <path d="M8 16H3v5" />
+                  </svg>
+                </button>
               </div>
 
+              {selectedSummary?.roundState === "UPCOMING" && (
+                <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-800">
+                  예약 준비 중인 날짜입니다. 시간표는 볼 수 있지만 예약 슬롯은 선택할 수 없습니다.
+                </p>
+              )}
               {!effectiveSongId && (
                 <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">
                   시간표는 확인할 수 있지만 예약하려면 먼저 팀장으로 지정된 팀이
@@ -438,7 +489,8 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 </p>
               )}
               {bookingOptionsQuery.data &&
-                !bookingOptionsQuery.data.acceptingReservations && (
+                !bookingOptionsQuery.data.acceptingReservations &&
+                selectedSummary?.roundState !== "UPCOMING" && (
                   <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-800">
                     {bookingOptionsQuery.data.maxReservationsPerSong > 0 &&
                     bookingOptionsQuery.data.currentReservationCount >=
@@ -454,11 +506,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                   </p>
                 )}
 
-              <div className="mt-5">
-                <p className="card-label">일반 예약 슬롯</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  선택한 {effectiveDuration}분 예약의 시작 시간을 선택하세요.
-                </p>
+              <div className="mt-4">
                 {bookingOptionsForSlots(
                   dayQuery.data.standardSlots,
                   bookingOptionsQuery.data?.options ?? [],
@@ -477,7 +525,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                         option={option}
                         selected={effectiveStartAt === option.startAt}
                         disabled={
-                          !(bookingOptionsQuery.data?.acceptingReservations ?? false)
+                          !bookingAllowedOnSelectedDate
                         }
                         onSelect={() => {
                           setSelectedStartAt(option.startAt);
@@ -515,9 +563,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                           bookingOptionsQuery.data?.options ?? [],
                         )}
                         selectedStartAt={effectiveStartAt}
-                        acceptingReservations={
-                          bookingOptionsQuery.data?.acceptingReservations ?? false
-                        }
+                        acceptingReservations={bookingAllowedOnSelectedDate}
                         onSelect={(startAt) => {
                           setSelectedStartAt(startAt);
                           clearBookingFeedback();
@@ -545,11 +591,6 @@ function ScheduleContent({ user }: { user: AuthUser }) {
 
             <div className="mt-6 rounded-2xl border border-slate-200 p-4">
               <p className="card-label">5. 예약 요청</p>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                버튼을 누른 순간 서버가 팀과 30분 원자 슬롯을 다시 확인하고 잠급니다.
-                화면에 보였던 시간이더라도 다른 팀이 먼저 확정했다면 예약은 실패할 수
-                있습니다.
-              </p>
               {bookingMessage && (
                 <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{bookingMessage}</p>
               )}
@@ -564,7 +605,7 @@ function ScheduleContent({ user }: { user: AuthUser }) {
                 disabled={
                   !effectiveSongId ||
                   !effectiveStartAt ||
-                  !bookingOptionsQuery.data?.acceptingReservations ||
+                  !bookingAllowedOnSelectedDate ||
                   bookingMutation.isPending
                 }
                 onClick={() => {
@@ -579,6 +620,27 @@ function ScheduleContent({ user }: { user: AuthUser }) {
               >
                 {bookingMutation.isPending ? "예약 확정 중..." : "선착순 예약 확정"}
               </button>
+              <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-slate-400">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M12 3 2.8 19h18.4L12 3Z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M12 9v4" strokeLinecap="round" />
+                  <path d="M12 17h.01" strokeLinecap="round" />
+                </svg>
+                <span>
+                  화면에 보였던 시간이라도 다른 팀이 먼저 확정했다면 예약은 실패할 수 있습니다.
+                </span>
+              </p>
             </div>
 
           </>
@@ -587,12 +649,9 @@ function ScheduleContent({ user }: { user: AuthUser }) {
 
       <section className="app-card">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="card-label">MY REHEARSALS</p>
-            <h2 className="mt-2 text-xl font-bold text-slate-950">
-              내 예정 합주
-            </h2>
-          </div>
+          <h2 className="text-xl font-bold text-slate-950">
+            내 예정 합주
+          </h2>
           {myReservationsQuery.data && (
             <span className="count-badge">{myReservationsQuery.data.length}</span>
           )}
@@ -636,55 +695,63 @@ function CalendarDay({
   onClick: () => void;
 }) {
   const outside = date.getMonth() !== currentMonth;
-  const closed = summary?.roomStatus === "CLOSED";
-  const partial = summary?.roomStatus === "PARTIAL_BLOCKED";
   const prepared = Boolean(summary?.roundId);
+  const past = toIsoDate(date) < todayIso();
+  const upcoming = summary?.roundState === "UPCOMING";
+  const closedRound = summary?.roundState === "CLOSED";
+  const roomClosed = summary?.roomStatus === "CLOSED";
+  const selectable =
+    prepared &&
+    !past &&
+    !outside &&
+    !closedRound &&
+    !roomClosed;
+  const active = selectable && !upcoming;
+  const disabled = !selectable;
+  const statusLabel =
+    !past && !outside && prepared && upcoming
+      ? "준비 중"
+      : active
+        ? "예약 가능"
+        : null;
 
   return (
     <button
       type="button"
-      disabled={!prepared}
+      disabled={disabled}
       onClick={onClick}
       className={`min-h-16 overflow-hidden rounded-xl border px-1 py-2 text-left transition ${
-        selected
+        selected && selectable
           ? "border-slate-950 bg-slate-950 text-white"
-          : "border-slate-100 bg-white hover:border-slate-300"
-      } ${outside && !selected ? "opacity-35" : ""} ${
-        !prepared ? "cursor-not-allowed opacity-25" : ""
+          : "border-slate-100 bg-white"
+      } ${outside ? "opacity-30" : ""} ${
+        disabled ? "cursor-not-allowed" : "hover:border-slate-300"
       }`}
     >
       <span
         className={`text-xs font-bold ${
-          selected
+          selected && selectable
             ? "text-white"
             : date.getDay() === 0
               ? "text-red-500"
               : date.getDay() === 6
                 ? "text-blue-500"
-                : "text-slate-800"
+                : past || disabled
+                  ? "text-slate-400"
+                  : "text-slate-800"
         }`}
       >
         {date.getDate()}
       </span>
-      <span
-        className={`mt-1 block whitespace-nowrap text-[9px] font-semibold leading-4 ${
-          selected
-            ? "text-white/80"
-            : closed
-              ? "text-red-500"
-              : partial
-                ? "text-amber-600"
-                : "text-slate-400"
-        }`}
-      >
-        {closed
-          ? "휴관"
-          : partial
-            ? `예외 ${summary?.blockedPeriodCount ?? 0}`
-            : prepared
-              ? "10~22"
-              : "준비"}
-      </span>
+      {statusLabel && (
+        <span
+          className={`mt-1 block whitespace-nowrap text-[9px] font-semibold leading-4 ${
+            selected && selectable ? "text-white/80" : "text-slate-400"
+          }`}
+        >
+          {statusLabel}
+        </span>
+      )}
     </button>
   );
 }
@@ -877,6 +944,15 @@ function toIsoDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function todayIso() {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 function formatDateLabel(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Intl.DateTimeFormat("ko-KR", {
@@ -886,15 +962,31 @@ function formatDateLabel(value: string) {
   }).format(new Date(year, month - 1, day));
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("ko-KR", {
+function formatCompactDateTime(value: string) {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
-    month: "short",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
     weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+    hour12: false,
+  }).formatToParts(new Date(value));
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+
+  return `${Number(values.month)}.${Number(values.day)}(${values.weekday}) ${values.hour}:${values.minute}`;
+}
+
+function formatDuplicateReservationCount(
+  currentReservationCount: number,
+  maxReservationsPerSong: number,
+) {
+  if (maxReservationsPerSong === 99) {
+    return `중복 예약 ${currentReservationCount}건`;
+  }
+  return `중복 예약 ${currentReservationCount}/${maxReservationsPerSong}건`;
 }
 
 function formatReservationDate(value: string) {

@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
+import { RehearsalScheduleModal } from "@/components/rehearsal-schedule-modal";
 import { errorMessage, songApi } from "@/lib/api";
 import {
   Reservation,
@@ -26,6 +27,8 @@ export default function MyReservationsPage() {
 
 function ReservationsContent({ userId }: { userId: number }) {
   const queryClient = useQueryClient();
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const closeScheduleModal = useCallback(() => setScheduleModalOpen(false), []);
   const reservationsQuery = useQuery({
     queryKey: ["reservations", "mine"],
     queryFn: scheduleApi.myReservations,
@@ -87,11 +90,11 @@ function ReservationsContent({ userId }: { userId: number }) {
     cancelMutation.isPending;
 
   return (
+    <>
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">MY · REHEARSALS</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
             합주 관리
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">
@@ -103,9 +106,9 @@ function ReservationsContent({ userId }: { userId: number }) {
           <Link href="/my/swaps" className="primary-button">
             일정 교환
           </Link>
-          <Link href="/schedule" className="secondary-button">
+          <button type="button" className="secondary-button" onClick={() => setScheduleModalOpen(true)}>
             전체 시간표 보기
-          </Link>
+          </button>
         </div>
       </section>
 
@@ -137,6 +140,8 @@ function ReservationsContent({ userId }: { userId: number }) {
         ))}
       </div>
     </div>
+    {scheduleModalOpen && <RehearsalScheduleModal onClose={closeScheduleModal} />}
+    </>
   );
 }
 
@@ -169,15 +174,12 @@ function ReservationCard({
 
   return (
     <article className="app-card">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="card-label">{reservation.source === "ADMIN" ? "관리자 예약" : "팀 예약"}</p>
-          <h2 className="mt-1 text-lg font-bold text-slate-950">{reservation.songTitle}</h2>
-          <p className="mt-2 text-sm font-semibold text-slate-700">
-            {formatKoreanDateTime(reservation.startAt)} ~ {formatTime(reservation.endAt)} · {duration}분
-          </p>
-        </div>
-        <span className="count-badge">#{reservation.id}</span>
+      <div>
+        <p className="card-label">{reservation.source === "ADMIN" ? "관리자 예약" : "팀 예약"}</p>
+        <h2 className="mt-1 text-lg font-bold text-slate-950">{reservation.songTitle}</h2>
+        <p className="mt-2 text-sm font-semibold text-slate-700">
+          {formatKoreanDateTime(reservation.startAt)} ~ {formatTime(reservation.endAt)} · {duration}분
+        </p>
       </div>
 
       {!editable ? (

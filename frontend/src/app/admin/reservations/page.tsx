@@ -13,6 +13,10 @@ import {
 } from "@/lib/schedule-api";
 
 const DURATIONS = [30, 60, 90, 120, 150, 180];
+const HOURS = Array.from({ length: 24 }, (_, hour) =>
+  String(hour).padStart(2, "0"),
+);
+const MINUTES = ["00", "30"];
 
 type AdminAction =
   | { kind: "move"; reservationId: number; startAt: string; reason: string }
@@ -118,8 +122,7 @@ function AdminReservationsContent() {
     <div className="space-y-7">
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">ADMIN · RESERVATIONS</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
             예약 강제 관리
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">
@@ -140,8 +143,7 @@ function AdminReservationsContent() {
       {error && <p className="error-box">{errorMessage(error)}</p>}
 
       <section className="app-card">
-        <p className="card-label">직접 예약</p>
-        <h2 className="mt-2 text-lg font-bold text-slate-950">관리자 예약 생성</h2>
+        <h2 className="text-lg font-bold text-slate-950">관리자 예약 생성</h2>
         <form
           className="mt-5 grid gap-3 sm:grid-cols-2"
           onSubmit={(event) => {
@@ -206,10 +208,7 @@ function AdminReservationsContent() {
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="card-label">예정 예약</p>
-            <h2 className="mt-2 text-lg font-bold text-slate-950">전체 활성 예약</h2>
-          </div>
+          <h2 className="text-lg font-bold text-slate-950">전체 활성 예약</h2>
           {reservationsQuery.data && (
             <span className="count-badge">
               {filteredReservations.length}/{reservationsQuery.data.length}
@@ -263,6 +262,7 @@ function AdminReservationCard({
   const duration = Math.round(
     (new Date(reservation.endAt).getTime() - new Date(reservation.startAt).getTime()) / 60000,
   );
+  const startParts = toKoreanDateTimeParts(reservation.startAt);
 
   function reason(promptText: string) {
     const value = window.prompt(promptText)?.trim();
@@ -292,32 +292,68 @@ function AdminReservationCard({
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
-          const moveReason = String(form.get("reason")).trim();
+          const moveReason =
+            String(form.get("reason")).trim() || "관리자 예약 시간 변경";
+          const startAt =
+            `${String(form.get("startDate"))}T${String(form.get("startHour"))}:${String(form.get("startMinute"))}`;
+
           onAction({
             kind: "move",
             reservationId: reservation.id,
-            startAt: koreanLocalToInstant(String(form.get("startAt"))),
+            startAt: koreanLocalToInstant(startAt),
             reason: moveReason,
           });
         }}
       >
-        <input
-          className="field-input min-w-[220px] flex-1"
-          type="datetime-local"
-          name="startAt"
-          step={1800}
-          defaultValue={toKoreanDateTimeLocal(reservation.startAt)}
-          required
-        />
+        <div className="grid min-w-0 flex-[2] grid-cols-[minmax(140px,1fr)_88px_88px] gap-2">
+          <input
+            className="field-input min-w-0"
+            type="date"
+            name="startDate"
+            defaultValue={startParts.date}
+            aria-label="예약 날짜"
+            required
+          />
+          <label className="min-w-0">
+            <span className="sr-only">예약 시</span>
+            <select
+              className="field-input min-w-0"
+              name="startHour"
+              defaultValue={startParts.hour}
+              aria-label="예약 시"
+            >
+              {HOURS.map((hour) => (
+                <option key={hour} value={hour}>
+                  {hour}시
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className="sr-only">예약 분</span>
+            <select
+              className="field-input min-w-0"
+              name="startMinute"
+              defaultValue={startParts.minute}
+              aria-label="예약 분"
+            >
+              {MINUTES.map((minute) => (
+                <option key={minute} value={minute}>
+                  {minute}분
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <input
           className="field-input min-w-[180px] flex-1"
           name="reason"
           maxLength={500}
-          placeholder="이동 사유"
-          required
+          placeholder="변경 사유 (선택)"
+          autoComplete="off"
         />
         <button className="secondary-button" type="submit" disabled={disabled}>
-          강제 이동
+          설정
         </button>
       </form>
 
@@ -357,7 +393,7 @@ function koreanLocalToInstant(value: string) {
   return new Date(`${value}:00+09:00`).toISOString();
 }
 
-function toKoreanDateTimeLocal(value: string) {
+function toKoreanDateTimeParts(value: string) {
   const parts = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Seoul",
     year: "numeric",
@@ -368,7 +404,11 @@ function toKoreanDateTimeLocal(value: string) {
     hour12: false,
   }).formatToParts(new Date(value));
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
+  return {
+    date: `${values.year}-${values.month}-${values.day}`,
+    hour: values.hour,
+    minute: values.minute === "30" ? "30" : "00",
+  };
 }
 
 function formatKoreanDateTime(value: string) {

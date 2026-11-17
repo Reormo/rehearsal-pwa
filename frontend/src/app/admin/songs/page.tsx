@@ -168,8 +168,7 @@ function AdminSongsContent() {
     <div className="space-y-6">
       <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">ADMIN · SONGS</p>
-          <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950">곡 / 팀 관리</h1>
+          <h1 className="text-2xl font-black tracking-tight text-slate-950">곡 / 팀 관리</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500">
             곡을 만들고 참여자, 세션, 팀장을 관리합니다. 활성 곡에는 항상 팀장이 한 명 있어야 해요.
           </p>

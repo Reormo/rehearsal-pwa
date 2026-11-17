@@ -11,8 +11,7 @@ export default function MyNotificationsPage() {
         <AppShell user={user}>
           <div className="space-y-7">
             <section>
-              <p className="eyebrow">ALL · NOTIFICATIONS</p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-950">
                 알림 설정
               </h1>
             </section>

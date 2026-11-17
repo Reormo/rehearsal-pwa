@@ -160,6 +160,24 @@ class ScheduleIntegrationTests {
 
     @Test
     @Transactional
+    void roundBookingWindowRequiresThirtyMinuteBoundary() {
+        long superAdminId = superAdminId();
+        var round = scheduleService.adminRounds(superAdminId).getFirst();
+
+        assertThrows(
+                AppException.class,
+                () -> scheduleService.updateRound(
+                        superAdminId,
+                        round.id(),
+                        round.bookingOpenAt().plusSeconds(60),
+                        round.bookingCloseAt(),
+                        round.maxReservationMinutes()
+                )
+        );
+    }
+
+    @Test
+    @Transactional
     void multipleBlockedPeriodsCreateRemainderSlotsAndOnlyBlockThoseTimes() {
         long superAdminId = superAdminId();
         LocalDate date = LocalDate.now(ZoneId.of("Asia/Seoul")).plusDays(1);

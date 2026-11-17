@@ -214,6 +214,9 @@ public class StageBookingWindowService {
             );
         }
 
+        validateThirtyMinuteBoundary(bookingOpenAt);
+        validateThirtyMinuteBoundary(bookingCloseAt);
+
         Instant roundEndLimit = round.getEndDate()
                 .atTime(ScheduleService.DEFAULT_CLOSE_TIME)
                 .atZone(ScheduleService.SERVICE_ZONE)
@@ -224,6 +227,19 @@ public class StageBookingWindowService {
                     HttpStatus.BAD_REQUEST,
                     "STAGE_BOOKING_WINDOW_AFTER_ROUND",
                     "무대별 예약 종료 시각은 해당 회차 마지막 날 22:00보다 늦을 수 없습니다."
+            );
+        }
+    }
+
+    private void validateThirtyMinuteBoundary(Instant instant) {
+        var local = instant.atZone(ScheduleService.SERVICE_ZONE);
+        if (local.getMinute() % 30 != 0
+                || local.getSecond() != 0
+                || local.getNano() != 0) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_STAGE_BOOKING_WINDOW_BOUNDARY",
+                    "무대별 예약 오픈·종료 시각은 30분 단위로 설정해주세요."
             );
         }
     }

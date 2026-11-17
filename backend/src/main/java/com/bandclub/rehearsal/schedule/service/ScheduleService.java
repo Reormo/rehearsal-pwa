@@ -337,6 +337,17 @@ public class ScheduleService {
                     "예약 오픈 시각은 예약 종료 시각보다 빨라야 합니다."
             );
         }
+        validateThirtyMinuteBoundary(
+                bookingOpenAt,
+                "INVALID_BOOKING_WINDOW_BOUNDARY",
+                "예약 오픈·종료 시각은 30분 단위로 설정해주세요."
+        );
+        validateThirtyMinuteBoundary(
+                bookingCloseAt,
+                "INVALID_BOOKING_WINDOW_BOUNDARY",
+                "예약 오픈·종료 시각은 30분 단위로 설정해주세요."
+        );
+
         if (bookingCloseAt.isAfter(roundEndLimit)) {
             throw new AppException(
                     HttpStatus.BAD_REQUEST,
@@ -1021,6 +1032,23 @@ public class ScheduleService {
                     HttpStatus.BAD_REQUEST,
                     "INVALID_MAX_RESERVATION_MINUTES",
                     "최대 예약 시간은 30, 60, 90, 120, 150, 180분 중 하나여야 합니다."
+            );
+        }
+    }
+
+    private void validateThirtyMinuteBoundary(
+            Instant instant,
+            String errorCode,
+            String message
+    ) {
+        var local = instant.atZone(SERVICE_ZONE);
+        if (local.getMinute() % 30 != 0
+                || local.getSecond() != 0
+                || local.getNano() != 0) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    errorCode,
+                    message
             );
         }
     }

@@ -44,6 +44,16 @@ describe("AuthGate", () => {
     vi.restoreAllMocks();
   });
 
+  it("shows a loading indicator while the first session check is pending", () => {
+    vi.spyOn(authApi, "me").mockImplementation(() => new Promise(() => {}));
+
+    renderGate(false);
+
+    expect(
+      screen.getByRole("status", { name: "로그인 상태를 확인하고 있어요." }),
+    ).toBeInTheDocument();
+  });
+
   it("renders authenticated content", async () => {
     vi.spyOn(authApi, "me").mockResolvedValue(member);
 

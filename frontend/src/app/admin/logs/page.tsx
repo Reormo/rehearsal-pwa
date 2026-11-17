@@ -26,8 +26,7 @@ function AdminLogsContent() {
   return (
     <div className="space-y-6">
       <section>
-        <p className="eyebrow">ADMIN · AUDIT</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-950">
           관리자 작업 이력
         </h1>
         <p className="mt-3 text-sm text-slate-500">

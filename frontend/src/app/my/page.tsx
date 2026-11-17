@@ -1,14 +1,16 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { AppShell } from "@/components/app-shell";
+import { useRouter } from "next/navigation";
+import { AppShell, roleLabel } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
+import { authApi, AuthUser, errorMessage } from "@/lib/api";
 
 const menuItems = [
-  { href: "/my/account", label: "내 계정", icon: "account" },
   { href: "/my/notifications", label: "알림 설정", icon: "notification" },
   { href: "/my/teams", label: "내 팀", icon: "team" },
-  { href: "/songs", label: "전체 곡 보기", icon: "team" },
+  { href: "/songs", label: "전체 곡 보기", icon: "music" },
   { href: "/my/reservations", label: "합주 관리", icon: "rehearsal" },
   { href: "/my/swaps", label: "일정 교환", icon: "swap" },
 ] as const;
@@ -20,15 +22,59 @@ export default function MyPage() {
     <AuthGate>
       {(user) => (
         <AppShell user={user}>
-          <div className="space-y-7">
-            <section>
-              <p className="eyebrow">ALL</p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
-                전체
-              </h1>
-            </section>
+          <MyContent user={user} />
+        </AppShell>
+      )}
+    </AuthGate>
+  );
+}
 
-            <nav
+function MyContent({ user }: { user: AuthUser }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const logoutMutation = useMutation({
+    mutationFn: authApi.logout,
+    onSuccess: () => {
+      queryClient.clear();
+      router.replace("/login");
+    },
+  });
+
+  return (
+    <div className="space-y-7">
+      <section className="app-card">
+        <dl className="space-y-4 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">이름</dt>
+            <dd className="font-semibold text-slate-950">{user.name}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">아이디</dt>
+            <dd className="font-semibold text-slate-950">{user.loginId}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-slate-500">계정 유형</dt>
+            <dd className="font-semibold text-slate-950">
+              {roleLabel(user.role)}
+            </dd>
+          </div>
+        </dl>
+
+        <button
+          className="secondary-button mt-6 w-full"
+          type="button"
+          disabled={logoutMutation.isPending}
+          onClick={() => logoutMutation.mutate()}
+        >
+          {logoutMutation.isPending ? "로그아웃 중..." : "로그아웃"}
+        </button>
+        {logoutMutation.isError && (
+          <p className="error-box mt-3">{errorMessage(logoutMutation.error)}</p>
+        )}
+      </section>
+
+      <nav
               aria-label="전체 메뉴"
               className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.06)]"
             >
@@ -60,11 +106,8 @@ export default function MyPage() {
                   </svg>
                 </Link>
               ))}
-            </nav>
-          </div>
-        </AppShell>
-      )}
-    </AuthGate>
+      </nav>
+    </div>
   );
 }
 
@@ -79,15 +122,6 @@ function MenuIcon({ name }: { name: MenuIconName }) {
     strokeLinejoin: "round" as const,
     "aria-hidden": true,
   };
-
-  if (name === "account") {
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
-      </svg>
-    );
-  }
 
   if (name === "notification") {
     return (
@@ -105,6 +139,16 @@ function MenuIcon({ name }: { name: MenuIconName }) {
         <circle cx="17" cy="9" r="2" />
         <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
         <path d="M14.5 15.5A4.5 4.5 0 0 1 20.5 20" />
+      </svg>
+    );
+  }
+
+  if (name === "music") {
+    return (
+      <svg {...common}>
+        <path d="M9 18V6l12-3v12" />
+        <ellipse cx="6" cy="18" rx="3" ry="2" />
+        <ellipse cx="18" cy="15" rx="3" ry="2" />
       </svg>
     );
   }

@@ -76,17 +76,34 @@ class StageReservationDurationIntegrationTests {
                 superAdminId,
                 round.id(),
                 typeOneSong.stageTypeId(),
-                Instant.now().minusSeconds(60),
+                Instant.now().minusSeconds(1800).truncatedTo(java.time.temporal.ChronoUnit.HOURS),
                 roundClose,
                 60
         );
+        Instant validOpenAt =
+                Instant.now()
+                        .minusSeconds(1800)
+                        .truncatedTo(java.time.temporal.ChronoUnit.HOURS);
+
         stageBookingWindowService.upsert(
                 superAdminId,
                 round.id(),
                 typeTwoSong.stageTypeId(),
-                Instant.now().minusSeconds(60),
+                validOpenAt,
                 roundClose,
                 120
+        );
+
+        assertThrows(
+                AppException.class,
+                () -> stageBookingWindowService.upsert(
+                        superAdminId,
+                        round.id(),
+                        typeTwoSong.stageTypeId(),
+                        validOpenAt.plusSeconds(60),
+                        roundClose,
+                        120
+                )
         );
 
         var typeOneThirty = bookingService.options(

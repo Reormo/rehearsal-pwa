@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MtLayout, MtHeader, MtCard, MtError } from "@/components/mt-layout";
 import { errorMessage } from "@/lib/api";
@@ -13,13 +13,13 @@ export default function MtTeamsPage() {
   const members=useQuery({queryKey:["mt","members"],queryFn:mtApi.members});
   const [teamId,setTeamId]=useState<number|null>(null);
   const [newName,setNewName]=useState("");
-  const [rename,setRename]=useState("");
+  const [renames,setRenames]=useState<Record<number,string>>({});
   const [search,setSearch]=useState("");
   const [memberId,setMemberId]=useState("");
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const team=teams.data?.find(t=>t.id===teamId)||teams.data?.[0];
-  useEffect(()=>{if(team)setRename(team.name)},[team?.id,team?.name]);
+  const rename=team?(renames[team.id]??team.name):"";
 
   async function run(fn:()=>Promise<unknown>) {
     setBusy(true);setError("");
@@ -59,7 +59,7 @@ export default function MtTeamsPage() {
       <div>
         <h2 className="mb-3 font-bold text-slate-900">{team.name} · 이름 수정</h2>
         <div className="flex gap-2">
-          <input aria-label="조 이름 변경" value={rename} maxLength={80} onChange={e=>setRename(e.target.value)}
+          <input aria-label="조 이름 변경" value={rename} maxLength={80} onChange={e=>setRenames(p=>({...p,[team.id]:e.target.value}))}
             className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-base"/>
           <button disabled={busy||!rename.trim()||rename===team.name} onClick={()=>run(()=>mtApi.renameTeam(team.id,rename))}
             className="rounded-xl border border-slate-200 px-4 font-semibold text-slate-800 disabled:opacity-50">저장</button>

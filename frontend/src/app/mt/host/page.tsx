@@ -32,6 +32,10 @@ export default function MtHostPage() {
     catch(e){setError(errorMessage(e));}
     finally{setBusy(false);}
   }
+  useEffect(()=>{
+    if(host.data?.typingOpen && results.data?.questionId)
+      setSelectedQuestion(results.data.questionId);
+  },[host.data?.typingOpen,results.data?.questionId]);
   const selected=questions.data?.find(q=>q.id===selectedQuestion);
   const visibleResults=results.data?.questionId===selectedQuestion?results.data:null;
   const excluded=new Set(host.data?.excludedTeamIds??[]);

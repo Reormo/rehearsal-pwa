@@ -33,6 +33,7 @@ export default function MtHostPage() {
     finally{setBusy(false);}
   }
   const selected=questions.data?.find(q=>q.id===selectedQuestion);
+  const visibleResults=results.data?.questionId===selectedQuestion?results.data:null;
   const excluded=new Set(host.data?.excludedTeamIds??[]);
   return <MtLayout hostOnly>{()=> <>
     <MtHeader title="MT 관리"/>
@@ -131,9 +132,9 @@ export default function MtHostPage() {
           </MtCard>
           <MtCard>
             <h2 className="mb-3 font-bold text-slate-900">{host.data.typingOpen?"실시간 순위":"최종 순위"}</h2>
-            {!results.data?.ranking.length?<p className="py-5 text-center text-sm text-slate-400">정확한 제출이 아직 없습니다.</p>:
+            {!visibleResults?.ranking.length?<p className="py-5 text-center text-sm text-slate-400">정확한 제출이 아직 없습니다.</p>:
               <div className="divide-y divide-slate-100">
-                {results.data.ranking.map((r,i)=><div key={i} className="flex items-center gap-3 py-3 text-sm">
+                {visibleResults!.ranking.map((r,i)=><div key={i} className="flex items-center gap-3 py-3 text-sm">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 font-bold">{i+1}</span>
                   <span className="font-semibold text-slate-900">{r.name}</span>
                   <span className="ml-auto text-slate-500">{r.teamName}</span>
@@ -143,11 +144,11 @@ export default function MtHostPage() {
           <MtCard>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-bold text-slate-900">전체 제출 현황</h2>
-              <span className="text-xs text-slate-500">{results.data?.submissions.length??0}건</span>
+              <span className="text-xs text-slate-500">{visibleResults?.submissions.length??0}건</span>
             </div>
-            {!results.data?.submissions.length?<p className="py-5 text-center text-sm text-slate-400">제출 내역이 없습니다.</p>:
+            {!visibleResults?.submissions.length?<p className="py-5 text-center text-sm text-slate-400">제출 내역이 없습니다.</p>:
               <div className="max-h-[450px] space-y-3 overflow-y-auto">
-                {[...results.data.submissions].reverse().map(s=><article key={s.id} className="border-b border-slate-100 pb-3">
+                {[...visibleResults!.submissions].reverse().map(s=><article key={s.id} className="border-b border-slate-100 pb-3">
                   <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
                     <strong className="text-sm text-slate-900">{s.user_name}</strong>
                     <span className="text-slate-500">{s.team_name}</span>

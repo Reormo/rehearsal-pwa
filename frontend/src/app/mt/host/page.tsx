@@ -33,8 +33,8 @@ export default function MtHostPage() {
   const selected=questions.data?.find(q=>q.id===displayedQuestionId);
   const visibleResults=results.data?.questionId===displayedQuestionId?results.data:null;
   const excluded=new Set(host.data?.excludedTeamIds??[]);
-  return <MtLayout hostOnly>{()=> <>
-    <MtHeader title="MT 관리"/>
+  return <MtLayout hostOnly>{user=> <>
+    <MtHeader title="MT 관리" back="/my"/>
     {error&&<div className="mb-3"><MtError message={error}/></div>}
     {host.isPending?<p className="text-sm text-slate-500">불러오는 중...</p>:host.isError?
       <MtError message={errorMessage(host.error)}/>:
@@ -44,6 +44,7 @@ export default function MtHostPage() {
         <label htmlFor="event-title" className="text-sm font-semibold text-slate-600">행사 이름</label>
         <input id="event-title" value={newEvent} maxLength={120} onChange={e=>setNewEvent(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3"/>
         <button disabled={busy||!newEvent.trim()} onClick={()=>run(()=>mtApi.createEvent(newEvent))} className="mt-4 w-full rounded-xl bg-slate-900 p-3 font-bold text-white disabled:opacity-50">생성하기</button>
+        {user.role==="SUPER_ADMIN"&&<Link href="/mt/host/managers" className="mt-4 block text-center text-sm font-semibold text-blue-600">MT 관리자 지정 →</Link>}
       </MtCard>:
       <>
         <div className="mb-4 flex flex-wrap gap-2">
@@ -70,6 +71,7 @@ export default function MtHostPage() {
             <h2 className="font-bold text-slate-900">운영 메뉴</h2>
             <Link href="/mt/host/teams" className="block rounded-xl border border-slate-200 p-3 font-semibold text-slate-800">조 관리 →</Link>
             <Link href="/mt/host/questions" className="block rounded-xl border border-slate-200 p-3 font-semibold text-slate-800">문장 관리 →</Link>
+            {user.role==="SUPER_ADMIN"&&<Link href="/mt/host/managers" className="block rounded-xl border border-slate-200 p-3 font-semibold text-slate-800">MT 관리자 지정 →</Link>}
           </MtCard>
           <MtCard>
             <p className="mb-2 text-sm text-slate-500">{host.data.eventTitle}</p>

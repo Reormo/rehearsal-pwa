@@ -2,7 +2,8 @@ import { request } from "@/lib/api";
 
 export type MtTeam = { id: number; name: string; members: { id: number; name: string }[] };
 export type MtQuestion = { id: number; text: string; sort_order: number };
-export type MtState = { exists: boolean; eventTitle?: string; buzzerVisible: boolean; typingVisible: boolean; host: boolean; team?: {id:number;name:string}|null };
+export type MtState = { exists: boolean; eventTitle?: string; buzzerVisible: boolean; typingVisible: boolean; host: boolean; superAdmin: boolean; team?: {id:number;name:string}|null };
+export type MtManager = {id:number;name:string;role:"MEMBER"|"ADMIN"|"SUPER_ADMIN";assigned:boolean;permanent:boolean};
 export type MtHost = { exists: boolean; eventTitle?:string; buzzerVisible?:boolean; typingVisible?:boolean; buzzerOpen?:boolean; winnerTeamId?:number|null; winnerTeamName?:string|null; excludedTeamIds?:number[]; typingOpen?:boolean; currentRoundId?:number|null };
 export type MtBuzz = { visible:boolean; open?:boolean; myTeam?:{id:number;name:string}|null; winnerTeamId?:number|null; winnerTeamName?:string|null; excludedTeamIds?:number[] };
 export type MtTyping = { visible:boolean; open?:boolean; team?:{id:number;name:string}|null; roundId?:number|null; messages?:{id:number;content:string;submitted_at:string}[] };
@@ -16,6 +17,9 @@ const del=(path:string)=>request<void>("/api/mt"+path,{method:"DELETE"});
 export const mtApi = {
   state:()=>request<MtState>("/api/mt/state"),
   host:()=>request<MtHost>("/api/mt/host"),
+  managers:()=>request<MtManager[]>("/api/mt/host/managers"),
+  grantManager:(id:number)=>request<void>(`/api/mt/host/managers/${id}`,{method:"POST"}),
+  revokeManager:(id:number)=>request<void>(`/api/mt/host/managers/${id}`,{method:"DELETE"}),
   createEvent:(title:string)=>request<MtHost>("/api/mt/host/events",{method:"POST",body:JSON.stringify({title})}),
   endEvent:()=>post("/host/events/end"),
   teams:()=>request<MtTeam[]>("/api/mt/host/teams"),

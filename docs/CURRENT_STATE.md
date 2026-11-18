@@ -1,12 +1,23 @@
 # Current State
 
+## MT 관리자 지정 및 역할별 자동 진입 (2026-11-18)
+
+- Branch: `feat/mt-games-easter-egg` (`43fa66f` 기반). **main 미병합 / 운영 미배포**.
+- SUPER_ADMIN은 기본 MC이며 `/mt/host/managers`에서 활성 회원을 MT 관리자로 지정·해제한다.
+- 지정된 MT 관리자만 슈퍼관리자와 함께 MC API를 호출할 수 있다. 합주 ADMIN 권한과는 독립이며 기존 권한·예약 로직은 변경하지 않았다.
+- `/mt`는 MT 관리자를 `/mt/host`로 자동 이동시키고 일반 회원에게 참가자 화면을 표시한다. 이름 5회 터치 이스터에그 유지.
+- Flyway V17 `mt_host_managers` 테이블을 추가한다. 기존 DB 데이터 초기화 없음.
+- 백엔드 역할 허용/거부 통합 테스트 및 프론트 접근/진입 테스트 추가. 이 환경에서 실제 테스트·빌드 미실행: 로컬에서 검증 후에만 병합·배포.
+
+---
+
 ## Active feature handoff — MT Easter Egg (2026-11-18)
 
 - Branch: `feat/mt-games-easter-egg` based on main `79b966690bb4144da0e9ea3ac64097fb77593495`; **not merged or deployed**.
 - Added new Flyway V16 schema and authenticated `/api/mt/**` for MT events, teams, buzzer and typing.
 - Added participant `/mt`, `/mt/buzzer`, `/mt/typing`; host `/mt/host`, `/mt/host/teams`, `/mt/host/questions`.
 - Hidden entry: tap account name 5 times on `/my`; direct `/mt` link also works. No navbar items added.
-- MC currently requires existing ADMIN or SUPER_ADMIN. Feature flags default OFF and lock game details.
+- MC role policy is superseded by the new MT manager section above. Feature flags still default OFF.
 - Buzzer ordering is atomic at the server via PostgreSQL event row lock. Multiple members can press for one MT team.
 - Typing is messenger-style, allows re-submission, ranks only latest submission per member, preserves text and team snapshots.
 - Tests added: `MtIntegrationTests` (visibility, claim, retries, Unicode, latest submission).

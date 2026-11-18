@@ -1,6 +1,7 @@
 package com.bandclub.rehearsal.mt;
 
 import com.bandclub.rehearsal.auth.domain.ClubMember;
+import com.bandclub.rehearsal.auth.domain.ClubRole;
 import com.bandclub.rehearsal.auth.service.MembershipService;
 import com.bandclub.rehearsal.common.exception.AppException;
 import jakarta.validation.Valid;
@@ -37,7 +38,20 @@ public class MtController {
 
     private long user(Jwt jwt) { return Long.parseLong(jwt.getSubject()); }
     private long club(Jwt jwt) { return membership.requireMembership(user(jwt)).getClubId(); }
-    private long adminClub(Jwt jwt) { return membership.requireAdmin(user(jwt)).getClubId(); }
+    private long superAdminClub(Jwt jwt) {
+        return membership.requireSuperAdmin(user(jwt)).getClubId();
+    }
+    private boolean isMtHost(ClubMember member) {
+        if (member.getRole() == ClubRole.SUPER_ADMIN) return true;
+        return first("SELECT user_id FROM mt_host_managers WHERE club_id=? AND user_id=?",
+            member.getClubId(),member.getUserId()) != null;
+    }
+    private long hostClub(Jwt jwt) {
+        var member = membership.requireMembership(user(jwt));
+        if (!isMtHost(member))
+            throw new AppException(HttpStatus.FORBIDDEN,"MT_HOST_REQUIRED","MT 관리자 권한이 필요합니다.");
+        return member.getClubId();
+    }
     private static long number(Object n) { return ((Number)n).longValue(); }
     private static boolean yes(Object b) { return Boolean.TRUE.equals(b); }
     private static AppException missing(String message) {
@@ -92,8 +106,9 @@ public class MtController {
     public Map<String,Object> state(@AuthenticationPrincipal Jwt jwt) {
         var member = membership.requireMembership(user(jwt));
         var e = event(member.getClubId());
-        boolean host = member.getRole().isAdmin();
-        if (e == null) return Map.of("exists",false,"buzzerVisible",false,"typingVisible",false,"host",host);
+        boolean host = isMtHost(member);
+        boolean superAdmin = member.getRole() == ClubRole.SUPER_ADMIN;
+        if (e == null) return Map.of("exists",false,"buzzerVisible",false,"typingVisible",false,"host",host,"superAdmin",superAdmin);
         long eid = eventId(e);
         var team = myTeam(eid, user(jwt));
         var out = new LinkedHashMap<String,Object>();
@@ -102,14 +117,48 @@ public class MtController {
         out.put("buzzerVisible",e.get("buzzer_enabled"));
         out.put("typingVisible",e.get("typing_enabled"));
         out.put("host",host);
+        out.put("superAdmin",superAdmin);
         out.put("team",team);
         return out;
+    }
+
+    // MT permissions are independent of rehearsal ADMIN roles.
+    @GetMapping("/host/managers")
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> mtManagers(@AuthenticationPrincipal Jwt jwt) {
+        long cid=superAdminClub(jwt);
+        return rows("SELECT u.id,u.name,cm.role," +
+            "(cm.role='SUPER_ADMIN' OR m.user_id IS NOT NULL) AS assigned," +
+            "(cm.role='SUPER_ADMIN') AS permanent " +
+            "FROM club_members cm JOIN users u ON u.id=cm.user_id " +
+            "LEFT JOIN mt_host_managers m ON m.club_id=cm.club_id AND m.user_id=cm.user_id " +
+            "WHERE cm.club_id=? AND u.status='ACTIVE' AND u.deleted_at IS NULL " +
+            "ORDER BY (cm.role='SUPER_ADMIN') DESC,(m.user_id IS NOT NULL) DESC,u.name,u.id",cid);
+    }
+
+    @PostMapping("/host/managers/{userId}")
+    @Transactional
+    public void grantMtHost(@AuthenticationPrincipal Jwt jwt,@PathVariable long userId) {
+        long cid=superAdminClub(jwt);
+        var target=first("SELECT cm.role FROM club_members cm JOIN users u ON u.id=cm.user_id " +
+            "WHERE cm.club_id=? AND cm.user_id=? AND u.status='ACTIVE' AND u.deleted_at IS NULL",cid,userId);
+        if(target==null)throw missing("동아리 회원을 찾을 수 없습니다.");
+        if("SUPER_ADMIN".equals(target.get("role")))throw bad("슈퍼관리자는 기본 MT 관리자입니다.");
+        db.update("INSERT INTO mt_host_managers(club_id,user_id,granted_by) VALUES (?,?,?) " +
+            "ON CONFLICT(club_id,user_id) DO NOTHING",cid,userId,user(jwt));
+    }
+
+    @DeleteMapping("/host/managers/{userId}")
+    @Transactional
+    public void revokeMtHost(@AuthenticationPrincipal Jwt jwt,@PathVariable long userId) {
+        long cid=superAdminClub(jwt);
+        db.update("DELETE FROM mt_host_managers WHERE club_id=? AND user_id=?",cid,userId);
     }
 
     @GetMapping("/host")
     @Transactional(readOnly=true)
     public Map<String,Object> host(@AuthenticationPrincipal Jwt jwt) {
-        var e=event(adminClub(jwt));
+        var e=event(hostClub(jwt));
         if(e==null) return Map.of("exists",false);
         long id=eventId(e);
         var out=new LinkedHashMap<String,Object>();
@@ -131,7 +180,7 @@ public class MtController {
     @PostMapping("/host/events")
     @Transactional
     public Map<String,Object> createEvent(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody TitleRequest input) {
-        long cid=adminClub(jwt);
+        long cid=hostClub(jwt);
         if(event(cid)!=null) throw conflict("진행 중인 MT 행사가 있습니다.");
         long id=db.queryForObject("INSERT INTO mt_events(club_id,title) VALUES (?,?) RETURNING id",
             Long.class,cid,input.title().trim());
@@ -145,7 +194,7 @@ public class MtController {
     @PostMapping("/host/events/end")
     @Transactional
     public void endEvent(@AuthenticationPrincipal Jwt jwt) {
-        var e=lockEvent(adminClub(jwt));
+        var e=lockEvent(hostClub(jwt));
         noRunningGames(e);
         db.update("UPDATE mt_events SET ended_at=NOW(),buzzer_enabled=false,typing_enabled=false WHERE id=?",eventId(e));
     }
@@ -153,13 +202,13 @@ public class MtController {
     @GetMapping("/host/members")
     @Transactional(readOnly=true)
     public List<Map<String,Object>> members(@AuthenticationPrincipal Jwt jwt) {
-        return rows("SELECT u.id, u.name FROM users u JOIN club_members cm ON cm.user_id=u.id WHERE cm.club_id=? AND u.status='ACTIVE' AND u.deleted_at IS NULL ORDER BY u.name,u.id",adminClub(jwt));
+        return rows("SELECT u.id, u.name FROM users u JOIN club_members cm ON cm.user_id=u.id WHERE cm.club_id=? AND u.status='ACTIVE' AND u.deleted_at IS NULL ORDER BY u.name,u.id",hostClub(jwt));
     }
 
     @GetMapping("/host/teams")
     @Transactional(readOnly=true)
     public List<Map<String,Object>> teams(@AuthenticationPrincipal Jwt jwt) {
-        var e=event(adminClub(jwt));
+        var e=event(hostClub(jwt));
         if(e==null) return List.of();
         long id=eventId(e);
         var teamRows=rows("SELECT id,name FROM mt_teams WHERE event_id=? AND active=true ORDER BY id",id);
@@ -177,7 +226,7 @@ public class MtController {
     @PostMapping("/host/teams")
     @Transactional
     public void createTeam(@AuthenticationPrincipal Jwt jwt,@Valid @RequestBody NameRequest input) {
-        var e=lockEvent(adminClub(jwt)); noRunningGames(e);
+        var e=lockEvent(hostClub(jwt)); noRunningGames(e);
         String name=input.name().trim();
         if(first("SELECT id FROM mt_teams WHERE event_id=? AND LOWER(name)=LOWER(?) AND active=true",eventId(e),name)!=null)
             throw conflict("이미 사용 중인 조 이름입니다.");
@@ -187,7 +236,7 @@ public class MtController {
     @PatchMapping("/host/teams/{teamId}")
     @Transactional
     public void renameTeam(@AuthenticationPrincipal Jwt jwt,@PathVariable long teamId,@Valid @RequestBody NameRequest input) {
-        var e=lockEvent(adminClub(jwt)); noRunningGames(e);
+        var e=lockEvent(hostClub(jwt)); noRunningGames(e);
         requireTeam(eventId(e),teamId);
         String name=input.name().trim();
         if(first("SELECT id FROM mt_teams WHERE event_id=? AND LOWER(name)=LOWER(?) AND active=true AND id<>?",
@@ -198,7 +247,7 @@ public class MtController {
     @DeleteMapping("/host/teams/{teamId}")
     @Transactional
     public void deleteTeam(@AuthenticationPrincipal Jwt jwt,@PathVariable long teamId) {
-        var e=lockEvent(adminClub(jwt)); noRunningGames(e);
+        var e=lockEvent(hostClub(jwt)); noRunningGames(e);
         requireTeam(eventId(e),teamId);
         if(e.get("buzzer_winner_team_id")!=null && number(e.get("buzzer_winner_team_id"))==teamId)
             db.update("UPDATE mt_events SET buzzer_winner_team_id=NULL WHERE id=?",eventId(e));
@@ -210,7 +259,7 @@ public class MtController {
     @PutMapping("/host/teams/{teamId}/members/{userId}")
     @Transactional
     public void assign(@AuthenticationPrincipal Jwt jwt,@PathVariable long teamId,@PathVariable long userId) {
-        long cid=adminClub(jwt); var e=lockEvent(cid);noRunningGames(e);
+        long cid=hostClub(jwt); var e=lockEvent(cid);noRunningGames(e);
         requireTeam(eventId(e),teamId);
         if(first("SELECT u.id FROM club_members cm JOIN users u ON u.id=cm.user_id WHERE cm.club_id=? AND cm.user_id=? AND u.status='ACTIVE' AND u.deleted_at IS NULL",cid,userId)==null)
             throw bad("해당 회원을 찾을 수 없습니다.");
@@ -221,21 +270,21 @@ public class MtController {
     @DeleteMapping("/host/teams/{teamId}/members/{userId}")
     @Transactional
     public void unassign(@AuthenticationPrincipal Jwt jwt,@PathVariable long teamId,@PathVariable long userId) {
-        var e=lockEvent(adminClub(jwt)); noRunningGames(e); requireTeam(eventId(e),teamId);
+        var e=lockEvent(hostClub(jwt)); noRunningGames(e); requireTeam(eventId(e),teamId);
         db.update("DELETE FROM mt_team_members WHERE event_id=? AND team_id=? AND user_id=?",eventId(e),teamId,userId);
     }
 
     @GetMapping("/host/questions")
     @Transactional(readOnly=true)
     public List<Map<String,Object>> questions(@AuthenticationPrincipal Jwt jwt) {
-        var e=event(adminClub(jwt));
+        var e=event(hostClub(jwt));
         return e==null?List.of():rows("SELECT id,sort_order,text FROM mt_questions WHERE event_id=? AND active=true ORDER BY sort_order,id",eventId(e));
     }
 
     @PostMapping("/host/questions")
     @Transactional
     public void addQuestion(@AuthenticationPrincipal Jwt jwt,@Valid @RequestBody TextRequest input) {
-        var e=lockEvent(adminClub(jwt));
+        var e=lockEvent(hostClub(jwt));
         Integer order=db.queryForObject("SELECT COALESCE(MAX(sort_order),0)+1 FROM mt_questions WHERE event_id=? AND active=true",Integer.class,eventId(e));
         db.update("INSERT INTO mt_questions(event_id,sort_order,text) VALUES (?,?,?)",eventId(e),order,input.text());
     }
@@ -250,21 +299,21 @@ public class MtController {
     @PatchMapping("/host/questions/{questionId}")
     @Transactional
     public void editQuestion(@AuthenticationPrincipal Jwt jwt,@PathVariable long questionId,@Valid @RequestBody TextRequest input) {
-        var e=lockEvent(adminClub(jwt)); requireQuestion(eventId(e),questionId);questionNotRunning(e,questionId);
+        var e=lockEvent(hostClub(jwt)); requireQuestion(eventId(e),questionId);questionNotRunning(e,questionId);
         db.update("UPDATE mt_questions SET text=? WHERE id=?",input.text(),questionId);
     }
 
     @DeleteMapping("/host/questions/{questionId}")
     @Transactional
     public void deleteQuestion(@AuthenticationPrincipal Jwt jwt,@PathVariable long questionId) {
-        var e=lockEvent(adminClub(jwt));requireQuestion(eventId(e),questionId);questionNotRunning(e,questionId);
+        var e=lockEvent(hostClub(jwt));requireQuestion(eventId(e),questionId);questionNotRunning(e,questionId);
         db.update("UPDATE mt_questions SET active=false WHERE id=?",questionId);
     }
 
     @PostMapping("/host/questions/{questionId}/move")
     @Transactional
     public void moveQuestion(@AuthenticationPrincipal Jwt jwt,@PathVariable long questionId,@Valid @RequestBody DirectionRequest input) {
-        var e=lockEvent(adminClub(jwt)); long eid=eventId(e);
+        var e=lockEvent(hostClub(jwt)); long eid=eventId(e);
         var question=requireQuestion(eid,questionId);
         int order=((Number)question.get("sort_order")).intValue();
         boolean up="UP".equals(input.direction());
@@ -278,7 +327,7 @@ public class MtController {
     @PostMapping("/host/visibility")
     @Transactional
     public void visibility(@AuthenticationPrincipal Jwt jwt,@Valid @RequestBody VisibilityRequest input) {
-        var e=lockEvent(adminClub(jwt));long eid=eventId(e);
+        var e=lockEvent(hostClub(jwt));long eid=eventId(e);
         if("BUZZER".equals(input.game())) {
             db.update("UPDATE mt_events SET buzzer_enabled=?,buzzer_open=CASE WHEN ? THEN buzzer_open ELSE false END WHERE id=?",
                 input.enabled(),input.enabled(),eid);
@@ -328,7 +377,7 @@ public class MtController {
     @PostMapping("/host/buzzer")
     @Transactional
     public void buzzerAction(@AuthenticationPrincipal Jwt jwt,@Valid @RequestBody ActionRequest input) {
-        var e=lockEvent(adminClub(jwt));long eid=eventId(e);
+        var e=lockEvent(hostClub(jwt));long eid=eventId(e);
         if(!yes(e.get("buzzer_enabled")))throw conflict("버저 기능이 잠겨있습니다.");
         switch(input.action()){
             case "OPEN" -> {
@@ -388,7 +437,7 @@ public class MtController {
     @PostMapping("/host/typing/start")
     @Transactional
     public void startTyping(@AuthenticationPrincipal Jwt jwt,@Valid @RequestBody StartRequest input) {
-        var e=lockEvent(adminClub(jwt));long eid=eventId(e);
+        var e=lockEvent(hostClub(jwt));long eid=eventId(e);
         if(!yes(e.get("typing_enabled")))throw conflict("문자 게임이 잠겨있습니다.");
         if(yes(e.get("typing_open")))throw conflict("이미 진행 중인 문제입니다.");
         var q=requireQuestion(eid,input.questionId());
@@ -400,7 +449,7 @@ public class MtController {
     @PostMapping("/host/typing/close")
     @Transactional
     public void closeTyping(@AuthenticationPrincipal Jwt jwt) {
-        var e=lockEvent(adminClub(jwt));
+        var e=lockEvent(hostClub(jwt));
         if(e.get("current_round_id")!=null){
             db.update("UPDATE mt_typing_rounds SET ended_at=NOW() WHERE id=? AND ended_at IS NULL",e.get("current_round_id"));
         }
@@ -410,7 +459,7 @@ public class MtController {
     @GetMapping("/host/typing/results")
     @Transactional(readOnly=true)
     public Map<String,Object> results(@AuthenticationPrincipal Jwt jwt) {
-        var e=event(adminClub(jwt));
+        var e=event(hostClub(jwt));
         if(e==null||e.get("current_round_id")==null)return Map.of("roundId",0,"submissions",List.of(),"ranking",List.of());
         long rid=number(e.get("current_round_id"));
         var round=first("SELECT answer_snapshot,question_id FROM mt_typing_rounds WHERE id=? AND event_id=?",rid,eventId(e));

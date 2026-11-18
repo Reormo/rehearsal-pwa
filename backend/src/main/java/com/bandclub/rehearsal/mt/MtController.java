@@ -167,6 +167,7 @@ public class MtController {
         out.put("buzzerVisible",e.get("buzzer_enabled"));
         out.put("typingVisible",e.get("typing_enabled"));
         out.put("buzzerOpen",e.get("buzzer_open"));
+        out.put("buzzerPaused",e.get("buzzer_paused"));
         out.put("winnerTeamId",e.get("buzzer_winner_team_id"));
         var winner=e.get("buzzer_winner_team_id")==null?null:first("SELECT name FROM mt_teams WHERE id=? AND event_id=?",e.get("buzzer_winner_team_id"),id);
         out.put("winnerTeamName",winner==null?null:winner.get("name"));
@@ -196,7 +197,57 @@ public class MtController {
     public void endEvent(@AuthenticationPrincipal Jwt jwt) {
         var e=lockEvent(hostClub(jwt));
         noRunningGames(e);
-        db.update("UPDATE mt_events SET ended_at=NOW(),buzzer_enabled=false,typing_enabled=false WHERE id=?",eventId(e));
+        db.update("UPDATE mt_events SET ended_at=NOW(),buzzer_enabled=false,typing_enabled=false,buzzer_paused=true WHERE id=?",eventId(e));
+    }
+
+    @GetMapping("/host/events/history")
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> history(@AuthenticationPrincipal Jwt jwt) {
+        long cid=hostClub(jwt);
+        return rows("SELECT e.id,e.title,e.created_at,e.ended_at," +
+            "(SELECT COUNT(*) FROM mt_teams t WHERE t.event_id=e.id) AS team_count," +
+            "(SELECT COUNT(*) FROM mt_questions q WHERE q.event_id=e.id) AS question_count," +
+            "(SELECT COUNT(*) FROM mt_typing_submissions s JOIN mt_typing_rounds r ON r.id=s.round_id " +
+            "WHERE r.event_id=e.id) AS submission_count " +
+            "FROM mt_events e WHERE e.club_id=? AND e.ended_at IS NOT NULL " +
+            "ORDER BY e.ended_at DESC,e.id DESC LIMIT 50",cid);
+    }
+
+    @GetMapping("/host/events/{eventId}/history")
+    @Transactional(readOnly=true)
+    public Map<String,Object> historyDetail(@AuthenticationPrincipal Jwt jwt,@PathVariable long eventId) {
+        long cid=hostClub(jwt);
+        var e=first("SELECT id,title,ended_at FROM mt_events " +
+            "WHERE id=? AND club_id=? AND ended_at IS NOT NULL",eventId,cid);
+        if(e==null)throw missing("지난 MT 기록이 없습니다.");
+        var out=new LinkedHashMap<String,Object>();
+        out.put("id",e.get("id"));
+        out.put("title",e.get("title"));
+        out.put("endedAt",e.get("ended_at"));
+        out.put("teams",rows("SELECT t.id,t.name," +
+            "(SELECT COUNT(*) FROM mt_team_members tm WHERE tm.team_id=t.id) AS member_count " +
+            "FROM mt_teams t WHERE t.event_id=? ORDER BY t.id",eventId));
+        out.put("questions",rows("SELECT id,text FROM mt_questions WHERE event_id=? ORDER BY sort_order,id",eventId));
+        out.put("rounds",rows("SELECT id,answer_snapshot,started_at,ended_at " +
+            "FROM mt_typing_rounds WHERE event_id=? ORDER BY id",eventId));
+        out.put("submissions",rows("SELECT s.id,s.user_name,s.team_name,s.content,s.submitted_at " +
+            "FROM mt_typing_submissions s JOIN mt_typing_rounds r ON r.id=s.round_id " +
+            "WHERE r.event_id=? ORDER BY s.id",eventId));
+        return out;
+    }
+
+    @PostMapping("/host/events/{eventId}/restore")
+    @Transactional
+    public void restoreEvent(@AuthenticationPrincipal Jwt jwt,@PathVariable long eventId) {
+        long cid=hostClub(jwt);
+        if(event(cid)!=null)throw conflict("진행 중인 MT 행사를 먼저 종료해 주세요.");
+        var archived=first("SELECT id FROM mt_events " +
+            "WHERE id=? AND club_id=? AND ended_at IS NOT NULL FOR UPDATE",eventId,cid);
+        if(archived==null)throw missing("복구할 MT 행사를 찾을 수 없습니다.");
+        db.update("UPDATE mt_events SET ended_at=NULL,buzzer_enabled=false,typing_enabled=false," +
+            "buzzer_open=false,buzzer_paused=true,buzzer_winner_team_id=NULL,typing_open=false " +
+            "WHERE id=?",eventId);
+        db.update("DELETE FROM mt_buzzer_exclusions WHERE event_id=?",eventId);
     }
 
     @GetMapping("/host/members")
@@ -329,8 +380,8 @@ public class MtController {
     public void visibility(@AuthenticationPrincipal Jwt jwt,@Valid @RequestBody VisibilityRequest input) {
         var e=lockEvent(hostClub(jwt));long eid=eventId(e);
         if("BUZZER".equals(input.game())) {
-            db.update("UPDATE mt_events SET buzzer_enabled=?,buzzer_open=CASE WHEN ? THEN buzzer_open ELSE false END WHERE id=?",
-                input.enabled(),input.enabled(),eid);
+            db.update("UPDATE mt_events SET buzzer_enabled=?,buzzer_open=CASE WHEN ? THEN buzzer_open ELSE false END,buzzer_paused=CASE WHEN ? THEN buzzer_paused ELSE true END WHERE id=?",
+                input.enabled(),input.enabled(),input.enabled(),eid);
         } else if("TYPING".equals(input.game())) {
             if(!input.enabled()&&yes(e.get("typing_open"))){
                 db.update("UPDATE mt_typing_rounds SET ended_at=NOW() WHERE id=? AND ended_at IS NULL",e.get("current_round_id"));
@@ -350,6 +401,7 @@ public class MtController {
         var out=new LinkedHashMap<String,Object>();
         out.put("visible",true);
         out.put("open",e.get("buzzer_open"));
+        out.put("paused",e.get("buzzer_paused"));
         out.put("myTeam",team);
         out.put("winnerTeamId",e.get("buzzer_winner_team_id"));
         var w=e.get("buzzer_winner_team_id")==null?null:first("SELECT name FROM mt_teams WHERE id=? AND event_id=?",e.get("buzzer_winner_team_id"),eid);
@@ -382,21 +434,21 @@ public class MtController {
         switch(input.action()){
             case "OPEN" -> {
                 if(e.get("buzzer_winner_team_id")!=null)throw conflict("먼저 다음 조에 기회를 주세요.");
-                db.update("UPDATE mt_events SET buzzer_open=true WHERE id=?",eid);
+                db.update("UPDATE mt_events SET buzzer_open=true,buzzer_paused=false WHERE id=?",eid);
             }
-            case "CLOSE" -> db.update("UPDATE mt_events SET buzzer_open=false WHERE id=?",eid);
+            case "CLOSE" -> db.update("UPDATE mt_events SET buzzer_open=false,buzzer_paused=true WHERE id=?",eid);
             case "OTHER" -> {
                 if(e.get("buzzer_winner_team_id")==null)throw conflict("먼저 도전한 조가 없습니다.");
                 db.update("INSERT INTO mt_buzzer_exclusions(event_id,team_id) VALUES (?,?) ON CONFLICT DO NOTHING",eid,e.get("buzzer_winner_team_id"));
-                db.update("UPDATE mt_events SET buzzer_winner_team_id=NULL,buzzer_open=true WHERE id=?",eid);
+                db.update("UPDATE mt_events SET buzzer_winner_team_id=NULL,buzzer_open=true,buzzer_paused=false WHERE id=?",eid);
             }
             case "RETRY" -> {
                 db.update("DELETE FROM mt_buzzer_exclusions WHERE event_id=?",eid);
-                db.update("UPDATE mt_events SET buzzer_winner_team_id=NULL,buzzer_open=true WHERE id=?",eid);
+                db.update("UPDATE mt_events SET buzzer_winner_team_id=NULL,buzzer_open=true,buzzer_paused=false WHERE id=?",eid);
             }
             case "RESET" -> {
                 db.update("DELETE FROM mt_buzzer_exclusions WHERE event_id=?",eid);
-                db.update("UPDATE mt_events SET buzzer_winner_team_id=NULL,buzzer_open=false WHERE id=?",eid);
+                db.update("UPDATE mt_events SET buzzer_winner_team_id=NULL,buzzer_open=false,buzzer_paused=true WHERE id=?",eid);
             }
             default -> throw bad("지원하지 않는 동작입니다.");
         }

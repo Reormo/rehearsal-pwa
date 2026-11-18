@@ -1,5 +1,20 @@
 # Current State
 
+## MT 코랄·3D 파티 디자인 + 게임 상태/기록 개편 (2026-11-18)
+
+- Target branch: `feat/mt-games-easter-egg`, starting HEAD `ae13adf625f40fee446b91782e3b302d8e430235`. **Not merged or deployed.**
+- MT 전용 코랄/피치 스타일, 자체 SVG 파티 패턴 배경, 채움형 게임 카드, 같은 높이의 잠금 카드. 상태 안내/화살표 없는 간결한 선택 UI.
+- AppShell의 MT 경로별 헤더 제목 추가. MT 콘텐츠 중복 뒤로가기/제목 제거. 합주 페이지 스타일 보존.
+- MT 관리자 지정 화면 설명 제거, 메뉴/버튼 및 토글 코랄 통일.
+- 백엔드 V18 `buzzer_paused`: MC 수동 닫기 상태와 자동 선착순 성공 상태 구분, 참가자 대기/회색 버튼 반영.
+- 문자 입력·전송 고정, 메시지 영역만 스크롤; 모바일 visualViewport 대응.
+- 지난 MT 목록·제출 기록·복구 구현. 활성 행사 중 복구 금지, 복구 후 게임 공개 OFF, 기존 기록 보존.
+- 변경한 게임/기록 API에 통합 테스트, 게임 카드 UI 테스트 추가. **GitHub 코드 단계에서 Gradle/Testcontainers·Vitest·lint·Next static build 및 모바일 실측은 실행하지 못함**. 사용자 로컬 검증 뒤 병합·배포 판단.
+- 기존 합주 예약·알림·인증 권한·운영 데이터 및 기존 DB 마이그레이션 무변경.
+
+---
+
+
 ## MT 관리자 지정 및 역할별 자동 진입 (2026-11-18)
 
 - Branch: `feat/mt-games-easter-egg` (`43fa66f` 기반). **main 미병합 / 운영 미배포**.

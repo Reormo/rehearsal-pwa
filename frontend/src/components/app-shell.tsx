@@ -24,6 +24,8 @@ export function AppShell({
 }) {
   const rawPathname = usePathname();
   const pathname = normalizePathname(rawPathname);
+  const isMt = pathname === "/mt" || pathname.startsWith("/mt/");
+  const isMtTyping = pathname === "/mt/typing";
   const router = useRouter();
   const { direction, startTransition, clearTransition } =
     useNavigationTransition();
@@ -131,7 +133,7 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-dvh overflow-x-clip bg-slate-50">
+    <div className={`min-h-dvh overflow-x-clip bg-slate-50 ${isMt ? "mt-app-shell" : ""}`} >
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto grid h-16 max-w-5xl grid-cols-[40px_1fr_40px] items-center px-5">
           {isMainTab ? (
@@ -185,17 +187,17 @@ export function AppShell({
       </header>
 
       <main
-        className="mx-auto w-full max-w-5xl px-5 py-7 pb-32"
+        className={`mx-auto w-full max-w-5xl px-5 py-7 pb-32 ${isMtTyping ? "mt-typing-main" : ""}`}
         onClickCapture={captureContentNavigation}
       >
         <div
           key={pathname}
           className={
             direction === "right"
-              ? "page-transition-surface page-enter-from-right"
+              ? `page-transition-surface page-enter-from-right ${isMtTyping ? "mt-typing-surface" : ""}`
               : direction === "left"
-                ? "page-transition-surface page-enter-from-left"
-                : "page-transition-surface"
+                ? `page-transition-surface page-enter-from-left ${isMtTyping ? "mt-typing-surface" : ""}`
+                : `page-transition-surface ${isMtTyping ? "mt-typing-surface" : ""}`
           }
           onAnimationEnd={(event) => {
             if (event.target === event.currentTarget) {
@@ -289,6 +291,14 @@ function headerTitleForPath(pathname: string) {
     "/admin/swaps": "일정 교환 관리",
     "/admin/logs": "관리자 작업 이력",
     "/admin/operating-hours": "날짜별 운영시간",
+    "/mt": "MT",
+    "/mt/host": "MT 관리",
+    "/mt/host/teams": "조 관리",
+    "/mt/host/questions": "문장 관리",
+    "/mt/host/managers": "MT 관리자 지정",
+    "/mt/host/history": "지난 MT",
+    "/mt/buzzer": "버저비터",
+    "/mt/typing": "문자 빨리 보내!",
   };
 
   return titles[normalized] ?? "무혼";

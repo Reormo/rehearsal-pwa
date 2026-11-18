@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MtLayout, MtHeader, MtCard, MtError } from "@/components/mt-layout";
+import { MtLayout, MtCard, MtError } from "@/components/mt-layout";
 import { errorMessage } from "@/lib/api";
 import { mtApi } from "@/lib/mt-api";
 
@@ -33,7 +33,6 @@ export default function MtTeamsPage() {
   }).filter(m=>m.name.toLowerCase().includes(search.toLowerCase())&&!team?.members.some(t=>t.id===m.id))??[];
 
   return <MtLayout hostOnly>{()=> <>
-    <MtHeader title="조 관리" back="/mt/host"/>
     {error&&<div className="mb-3"><MtError message={error}/></div>}
     <MtCard className="mb-3">
       <h2 className="mb-3 font-bold text-slate-900">조 추가</h2>
@@ -41,7 +40,7 @@ export default function MtTeamsPage() {
         <input value={newName} maxLength={80} onChange={e=>setNewName(e.target.value)} placeholder="새 조 이름"
           className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-base"/>
         <button disabled={busy||!newName.trim()} onClick={()=>run(async()=>{await mtApi.addTeam(newName);setNewName("")})}
-          className="rounded-xl bg-slate-900 px-4 font-bold text-white disabled:opacity-50">추가</button>
+          className="rounded-xl mt-primary-button px-4 font-bold text-white disabled:opacity-50">추가</button>
       </div>
     </MtCard>
     <MtCard className="mb-3">
@@ -49,7 +48,7 @@ export default function MtTeamsPage() {
       {!teams.data?.length&&<p className="text-sm text-slate-400">등록된 조가 없습니다.</p>}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {teams.data?.map(t=><button key={t.id} onClick={()=>{setTeamId(t.id);setMemberId("");setSearch("")}}
-          className={`rounded-xl border px-3 py-3 text-left ${team?.id===t.id?"border-blue-400 bg-blue-50":"border-slate-200 bg-white"}`}>
+          className={`rounded-xl border px-3 py-3 text-left ${team?.id===t.id?"border-rose-300 bg-rose-50":"border-slate-200 bg-white"}`}>
           <p className="truncate font-bold text-slate-900">{t.name}</p>
           <p className="mt-1 text-xs text-slate-500">{t.members.length}명</p>
         </button>)}
@@ -90,7 +89,7 @@ export default function MtTeamsPage() {
           if(!member)return;
           if(member.currentTeam&&!window.confirm(`${member.name}님을 ${member.currentTeam}에서 ${team.name}(으)로 이동할까요?`))return;
           void run(async()=>{await mtApi.assign(team.id,member.id);setMemberId("");setSearch("")});
-        }} className="w-full rounded-xl bg-slate-900 p-3 font-bold text-white disabled:opacity-50">이 조에 배정</button>
+        }} className="w-full rounded-xl mt-primary-button p-3 font-bold text-white disabled:opacity-50">이 조에 배정</button>
       </div>
       <div className="border-t border-slate-100 pt-4">
         <button disabled={busy} onClick={()=>{

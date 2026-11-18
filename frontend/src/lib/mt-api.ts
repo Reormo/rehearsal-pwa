@@ -4,8 +4,14 @@ export type MtTeam = { id: number; name: string; members: { id: number; name: st
 export type MtQuestion = { id: number; text: string; sort_order: number };
 export type MtState = { exists: boolean; eventTitle?: string; buzzerVisible: boolean; typingVisible: boolean; host: boolean; superAdmin: boolean; team?: {id:number;name:string}|null };
 export type MtManager = {id:number;name:string;role:"MEMBER"|"ADMIN"|"SUPER_ADMIN";assigned:boolean;permanent:boolean};
-export type MtHost = { exists: boolean; eventTitle?:string; buzzerVisible?:boolean; typingVisible?:boolean; buzzerOpen?:boolean; winnerTeamId?:number|null; winnerTeamName?:string|null; excludedTeamIds?:number[]; typingOpen?:boolean; currentRoundId?:number|null };
-export type MtBuzz = { visible:boolean; open?:boolean; myTeam?:{id:number;name:string}|null; winnerTeamId?:number|null; winnerTeamName?:string|null; excludedTeamIds?:number[] };
+export type MtHistoryItem = {id:number;title:string;created_at:string;ended_at:string;team_count:number;question_count:number;submission_count:number};
+export type MtHistoryDetail = {id:number;title:string;endedAt:string;
+  teams:{id:number;name:string;member_count:number}[];
+  questions:{id:number;text:string}[];
+  rounds:{id:number;answer_snapshot:string;started_at:string;ended_at:string}[];
+  submissions:{id:number;user_name:string;team_name:string;content:string;submitted_at:string}[]};
+export type MtHost = { exists: boolean; eventTitle?:string; buzzerVisible?:boolean; typingVisible?:boolean; buzzerOpen?:boolean; buzzerPaused?:boolean; winnerTeamId?:number|null; winnerTeamName?:string|null; excludedTeamIds?:number[]; typingOpen?:boolean; currentRoundId?:number|null };
+export type MtBuzz = { visible:boolean; open?:boolean; paused?:boolean; myTeam?:{id:number;name:string}|null; winnerTeamId?:number|null; winnerTeamName?:string|null; excludedTeamIds?:number[] };
 export type MtTyping = { visible:boolean; open?:boolean; team?:{id:number;name:string}|null; roundId?:number|null; messages?:{id:number;content:string;submitted_at:string}[] };
 export type MtSubmission = { id:number;user_id:number;user_name:string;team_name:string;content:string;correct:boolean;latest:boolean;submitted_at:string };
 export type MtResults = { roundId:number; questionId?:number; open?:boolean; ranking:{name:string;teamName:string}[]; submissions:MtSubmission[] };
@@ -22,6 +28,9 @@ export const mtApi = {
   revokeManager:(id:number)=>request<void>(`/api/mt/host/managers/${id}`,{method:"DELETE"}),
   createEvent:(title:string)=>request<MtHost>("/api/mt/host/events",{method:"POST",body:JSON.stringify({title})}),
   endEvent:()=>post("/host/events/end"),
+  history:()=>request<MtHistoryItem[]>("/api/mt/host/events/history"),
+  historyDetail:(id:number)=>request<MtHistoryDetail>(`/api/mt/host/events/${id}/history`),
+  restoreEvent:(id:number)=>post(`/host/events/${id}/restore`),
   teams:()=>request<MtTeam[]>("/api/mt/host/teams"),
   members:()=>request<{id:number;name:string}[]>("/api/mt/host/members"),
   addTeam:(name:string)=>post("/host/teams",{name}),

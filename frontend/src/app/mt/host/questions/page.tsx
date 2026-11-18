@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MtLayout, MtHeader, MtCard, MtError } from "@/components/mt-layout";
+import { MtLayout, MtCard, MtError } from "@/components/mt-layout";
 import { errorMessage } from "@/lib/api";
 import { mtApi } from "@/lib/mt-api";
 
@@ -24,7 +24,6 @@ export default function MtQuestionsPage() {
     finally{setBusy(false);}
   }
   return <MtLayout hostOnly>{()=> <>
-    <MtHeader title="문장 관리" back="/mt/host"/>
     {error&&<div className="mb-3"><MtError message={error}/></div>}
     <MtCard className="mb-3">
       <h2 className="mb-3 font-bold text-slate-900">문제 추가</h2>
@@ -32,13 +31,13 @@ export default function MtQuestionsPage() {
         placeholder="새 문장을 입력하세요. 이모지도 사용할 수 있어요."
         rows={3} className="w-full rounded-xl border border-slate-200 p-3 text-base"/>
       <button disabled={busy||!newText.trim()} onClick={()=>run(async()=>{await mtApi.addQuestion(newText);setNewText("")})}
-        className="mt-2 w-full rounded-xl bg-slate-900 p-3 font-bold text-white disabled:opacity-50">문제 추가</button>
+        className="mt-2 w-full rounded-xl mt-primary-button p-3 font-bold text-white disabled:opacity-50">문제 추가</button>
     </MtCard>
     <MtCard className="mb-3">
       <h2 className="mb-3 font-bold text-slate-900">등록된 문제 · {questions.data?.length??0}개</h2>
       <div className="divide-y divide-slate-100">
         {questions.data?.map((q,i)=><div key={q.id} className="flex items-center gap-2 py-2">
-          <button onClick={()=>setSelectedId(q.id)} className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-sm ${selected?.id===q.id?"bg-blue-50 font-semibold text-blue-800":"text-slate-800"}`}>
+          <button onClick={()=>setSelectedId(q.id)} className={`min-w-0 flex-1 rounded-lg px-3 py-2 text-left text-sm ${selected?.id===q.id?"bg-rose-50 font-semibold text-[#AA3A50]":"text-slate-800"}`}>
             <span className="mr-2 text-slate-400">{i+1}.</span>{q.text}
           </button>
           <div className="flex shrink-0 gap-1">
@@ -63,7 +62,7 @@ export default function MtQuestionsPage() {
         }} className="rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50">삭제</button>
         <button disabled={busy||!editing.trim()||editing===selected.text}
           onClick={()=>run(()=>mtApi.editQuestion(selected.id,editing))}
-          className="rounded-xl bg-slate-900 px-5 py-2.5 font-bold text-white disabled:opacity-50">저장</button>
+          className="rounded-xl mt-primary-button px-5 py-2.5 font-bold text-white disabled:opacity-50">저장</button>
       </div>
     </MtCard>}
   </>}</MtLayout>;

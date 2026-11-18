@@ -248,3 +248,70 @@ button:disabled {
       max(24px, env(safe-area-inset-left));
   }
 }
+
+/* MT-only coral/peach party theme. The rehearsal UI retains its original styles. */
+.mt-app-shell {
+  --mt-coral: #ec5a6b; --mt-peach: #ff9b6a; --mt-border: #f3d8d2;
+  background: radial-gradient(ellipse at 13% 24%, #ffe8dc, transparent 48%),
+    radial-gradient(ellipse at 90% 73%, #ffebf0, transparent 46%), #fff8f5;
+  isolation: isolate; position: relative;
+}
+.mt-app-shell::before {
+  content:""; position:fixed; pointer-events:none; z-index:0;
+  inset:calc(64px + env(safe-area-inset-top)) 0 calc(80px + env(safe-area-inset-bottom));
+  background:url("/mt-party-pattern.svg") center top / 440px 605px repeat; opacity:.21;
+}
+.mt-app-shell > main {position:relative;z-index:1}
+.mt-app-shell > header, .mt-app-shell > nav {background-color:rgba(255,255,255,.96)}
+.mt-card,.mt-locked-panel {
+  background:rgba(255,255,255,.96);
+  border:1px solid var(--mt-border);
+  box-shadow:0 8px 25px rgba(168,61,79,.065);
+}
+.mt-locked-panel {min-height:180px}
+.mt-game-tile {
+  display:flex; min-height:170px; flex-direction:column; justify-content:space-between;
+  overflow:hidden; position:relative; border:1px solid rgba(255,255,255,.7);
+  border-radius:28px; padding:22px; box-shadow:0 12px 22px rgba(183,76,93,.14);
+  transition:transform 150ms ease, box-shadow 150ms ease;
+}
+.mt-game-tile:not(.mt-game-tile-locked):active {transform:scale(.985)}
+.mt-game-tile-buzzer {color:white;background:linear-gradient(118deg,#ef5577,#f86b70 52%,#ffa67e)}
+.mt-game-tile-typing {color:white;background:linear-gradient(120deg,#f48a61,#ffa35d 57%,#ffce8b)}
+.mt-game-tile-buzzer::after,.mt-game-tile-typing::after {
+  content:"";position:absolute;width:178px;height:178px;top:-87px;right:-46px;
+  border-radius:50%;background:rgba(255,255,255,.13);
+}
+.mt-game-tile-locked {
+  box-shadow:none; background:rgba(248,245,246,.92);
+  border-color:#e7dfe3; color:#a7a1ac;
+}
+.mt-game-glyph {font-size:47px;line-height:1.15;filter:drop-shadow(0 5px 3px rgba(95,33,51,.15));width:fit-content}
+.mt-game-tile-locked .mt-game-glyph {filter:grayscale(1);opacity:.5}
+.mt-game-label {position:relative;z-index:1;font-size:1.5rem;font-weight:900;letter-spacing:-.045em}
+.mt-primary-button,.mt-send-button {background:linear-gradient(110deg,#ec5a6b,#f47c71)!important;border-color:transparent!important;color:white!important}
+.mt-menu-item,.mt-outline-button {background:#fff4f0;border:1px solid #f4d5cf!important;color:#ae4051!important}
+.mt-menu-item:active {background:#ffe6dc}
+.mt-danger-button {background:#fff5f4;border-color:#f5cbc7!important;color:#c85160!important}
+.mt-host-tab-active {border-color:#ec5a6b!important;background:#ec5a6b!important;color:white!important}
+.mt-host-tab-inactive {border-color:var(--mt-border)!important;background:white!important;color:#9b5b67!important}
+.mt-buzz-active,.mt-buzz-success {background:linear-gradient(140deg,#f25775,#ff9873)}
+.mt-buzz-success {box-shadow:0 12px 38px rgba(236,90,107,.28)}
+.mt-chat-messages {background:rgba(255,242,237,.7);overscroll-behavior:contain}
+.mt-chat-bubble {background:linear-gradient(120deg,#ffd2c7,#ffe1d3)}
+.mt-app-shell button:focus-visible,.mt-app-shell a:focus-visible,
+.mt-app-shell textarea:focus-visible,.mt-app-shell input:focus-visible,.mt-app-shell select:focus-visible {
+  outline:2px solid #ec5a6b;outline-offset:2px;
+}
+.mt-typing-main {
+  height:calc(var(--mt-visual-height,100dvh) - 64px - 80px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height:0;padding-top:14px!important;padding-bottom:14px!important;
+  overflow:hidden;display:flex;flex-direction:column;
+}
+.mt-typing-surface,.mt-typing-layout {flex:1;display:flex;min-height:0;flex-direction:column}
+.mt-typing-layout > .mt-chat-frame {flex:1;min-height:0}
+.mt-app-shell:has(.mt-chat-composer textarea:focus) > nav {display:none}
+.mt-app-shell:has(.mt-chat-composer textarea:focus) .mt-typing-main {
+  height:calc(var(--mt-visual-height,100dvh) - 64px - env(safe-area-inset-top));
+}
+@media(prefers-reduced-motion:reduce){.mt-game-tile{transition:none}}

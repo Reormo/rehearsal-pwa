@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MtLayout, MtHeader, MtCard, MtError } from "@/components/mt-layout";
+import { MtLayout, MtCard, MtError } from "@/components/mt-layout";
 import { AuthUser, errorMessage } from "@/lib/api";
 import { mtApi, MtManager } from "@/lib/mt-api";
 
@@ -29,9 +29,7 @@ function ManagerContent({user}:{user:AuthUser}) {
   }
   const shown=managers.data?.filter(m=>m.name.toLowerCase().includes(search.toLowerCase()))??[];
   return <>
-    <MtHeader title="MT 관리자 지정" back="/mt/host"/>
     {!superAdmin?<MtError message="슈퍼관리자만 MT 관리자를 지정할 수 있습니다."/>:<>
-      <p className="mb-4 text-sm text-slate-600">MT 관리자는 게임과 조·문제를 운영하지만, 합주 예약 관리자 권한은 갖지 않습니다.</p>
       {error&&<div className="mb-3"><MtError message={error}/></div>}
       <MtCard>
         <label htmlFor="mt-manager-search" className="mb-2 block text-sm font-semibold text-slate-700">회원 검색</label>
@@ -50,7 +48,7 @@ function ManagerContent({user}:{user:AuthUser}) {
               {m.permanent?<span className="shrink-0 text-xs font-semibold text-slate-500">고정</span>:
                 <button type="button" disabled={busy!==null} onClick={()=>void toggle(m)}
                   aria-label={`${m.name} MT 관리자 ${m.assigned?"해제":"지정"}`}
-                  className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-bold disabled:opacity-50 ${m.assigned?"border-red-200 text-red-600":"border-blue-200 bg-blue-50 text-blue-700"}`}>
+                  className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-bold disabled:opacity-50 ${m.assigned?"mt-danger-button":"mt-primary-button"}`}>
                   {busy===m.id?"처리 중":m.assigned?"권한 해제":"관리자 지정"}
                 </button>}
             </div>)}</div>}

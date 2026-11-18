@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MtLayout, MtHeader, MtCard, MtError, MtSwitch } from "@/components/mt-layout";
+import { MtLayout, MtCard, MtError, MtSwitch } from "@/components/mt-layout";
 import { errorMessage } from "@/lib/api";
 import { mtApi } from "@/lib/mt-api";
 
@@ -34,7 +34,6 @@ export default function MtHostPage() {
   const visibleResults=results.data?.questionId===displayedQuestionId?results.data:null;
   const excluded=new Set(host.data?.excludedTeamIds??[]);
   return <MtLayout hostOnly>{user=> <>
-    <MtHeader title="MT 관리" back="/my"/>
     {error&&<div className="mb-3"><MtError message={error}/></div>}
     {host.isPending?<p className="text-sm text-slate-500">불러오는 중...</p>:host.isError?
       <MtError message={errorMessage(host.error)}/>:
@@ -43,14 +42,17 @@ export default function MtHostPage() {
         <h2 className="mb-4 text-lg font-bold text-slate-900">MT 행사 만들기</h2>
         <label htmlFor="event-title" className="text-sm font-semibold text-slate-600">행사 이름</label>
         <input id="event-title" value={newEvent} maxLength={120} onChange={e=>setNewEvent(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3"/>
-        <button disabled={busy||!newEvent.trim()} onClick={()=>run(()=>mtApi.createEvent(newEvent))} className="mt-4 w-full rounded-xl bg-slate-900 p-3 font-bold text-white disabled:opacity-50">생성하기</button>
-        {user.role==="SUPER_ADMIN"&&<Link href="/mt/host/managers" className="mt-4 block text-center text-sm font-semibold text-blue-600">MT 관리자 지정 →</Link>}
+        <button disabled={busy||!newEvent.trim()} onClick={()=>run(()=>mtApi.createEvent(newEvent))} className="mt-primary-button mt-4 w-full rounded-xl p-3 font-bold text-white disabled:opacity-50">생성하기</button>
+        <div className="mt-3 space-y-2">
+          {user.role==="SUPER_ADMIN"&&<Link href="/mt/host/managers" className="mt-menu-item block rounded-xl px-4 py-3 text-sm font-semibold">MT 관리자 지정</Link>}
+          <Link href="/mt/host/history" className="mt-menu-item block rounded-xl px-4 py-3 text-sm font-semibold">지난 MT</Link>
+        </div>
       </MtCard>:
       <>
         <div className="mb-4 flex flex-wrap gap-2">
           {([{id:"settings",label:"설정"},{id:"buzzer",label:"버저 진행"},{id:"typing",label:"문자 게임 진행"}] as const).map(item=>
             <button type="button" key={item.id} onClick={()=>setTab(item.id)}
-              className={`rounded-xl border px-3 py-2 text-sm font-semibold ${tab===item.id?"border-slate-900 bg-slate-900 text-white":"border-slate-200 bg-white text-slate-600"}`}>{item.label}</button>)}
+              className={`mt-host-tab rounded-xl border px-3 py-2 text-sm font-semibold ${tab===item.id?"mt-host-tab-active":"mt-host-tab-inactive"}`}>{item.label}</button>)}
         </div>
         {tab==="settings"&&<div className="space-y-3">
           <MtCard>
@@ -69,33 +71,34 @@ export default function MtHostPage() {
           </MtCard>
           <MtCard className="space-y-3">
             <h2 className="font-bold text-slate-900">운영 메뉴</h2>
-            <Link href="/mt/host/teams" className="block rounded-xl border border-slate-200 p-3 font-semibold text-slate-800">조 관리 →</Link>
-            <Link href="/mt/host/questions" className="block rounded-xl border border-slate-200 p-3 font-semibold text-slate-800">문장 관리 →</Link>
-            {user.role==="SUPER_ADMIN"&&<Link href="/mt/host/managers" className="block rounded-xl border border-slate-200 p-3 font-semibold text-slate-800">MT 관리자 지정 →</Link>}
+            <Link href="/mt/host/teams" className="mt-menu-item block rounded-xl border p-3 font-semibold">조 관리 →</Link>
+            <Link href="/mt/host/questions" className="mt-menu-item block rounded-xl border p-3 font-semibold">문장 관리 →</Link>
+            {user.role==="SUPER_ADMIN"&&<Link href="/mt/host/managers" className="mt-menu-item block rounded-xl border p-3 font-semibold">MT 관리자 지정</Link>}
+            <Link href="/mt/host/history" className="mt-menu-item block rounded-xl border p-3 font-semibold">지난 MT</Link>
           </MtCard>
           <MtCard>
             <p className="mb-2 text-sm text-slate-500">{host.data.eventTitle}</p>
             <button disabled={busy||Boolean(host.data.buzzerOpen)||Boolean(host.data.typingOpen)}
               onClick={()=>{if(window.confirm("현재 MT 행사를 종료할까요? 기록은 보관되고 새 행사를 만들 수 있어요."))void run(mtApi.endEvent)}}
-              className="rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-600 disabled:opacity-50">행사 종료</button>
+              className="mt-danger-button rounded-xl border px-4 py-2 text-sm font-bold disabled:opacity-50">행사 종료</button>
           </MtCard>
         </div>}
         {tab==="buzzer"&&<div className="space-y-3">
           <MtCard>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-bold text-slate-900">버저 진행</h2>
-              <span className="text-sm text-slate-500">{host.data.buzzerOpen?"진행 중":host.data.winnerTeamId?"접수 완료":"대기"}</span>
+              <span className="text-sm text-slate-500">{host.data.buzzerPaused?"대기":host.data.buzzerOpen?"진행 중":host.data.winnerTeamId?"접수 완료":"대기"}</span>
             </div>
             <div className="mb-4 rounded-2xl bg-slate-50 py-10 text-center">
               <p className="mb-1 text-sm text-slate-500">선착순</p>
-              <p aria-live="polite" className="text-4xl font-extrabold text-blue-600">{host.data.winnerTeamName??"—"}</p>
+              <p aria-live="polite" className="text-4xl font-extrabold text-[#D6475C]">{host.data.winnerTeamName??"—"}</p>
               {excluded.size>0&&<p className="mt-3 px-3 text-xs text-slate-500">제외: {teams.data?.filter(t=>excluded.has(t.id)).map(t=>t.name).join(", ")}</p>}
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <button disabled={busy||!host.data.buzzerVisible||Boolean(host.data.buzzerOpen)||Boolean(host.data.winnerTeamId)}
-                className="rounded-xl bg-blue-600 p-3 font-bold text-white disabled:opacity-40" onClick={()=>run(()=>mtApi.buzzerAction("OPEN"))}>버저 열기</button>
-              <button disabled={busy||!host.data.buzzerVisible||(!host.data.buzzerOpen&&!host.data.winnerTeamId)}
-                className="rounded-xl border border-slate-200 p-3 font-bold text-slate-700 disabled:opacity-40" onClick={()=>run(()=>mtApi.buzzerAction("CLOSE"))}>버저 닫기</button>
+                className="mt-primary-button rounded-xl p-3 font-bold text-white disabled:opacity-40" onClick={()=>run(()=>mtApi.buzzerAction("OPEN"))}>버저 열기</button>
+              <button disabled={busy||!host.data.buzzerVisible||Boolean(host.data.buzzerPaused)||(!host.data.buzzerOpen&&!host.data.winnerTeamId)}
+                className="rounded-xl border border-slate-200 p-3 font-bold text-slate-700 disabled:opacity-40" onClick={()=>run(()=>mtApi.buzzerAction("CLOSE"))}>{host.data.buzzerPaused?"버저 닫힘":"버저 닫기"}</button>
               <button disabled={busy||!host.data.buzzerVisible||!host.data.winnerTeamId}
                 className="rounded-xl border border-slate-200 p-3 font-bold text-slate-700 disabled:opacity-40" onClick={()=>run(()=>mtApi.buzzerAction("OTHER"))}>다른 조에 기회</button>
               <button disabled={busy||!host.data.buzzerVisible||excluded.size===0}
@@ -111,7 +114,7 @@ export default function MtHostPage() {
             <h2 className="mb-3 font-bold text-slate-900">문자 게임 진행</h2>
             <div className="mb-3 flex items-center justify-between">
               <span className="text-sm text-slate-500">기준 문장</span>
-              <Link href="/mt/host/questions" className="text-sm font-semibold text-blue-600">문장 관리</Link>
+              <Link href="/mt/host/questions" className="text-sm font-semibold text-[#D6475C]">문장 관리</Link>
             </div>
             <select aria-label="문제 선택" value={displayedQuestionId??""}
               disabled={busy||Boolean(host.data.typingOpen)}
@@ -122,7 +125,7 @@ export default function MtHostPage() {
             <div className="my-3 whitespace-pre-wrap break-words rounded-xl bg-slate-50 p-3 text-sm text-slate-800">{selected?.text??"등록된 문장이 없습니다."}</div>
             <p className="mb-3 text-sm font-semibold text-slate-500">{host.data.typingOpen?"접수 중":"접수 대기 / 종료"}</p>
             <div className="grid grid-cols-2 gap-2">
-              <button className="rounded-xl bg-slate-900 p-3 font-bold text-white disabled:opacity-40"
+              <button className="mt-primary-button rounded-xl p-3 font-bold text-white disabled:opacity-40"
                 disabled={busy||!displayedQuestionId||!host.data.typingVisible||Boolean(host.data.typingOpen)}
                 onClick={()=>run(()=>mtApi.startTyping(displayedQuestionId!))}>접수 시작</button>
               <button className="rounded-xl border border-slate-200 p-3 font-bold text-slate-700 disabled:opacity-40"

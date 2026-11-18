@@ -141,6 +141,62 @@ class MtIntegrationTests {
 
     @Test
     @Transactional
+    void mcCloseAfterWinningResetsParticipantToWaitingWithoutLosingWinner() {
+        Jwt admin=superAdmin();
+        mt.createEvent(admin,new MtController.TitleRequest("버저 종료 검증"));
+        long uid=Long.parseLong(admin.getSubject());
+        long tid=((Number)mt.teams(admin).get(0).get("id")).longValue();
+        mt.assign(admin,tid,uid);
+        mt.visibility(admin,new MtController.VisibilityRequest("BUZZER",true));
+        mt.buzzerAction(admin,new MtController.ActionRequest("OPEN"));
+        assertEquals(true,mt.press(admin).get("won"));
+        assertEquals(false,mt.buzzer(admin).get("paused"));
+        assertEquals(tid,((Number)mt.buzzer(admin).get("winnerTeamId")).longValue());
+        mt.buzzerAction(admin,new MtController.ActionRequest("CLOSE"));
+        assertEquals(true,mt.buzzer(admin).get("paused"));
+        assertEquals(false,mt.buzzer(admin).get("open"));
+        assertEquals(tid,((Number)mt.buzzer(admin).get("winnerTeamId")).longValue());
+        mt.buzzerAction(admin,new MtController.ActionRequest("OTHER"));
+        assertEquals(false,mt.buzzer(admin).get("paused"));
+        assertEquals(true,mt.buzzer(admin).get("open"));
+    }
+
+    @Test
+    @Transactional
+    void endedMtIsListedAndCanBeRestoredWithoutLosingSubmissionHistory() {
+        Jwt admin=superAdmin();
+        mt.createEvent(admin,new MtController.TitleRequest("기록 보관 검증"));
+        long uid=Long.parseLong(admin.getSubject());
+        long tid=((Number)mt.teams(admin).get(0).get("id")).longValue();
+        mt.assign(admin,tid,uid);
+        mt.visibility(admin,new MtController.VisibilityRequest("TYPING",true));
+        long q=((Number)mt.questions(admin).get(0).get("id")).longValue();
+        mt.startTyping(admin,new MtController.StartRequest(q));
+        long rid=((Number)mt.typing(admin).get("roundId")).longValue();
+        mt.submit(admin,new MtController.SubmissionRequest(rid,"테스트 전송 기록"));
+        mt.closeTyping(admin);
+        mt.endEvent(admin);
+
+        var archived=mt.history(admin);
+        assertEquals(1,archived.size());
+        long eid=((Number)archived.get(0).get("id")).longValue();
+        assertEquals(1L,((Number)archived.get(0).get("submission_count")).longValue());
+        assertEquals(1,((java.util.List<?>)mt.historyDetail(admin,eid).get("submissions")).size());
+
+        mt.createEvent(admin,new MtController.TitleRequest("새 행사"));
+        assertEquals(HttpStatus.CONFLICT,
+            assertThrows(AppException.class,()->mt.restoreEvent(admin,eid)).getStatus());
+        mt.endEvent(admin);
+        mt.restoreEvent(admin,eid);
+        assertEquals(true,mt.state(admin).get("exists"));
+        assertEquals(false,mt.state(admin).get("typingVisible"));
+        assertEquals(1L,db.queryForObject("SELECT COUNT(*) FROM mt_typing_submissions WHERE round_id=?",Long.class,rid));
+        assertEquals(HttpStatus.NOT_FOUND,
+            assertThrows(AppException.class,()->mt.historyDetail(admin,eid)).getStatus());
+    }
+
+    @Test
+    @Transactional
     void hiddenFeaturesNeverExposeGameData() {
         Jwt admin=superAdmin();
         mt.createEvent(admin,new MtController.TitleRequest("비공개 MT"));

@@ -50,7 +50,8 @@ describe("MT host visibility switches",()=>{
     fireEvent.click(buzzer);
     await waitFor(()=>expect(buzzer).toBeDisabled());
     expect(typing).not.toBeDisabled();
-    expect(screen.getByRole("button",{name:"버저비터"})).not.toBeDisabled();
-    expect(screen.getByText("조 관리")).toBeInTheDocument();
+    // Unrelated controls remain available while the buzzer visibility request is pending.
+    expect(screen.getByRole("button",{name:"행사 종료"})).not.toBeDisabled();
+    expect(screen.getByRole("link",{name:"조 관리"})).toBeInTheDocument();
   });
 });

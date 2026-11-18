@@ -1,5 +1,15 @@
 # Current State
 
+## MT frontend test fixes — 2026-11-18
+
+- `feat/mt-games-easter-egg` base `1859583b24816f2a809085a9082aa6301129fb3f`.
+- Local user-provided Vitest run: 11 suites passed; 1 suite failed at transform (invalid regex); 3 test cases failed across MT entry/host (25 passed of 28 executed). The user started `npm run lint`, but no lint result was included in the uploaded log.
+- Fixed duplicated regex escaping in MT route normalization. Updated `/mt` test mocks for the new loading spinner and game-card rendering. Updated visibility-pending test to assert independent controls stay enabled rather than assuming an unpublished game tab is always visible.
+- Code-level inspection only after fixes; Vitest/lint/build **not yet rerun**. Await user desktop verification. No backend, database, live MT data, main branch, or deployment changes.
+
+---
+
+
 ## MT 자유형 채팅·버저, 화면 전환, 운영 메뉴, 지난 MT 삭제 (2026-11-18)
 
 - Branch: `feat/mt-games-easter-egg`, parent HEAD `bf5de0e572876351d3d2c8164635288f9e8aa02a`. main 미병합, 운영 미배포.

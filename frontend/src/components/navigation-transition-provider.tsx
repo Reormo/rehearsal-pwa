@@ -90,7 +90,7 @@ export function useNavigationTransition() {
 }
 
 function isMtRoute(pathname:string) {
-  const normalized=pathname.replace(/\\/index\\.html$/, "").replace(/\\.html$/, "").replace(/\\/+$/, "") || "/";
+  const normalized = pathname.replace(/\/index\.html$/, "").replace(/\.html$/, "").replace(/\/+$/, "") || "/";
   return normalized==="/mt" || normalized.startsWith("/mt/");
 }
 

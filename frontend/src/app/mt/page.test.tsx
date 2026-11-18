@@ -9,8 +9,9 @@ const navigation=vi.hoisted(()=>({replace:vi.fn()}));
 vi.mock("next/navigation",()=>({useRouter:()=>({replace:navigation.replace})}));
 vi.mock("@/components/mt-layout",()=>({
   MtLayout:({children}:{children:(user:{role:string})=>React.ReactNode})=>children({role:"MEMBER"}),
-  MtHeader:({title}:{title:string})=><h1>{title}</h1>,
-  MtLocked:()=> <p>잠겨있는 기능입니다</p>,
+  MtLoading:()=> <div role="status" aria-label="MT 정보를 불러오는 중">불러오는 중</div>,
+  MtGameCard:({href,title,visible}:{href:string;title:string;visible:boolean})=>
+    visible?<a href={href}>{title}</a>:<div>잠겨 있는 기능</div>,
 }));
 
 describe("MT entry routing",()=>{

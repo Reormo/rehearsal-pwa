@@ -30,6 +30,18 @@ describe("MT host visibility switches",()=>{
   });
   afterEach(()=>{cleanup();queryClient.clear();vi.restoreAllMocks();});
 
+  it("shows only published games as MC tabs",async()=>{
+    render(<QueryClientProvider client={queryClient}><MtHostPage/></QueryClientProvider>);
+    await screen.findByRole("switch",{name:"버저비터 공개"});
+    expect(screen.queryByRole("navigation",{name:"MT 게임 진행 선택"})).not.toBeInTheDocument();
+    queryClient.setQueryData(["mt","host"],{
+      exists:true,eventTitle:"무혼 MT",buzzerVisible:true,typingVisible:false,
+      buzzerOpen:false,buzzerPaused:false,typingOpen:false,currentRoundId:null,
+    });
+    expect(await screen.findByRole("button",{name:"버저비터"})).toBeInTheDocument();
+    expect(screen.queryByRole("button",{name:"문자 빨리 보내!"})).not.toBeInTheDocument();
+  });
+
   it("does not disable unrelated controls while a visibility change is pending",async()=>{
     vi.spyOn(mtApi,"visibility").mockImplementation(()=>new Promise<void>(()=>{}));
     render(<QueryClientProvider client={queryClient}><MtHostPage/></QueryClientProvider>);
@@ -38,7 +50,7 @@ describe("MT host visibility switches",()=>{
     fireEvent.click(buzzer);
     await waitFor(()=>expect(buzzer).toBeDisabled());
     expect(typing).not.toBeDisabled();
-    expect(screen.getByRole("button",{name:"버저 진행"})).not.toBeDisabled();
-    expect(screen.getByText("조 관리 →")).toBeInTheDocument();
+    expect(screen.getByRole("button",{name:"버저비터"})).not.toBeDisabled();
+    expect(screen.getByText("조 관리")).toBeInTheDocument();
   });
 });

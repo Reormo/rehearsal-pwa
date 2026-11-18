@@ -31,6 +31,7 @@ export const mtApi = {
   history:()=>request<MtHistoryItem[]>("/api/mt/host/events/history"),
   historyDetail:(id:number)=>request<MtHistoryDetail>(`/api/mt/host/events/${id}/history`),
   restoreEvent:(id:number)=>post(`/host/events/${id}/restore`),
+  deleteArchivedEvent:(id:number)=>del(`/host/events/${id}`),
   teams:()=>request<MtTeam[]>("/api/mt/host/teams"),
   members:()=>request<{id:number;name:string}[]>("/api/mt/host/members"),
   addTeam:(name:string)=>post("/host/teams",{name}),

@@ -1,15 +1,19 @@
 "use client";
 
-// Decorative only. The 3D renders are original, transparent, optimized WebP stickers.
+// Decorative only. Resolution-independent glossy 3D-style SVG stickers.
 const sprites = [
-  { kind:"smile", top:"2%", left:"3%", size:92, rotation:-13 },
-  { kind:"party", top:"9%", left:"68%", size:108, rotation:18 },
-  { kind:"soju", top:"24%", left:"1%", size:98, rotation:-15 },
-  { kind:"star", top:"35%", left:"73%", size:100, rotation:14 },
-  { kind:"balloon", top:"53%", left:"6%", size:88, rotation:8 },
-  { kind:"confetti", top:"65%", left:"70%", size:100, rotation:-9 },
-  { kind:"smile", top:"78%", left:"43%", size:90, rotation:12 },
-  { kind:"soju", top:"92%", left:"77%", size:93, rotation:15 },
+  {kind:"smile",top:"2%",left:"3%",size:80,rotation:-12},
+  {kind:"party",top:"9%",left:"71%",size:88,rotation:16},
+  {kind:"soju",top:"18%",left:"1%",size:84,rotation:-16},
+  {kind:"star",top:"29%",left:"75%",size:86,rotation:11},
+  {kind:"balloon",top:"40%",left:"4%",size:80,rotation:7},
+  {kind:"confetti",top:"48%",left:"69%",size:74,rotation:-10},
+  {kind:"smile",top:"58%",left:"68%",size:81,rotation:-15},
+  {kind:"soju",top:"67%",left:"2%",size:83,rotation:12},
+  {kind:"party",top:"75%",left:"73%",size:77,rotation:-13},
+  {kind:"star",top:"83%",left:"9%",size:82,rotation:17},
+  {kind:"balloon",top:"92%",left:"66%",size:78,rotation:-14},
+  {kind:"confetti",top:"97%",left:"40%",size:70,rotation:11},
 ] as const;
 
 export function MtPartyBackdrop() {

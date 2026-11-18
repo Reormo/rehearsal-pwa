@@ -197,6 +197,58 @@ class MtIntegrationTests {
 
     @Test
     @Transactional
+    void archivedMtDeletionRemovesOnlyThatEventsChildren() {
+        Jwt admin=superAdmin();
+        mt.createEvent(admin,new MtController.TitleRequest("삭제 대상 MT"));
+        long uid=Long.parseLong(admin.getSubject());
+        long tid=((Number)mt.teams(admin).get(0).get("id")).longValue();
+        mt.assign(admin,tid,uid);
+        mt.visibility(admin,new MtController.VisibilityRequest("TYPING",true));
+        long q=((Number)mt.questions(admin).get(0).get("id")).longValue();
+        mt.startTyping(admin,new MtController.StartRequest(q));
+        long rid=((Number)mt.typing(admin).get("roundId")).longValue();
+        mt.submit(admin,new MtController.SubmissionRequest(rid,"삭제될 메시지"));
+        mt.closeTyping(admin);
+        mt.endEvent(admin);
+        long archivedId=((Number)mt.history(admin).get(0).get("id")).longValue();
+
+        mt.createEvent(admin,new MtController.TitleRequest("보존할 활성 MT"));
+        assertEquals(HttpStatus.NOT_FOUND,
+            assertThrows(AppException.class,()->mt.deleteArchivedEvent(admin,
+                ((Number)db.queryForMap("SELECT id FROM mt_events WHERE ended_at IS NULL AND club_id=(SELECT club_id FROM mt_events WHERE id=?)",archivedId).get("id")).longValue()))
+                .getStatus());
+        mt.deleteArchivedEvent(admin,archivedId);
+        assertEquals(0L,db.queryForObject("SELECT COUNT(*) FROM mt_events WHERE id=?",Long.class,archivedId));
+        assertEquals(0L,db.queryForObject("SELECT COUNT(*) FROM mt_typing_rounds WHERE id=?",Long.class,rid));
+        assertEquals(0L,db.queryForObject("SELECT COUNT(*) FROM mt_typing_submissions WHERE round_id=?",Long.class,rid));
+        assertEquals(0L,db.queryForObject("SELECT COUNT(*) FROM mt_teams WHERE event_id=?",Long.class,archivedId));
+        assertEquals(0L,db.queryForObject("SELECT COUNT(*) FROM mt_questions WHERE event_id=?",Long.class,archivedId));
+        assertEquals(true,mt.state(admin).get("exists"));
+        assertEquals(HttpStatus.NOT_FOUND,
+            assertThrows(AppException.class,()->mt.deleteArchivedEvent(admin,archivedId)).getStatus());
+    }
+
+    @Test
+    @Transactional
+    void cannotDeleteOtherClubsArchivedMtOrAsOrdinaryMember() {
+        Jwt admin=superAdmin();
+        long cid=db.queryForObject("INSERT INTO clubs(name) VALUES ('MT 삭제 격리') RETURNING id",Long.class);
+        long id=db.queryForObject("INSERT INTO mt_events(club_id,title,ended_at) " +
+            "VALUES (?,'다른 동아리 기록',NOW()) RETURNING id",Long.class,cid);
+        assertEquals(HttpStatus.NOT_FOUND,
+            assertThrows(AppException.class,()->mt.deleteArchivedEvent(admin,id)).getStatus());
+        long uid=db.queryForObject("INSERT INTO users(login_id,name,status) " +
+            "VALUES ('mt_delete_test','비관리자','ACTIVE') RETURNING id",Long.class);
+        long homeCid=db.queryForObject("SELECT club_id FROM club_members WHERE user_id=?",Long.class,
+            Long.parseLong(admin.getSubject()));
+        db.update("INSERT INTO club_members(club_id,user_id,role) VALUES (?,?,?)",homeCid,uid,"MEMBER");
+        assertEquals(HttpStatus.FORBIDDEN,
+            assertThrows(AppException.class,()->mt.deleteArchivedEvent(token(uid),id)).getStatus());
+        assertEquals(1L,db.queryForObject("SELECT COUNT(*) FROM mt_events WHERE id=?",Long.class,id));
+    }
+
+    @Test
+    @Transactional
     void hiddenFeaturesNeverExposeGameData() {
         Jwt admin=superAdmin();
         mt.createEvent(admin,new MtController.TitleRequest("비공개 MT"));

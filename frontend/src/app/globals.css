@@ -276,11 +276,11 @@ button:disabled {
 .mt-app-shell .mt-party-sprite {
   position:absolute;
   display:block;
-  background-image:url("/mt-emoji-sheet.webp");
+  background-image:url("/mt-emoji-sheet.svg");
   background-repeat:no-repeat;
   background-size:300% 200%;
-  opacity:.23;
-  filter:blur(.25px);
+  opacity:.22;
+  filter:none;
   user-select:none;
 }
 .mt-app-shell .mt-party-sprite-smile { background-position:0% 0%; }

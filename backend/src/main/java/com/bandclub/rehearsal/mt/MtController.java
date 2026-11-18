@@ -250,6 +250,28 @@ public class MtController {
         db.update("DELETE FROM mt_buzzer_exclusions WHERE event_id=?",eventId);
     }
 
+    // Delete only an ended MT event belonging to the caller's club.
+    // PostgreSQL foreign keys have NO ACTION, so children must be cleared in dependency order.
+    @DeleteMapping("/host/events/{eventId}")
+    @Transactional
+    public void deleteArchivedEvent(@AuthenticationPrincipal Jwt jwt,@PathVariable long eventId) {
+        long cid=hostClub(jwt);
+        var archived=first("SELECT id FROM mt_events " +
+            "WHERE id=? AND club_id=? AND ended_at IS NOT NULL FOR UPDATE",eventId,cid);
+        if(archived==null)throw missing("삭제할 지난 MT 행사를 찾을 수 없습니다.");
+
+        // The event points back to a winner team and a typing round.
+        db.update("UPDATE mt_events SET buzzer_winner_team_id=NULL,current_round_id=NULL WHERE id=?",eventId);
+        db.update("DELETE FROM mt_typing_submissions WHERE round_id IN " +
+            "(SELECT id FROM mt_typing_rounds WHERE event_id=?)",eventId);
+        db.update("DELETE FROM mt_typing_rounds WHERE event_id=?",eventId);
+        db.update("DELETE FROM mt_buzzer_exclusions WHERE event_id=?",eventId);
+        db.update("DELETE FROM mt_team_members WHERE event_id=?",eventId);
+        db.update("DELETE FROM mt_questions WHERE event_id=?",eventId);
+        db.update("DELETE FROM mt_teams WHERE event_id=?",eventId);
+        db.update("DELETE FROM mt_events WHERE id=? AND club_id=? AND ended_at IS NOT NULL",eventId,cid);
+    }
+
     @GetMapping("/host/members")
     @Transactional(readOnly=true)
     public List<Map<String,Object>> members(@AuthenticationPrincipal Jwt jwt) {

@@ -58,7 +58,8 @@ export function NavigationTransitionProvider({
       direction:
         pendingTransition &&
         pendingTransition.fromPathname !== pathname &&
-        !(isSubpage(pendingTransition.fromPathname) && isSubpage(pathname))
+        (!(isSubpage(pendingTransition.fromPathname) && isSubpage(pathname)) ||
+          isMtRoute(pendingTransition.fromPathname) || isMtRoute(pathname))
           ? pendingTransition.direction
           : null,
       startTransition: (direction: PageTransitionDirection) =>
@@ -86,6 +87,11 @@ export function useNavigationTransition() {
     );
   }
   return value;
+}
+
+function isMtRoute(pathname:string) {
+  const normalized=pathname.replace(/\\/index\\.html$/, "").replace(/\\.html$/, "").replace(/\\/+$/, "") || "/";
+  return normalized==="/mt" || normalized.startsWith("/mt/");
 }
 
 function isSubpage(pathname: string) {

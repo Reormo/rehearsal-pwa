@@ -8,7 +8,11 @@ import { errorMessage } from "@/lib/api";
 import type { MtHost } from "@/lib/mt-api";
 import { mtApi } from "@/lib/mt-api";
 
-type Tab="settings"|"buzzer"|"typing";
+const MT_GAMES=[
+  {id:"buzzer",label:"버저비터",switchLabel:"버저비터 공개",apiGame:"BUZZER",flag:"buzzerVisible"},
+  {id:"typing",label:"문자 빨리 보내!",switchLabel:"문자 빨리 보내 공개",apiGame:"TYPING",flag:"typingVisible"},
+] as const;
+type Tab="settings"|(typeof MT_GAMES)[number]["id"];
 export default function MtHostPage() {
   const client=useQueryClient();
   const [visibilityPending,setVisibilityPending]=useState<"BUZZER"|"TYPING"|null>(null);
@@ -54,6 +58,14 @@ export default function MtHostPage() {
   const selected=questions.data?.find(q=>q.id===displayedQuestionId);
   const visibleResults=results.data?.questionId===displayedQuestionId?results.data:null;
   const excluded=new Set(host.data?.excludedTeamIds??[]);
+  const publishedGames=MT_GAMES.filter(game=>Boolean(host.data?.[game.flag]));
+  const activeTab=tab==="settings"||publishedGames.some(game=>game.id===tab)?tab:"settings";
+  const tabs=[{id:"settings" as const,label:"설정"},...publishedGames];
+  const operations=[
+    {href:"/mt/host/teams",label:"조 관리",visible:true},
+    {href:"/mt/host/questions",label:"문장 관리",visible:Boolean(host.data?.typingVisible)},
+    {href:"/mt/host/history",label:"지난 MT",visible:true},
+  ];
   return <MtLayout hostOnly>{user=> <>
     {error&&<div className="mb-3"><MtError message={error}/></div>}
     {host.isPending?<MtLoading/>:host.isError?
@@ -70,32 +82,32 @@ export default function MtHostPage() {
         </div>
       </MtCard>:
       <>
-        <div className="mb-4 flex flex-wrap gap-2">
-          {([{id:"settings",label:"설정"},{id:"buzzer",label:"버저 진행"},{id:"typing",label:"문자 게임 진행"}] as const).map(item=>
-            <button type="button" key={item.id} onClick={()=>setTab(item.id)}
-              className={`mt-host-tab rounded-xl border px-3 py-2 text-sm font-semibold ${tab===item.id?"mt-host-tab-active":"mt-host-tab-inactive"}`}>{item.label}</button>)}
-        </div>
-        {tab==="settings"&&<div className="space-y-3">
+        {publishedGames.length>0&&<nav aria-label="MT 게임 진행 선택" className="mb-4 flex w-full gap-1 rounded-2xl border border-rose-100 bg-white/85 p-1">
+          {tabs.map(item=><button type="button" key={item.id} onClick={()=>setTab(item.id)}
+            aria-pressed={activeTab===item.id}
+            className={`mt-host-tab min-w-0 flex-1 rounded-xl px-2 py-3 text-xs font-bold sm:text-sm ${activeTab===item.id?"mt-host-tab-active":"mt-host-tab-inactive"}`}>{item.label}</button>)}
+        </nav>}
+        {activeTab==="settings"&&<div className="space-y-3">
           <MtCard>
             <h2 className="mb-4 font-bold text-slate-900">기능 공개</h2>
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-semibold text-slate-800">버저비터</span>
-              <MtSwitch label="버저비터 공개" disabled={busy||visibilityPending==="BUZZER"} checked={Boolean(host.data.buzzerVisible)}
-                onChange={enabled=>void updateVisibility("BUZZER",enabled)}/>
-            </div>
-            <div className="my-4 border-t border-slate-100"/>
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-semibold text-slate-800">문자 빨리 보내!</span>
-              <MtSwitch label="문자 빨리 보내 공개" disabled={busy||visibilityPending==="TYPING"} checked={Boolean(host.data.typingVisible)}
-                onChange={enabled=>void updateVisibility("TYPING",enabled)}/>
+            <div className="divide-y divide-rose-100">
+              {MT_GAMES.map(game=><div key={game.id} className="flex min-h-14 items-center justify-between gap-3 py-3">
+                <span className="font-semibold text-slate-800">{game.label}</span>
+                <MtSwitch label={game.switchLabel}
+                  disabled={busy||visibilityPending===game.apiGame}
+                  checked={Boolean(host.data?.[game.flag])}
+                  onChange={enabled=>void updateVisibility(game.apiGame,enabled)}/>
+              </div>)}
             </div>
           </MtCard>
           <MtCard className="space-y-3">
             <h2 className="font-bold text-slate-900">운영 메뉴</h2>
-            <Link href="/mt/host/teams" className="mt-menu-item block rounded-xl border p-3 font-semibold">조 관리 →</Link>
-            <Link href="/mt/host/questions" className="mt-menu-item block rounded-xl border p-3 font-semibold">문장 관리 →</Link>
-            {user.role==="SUPER_ADMIN"&&<Link href="/mt/host/managers" className="mt-menu-item block rounded-xl border p-3 font-semibold">MT 관리자 지정</Link>}
-            <Link href="/mt/host/history" className="mt-menu-item block rounded-xl border p-3 font-semibold">지난 MT</Link>
+            <div className="grid gap-2">
+              {operations.filter(item=>item.visible).map(item=><Link key={item.href} href={item.href}
+                className="mt-menu-item block rounded-xl border p-3 font-semibold">{item.label}</Link>)}
+              {user.role==="SUPER_ADMIN"&&<Link href="/mt/host/managers"
+                className="mt-menu-item block rounded-xl border p-3 font-semibold">MT 관리자 지정</Link>}
+            </div>
           </MtCard>
           <MtCard>
             <p className="mb-2 text-sm text-slate-500">{host.data.eventTitle}</p>
@@ -104,7 +116,7 @@ export default function MtHostPage() {
               className="mt-danger-button rounded-xl border px-4 py-2 text-sm font-bold disabled:opacity-50">행사 종료</button>
           </MtCard>
         </div>}
-        {tab==="buzzer"&&<div className="space-y-3">
+        {activeTab==="buzzer"&&<div className="space-y-3">
           <MtCard>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-bold text-slate-900">버저 진행</h2>
@@ -130,7 +142,7 @@ export default function MtHostPage() {
               onClick={()=>run(()=>mtApi.buzzerAction("RESET"))}>초기화</button>
           </MtCard>
         </div>}
-        {tab==="typing"&&<div className="space-y-3">
+        {activeTab==="typing"&&<div className="space-y-3">
           <MtCard>
             <h2 className="mb-3 font-bold text-slate-900">문자 게임 진행</h2>
             <div className="mb-3 flex items-center justify-between">

@@ -7,6 +7,7 @@ import { AuthUser } from "@/lib/api";
 import { useNavigationTransition } from "@/components/navigation-transition-provider";
 import { notificationApi } from "@/lib/notification-api";
 import { MtPartyBackdrop } from "@/components/mt-party-backdrop";
+import { mtBackTarget, isMtPath } from "@/lib/mt-navigation";
 
 type NavIconName =
   | "home"
@@ -25,7 +26,7 @@ export function AppShell({
 }) {
   const rawPathname = usePathname();
   const pathname = normalizePathname(rawPathname);
-  const isMt = pathname === "/mt" || pathname.startsWith("/mt/");
+  const isMt = isMtPath(pathname);
   const isMtTyping = pathname === "/mt/typing";
   const router = useRouter();
   const { direction, startTransition, clearTransition } =
@@ -121,7 +122,9 @@ export function AppShell({
       return;
     }
 
-    if (isMainTab) {
+    if (isMt && isMtPath(normalizedHref)) {
+      startTransition(mtBackTarget(pathname)===normalizedHref ? "left" : "right");
+    } else if (isMainTab) {
       startTransition("right");
     } else {
       clearTransition();
@@ -129,8 +132,10 @@ export function AppShell({
   }
 
   function goBack() {
+    const target = mtBackTarget(pathname);
     startTransition("left");
-    router.back();
+    if (target) router.push(target);
+    else router.back();
   }
 
   return (

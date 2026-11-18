@@ -28,6 +28,19 @@ export default function MtHistoryPage() {
     }catch(e){setError(errorMessage(e))}
     finally{setBusy(null)}
   }
+  async function remove(id:number,title:string) {
+    if(busy!==null)return;
+    const answer=window.prompt(`‘${title}’ 행사와 조·문제·제출 기록을 영구 삭제합니다. 복구할 수 없습니다. 확인하려면 행사 이름을 입력하세요.`);
+    if(answer!==title)return;
+    setBusy(id);setError("");
+    try {
+      await mtApi.deleteArchivedEvent(id);
+      if(selected===id)setSelected(null);
+      await client.invalidateQueries({queryKey:["mt","history"]});
+    }catch(e){setError(errorMessage(e))}
+    finally{setBusy(null)}
+  }
+
   return <MtLayout hostOnly>{()=> <div className="space-y-3">
     {error&&<MtError message={error}/>}
     {history.isPending?<p className="text-sm text-slate-500">불러오는 중...</p>:
@@ -44,6 +57,8 @@ export default function MtHistoryPage() {
               className="mt-outline-button rounded-xl px-3 py-2 text-xs font-bold">{selected===item.id?"접기":"기록 보기"}</button>
             <button type="button" disabled={busy!==null} onClick={()=>void restore(item.id,item.title)}
               className="mt-primary-button rounded-xl px-3 py-2 text-xs font-bold text-white">복구</button>
+            <button type="button" disabled={busy!==null} onClick={()=>void remove(item.id,item.title)}
+              className="mt-danger-button rounded-xl border px-3 py-2 text-xs font-bold">삭제</button>
           </div>
         </div>
         <div className="mt-3 flex gap-3 text-xs text-slate-500">

@@ -79,6 +79,24 @@ describe("NavigationTransitionProvider", () => {
     expect(screen.getByTestId("direction")).toHaveTextContent("none");
   });
 
+  it("animates forward navigation between two MT subpages", () => {
+    navigation.pathname="/mt/host";
+    const view=render(tree());
+    fireEvent.click(screen.getByRole("button",{name:"Go right"}));
+    navigation.pathname="/mt/host/teams";
+    view.rerender(tree());
+    expect(screen.getByTestId("direction")).toHaveTextContent("right");
+  });
+
+  it("animates backward navigation between MT subpages", () => {
+    navigation.pathname="/mt/typing";
+    const view=render(tree());
+    fireEvent.click(screen.getByRole("button",{name:"Go left"}));
+    navigation.pathname="/mt";
+    view.rerender(tree());
+    expect(screen.getByTestId("direction")).toHaveTextContent("left");
+  });
+
   it("animates a subpage returning to its parent tab", () => {
     navigation.pathname = "/my/teams";
     const view = render(tree());

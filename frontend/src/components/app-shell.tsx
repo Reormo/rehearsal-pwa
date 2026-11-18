@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AuthUser } from "@/lib/api";
 import { useNavigationTransition } from "@/components/navigation-transition-provider";
 import { notificationApi } from "@/lib/notification-api";
+import { MtPartyBackdrop } from "@/components/mt-party-backdrop";
 
 type NavIconName =
   | "home"
@@ -133,7 +134,7 @@ export function AppShell({
   }
 
   return (
-    <div className={`min-h-dvh overflow-x-clip bg-slate-50 ${isMt ? "mt-app-shell" : ""}`} >
+    <div className={isMt ? "mt-app-shell min-h-dvh overflow-x-clip" : "min-h-dvh overflow-x-clip bg-slate-50"}>
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto grid h-16 max-w-5xl grid-cols-[40px_1fr_40px] items-center px-5">
           {isMainTab ? (
@@ -162,7 +163,7 @@ export function AppShell({
             </button>
           )}
 
-          <div className="truncate text-center text-xl font-black tracking-tight text-slate-950">
+          <div className="select-none truncate text-center text-xl font-black tracking-tight text-slate-950" style={{ WebkitUserSelect: "none" }}>
             {headerTitleForPath(pathname)}
           </div>
 
@@ -190,6 +191,7 @@ export function AppShell({
         className={`mx-auto w-full max-w-5xl px-5 py-7 pb-32 ${isMtTyping ? "mt-typing-main" : ""}`}
         onClickCapture={captureContentNavigation}
       >
+        {isMt && <MtPartyBackdrop />}
         <div
           key={pathname}
           className={

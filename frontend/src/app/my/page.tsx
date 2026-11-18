@@ -7,6 +7,7 @@ import { useRef } from "react";
 import { AppShell, roleLabel } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
 import { authApi, AuthUser, errorMessage } from "@/lib/api";
+import { mtApi } from "@/lib/mt-api";
 
 const menuItems = [
   { href: "/my/notifications", label: "알림 설정", icon: "notification" },
@@ -39,6 +40,7 @@ function MyContent({ user }: { user: AuthUser }) {
     mtTap.current.at = now;
     if (mtTap.current.count >= 5) {
       mtTap.current.count = 0;
+      void queryClient.prefetchQuery({queryKey:["mt","state"],queryFn:mtApi.state,staleTime:5000});
       router.push("/mt");
     }
   }

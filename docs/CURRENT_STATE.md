@@ -1,5 +1,18 @@
 # Current State
 
+## MT 3D glossy emoji + app-wide polish (2026-11-18)
+
+- Branch: `feat/mt-games-easter-egg`, base `7c5a3af21bce11ca5297997d06a74a0095237d4f`; **main 미병합, 운영 미배포**.
+- 디자인: 사용자가 참고한 유광 젤리 질감에서 영감을 받아 생성한 **오리지널** 3D 이모지 (웃음/별눈/파티콘/풍선/소주병·잔/색종이)를 투명 WebP 스프라이트로 최적화. 실제 스톡 이미지와 개별 상표/문구는 복제하지 않음.
+- MT 화면에만 흩어진 장식이 표시되도록 별도 컴포넌트 `MtPartyBackdrop`와 `.mt-app-shell` CSS로 제한. 기존의 반복 SVG 패턴은 제거. 홈/예약/공지/관리자/전체는 기존 배경으로 유지.
+- 최초 MT 진입 및 MC 권한 확인/데이터 로딩 중 즉시 코랄 스피너 렌더. /my 이스터에그 진입 시 MT 상태 쿼리 사전 요청.
+- 게임 공개 스위치: 전체 MT 쿼리 무차별 갱신·공통 busy로 인한 다른 컨트롤의 깜빡임을 줄임. 해당 스위치만 전송 중 비활성화, 호스트 데이터 낙관적 갱신 + 실패 시 롤백, 필요한 쿼리만 재확인.
+- 모든 페이지 공통 viewport의 최대 스케일 1 및 userScalable false, 헤더 제목 텍스트 선택 방지. 모바일 브라우저/접근성 설정에서 확대 제한을 무시할 수 있어 실제 iOS/Android 검증 필요.
+- 기존 MT 기능/예약/알림/DB 변경 없음. **Gradle/Next/Vitest 및 실기기 검증은 GitHub-only 세션에서 실행하지 못했으며 로컬 확인 필요.**
+
+---
+
+
 ## MT 코랄·3D 파티 디자인 + 게임 상태/기록 개편 (2026-11-18)
 
 - Target branch: `feat/mt-games-easter-egg`, starting HEAD `ae13adf625f40fee446b91782e3b302d8e430235`. **Not merged or deployed.**

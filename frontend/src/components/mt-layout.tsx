@@ -22,7 +22,7 @@ export function MtLayout({children,hostOnly=false}:{children:(user:AuthUser)=>Re
 }
 function MtHostAccess({children}:{children:React.ReactNode}) {
   const state=useQuery({queryKey:["mt","state"],queryFn:mtApi.state,refetchInterval:3000});
-  if(state.isPending)return <p className="py-8 text-center text-sm text-slate-500">MT 관리자 권한을 확인하는 중...</p>;
+  if(state.isPending)return <MtLoading/>;
   if(state.isError)return <div className="space-y-3">
     <MtError message={errorMessage(state.error)}/>
     <button type="button" onClick={()=>void state.refetch()} className="rounded-xl border border-slate-200 px-4 py-2 text-sm">다시 시도</button>
@@ -42,6 +42,11 @@ export function MtGameCard({href,title,kind,visible}:{href:string;title:string;k
     <span className="mt-game-glyph" aria-hidden="true">{kind==="buzzer"?"🎯":"💬"}</span>
     <strong className="mt-game-label">{title}</strong>
   </Link>;
+}
+export function MtLoading() {
+  return <div className="mt-loading" role="status" aria-label="MT 정보를 불러오는 중">
+    <span className="mt-loading-ring" aria-hidden="true"/>
+  </div>;
 }
 export function MtLocked() {
   return <div className="mt-locked-panel rounded-3xl px-4 py-16 text-center text-sm font-semibold text-slate-400">잠겨있는 기능입니다</div>;

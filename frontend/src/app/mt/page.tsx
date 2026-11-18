@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MtLayout, MtGameCard } from "@/components/mt-layout";
+import { MtLayout, MtGameCard, MtLoading } from "@/components/mt-layout";
 import { mtApi } from "@/lib/mt-api";
 
 export default function MtPage() {
@@ -11,7 +11,7 @@ export default function MtPage() {
   const state=useQuery({queryKey:["mt","state"],queryFn:mtApi.state,refetchInterval:2500});
   useEffect(()=>{if(state.data?.host)router.replace("/mt/host")},[router,state.data?.host]);
   return <MtLayout>{()=> <>
-    {state.isPending?<p className="text-sm text-slate-500">불러오는 중...</p>:state.isError?
+    {state.isPending?<MtLoading/>:state.isError?
       <p className="text-sm text-red-600">MT 페이지를 불러오지 못했어요.</p>:state.data?.host?
       <p className="text-sm text-slate-500">MT 관리자 화면으로 이동 중...</p>:<>
       {state.data?.exists && state.data.team && <p className="mb-4 inline-flex rounded-full bg-white/85 px-3 py-1.5 text-sm font-bold text-[#AE4051]">{state.data.team.name}</p>}

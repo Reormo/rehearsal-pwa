@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MtLayout, MtCard, MtError, MtSwitch } from "@/components/mt-layout";
+import { MtLayout, MtCard, MtError, MtSwitch, MtLoading } from "@/components/mt-layout";
 import { errorMessage } from "@/lib/api";
+import type { MtHost } from "@/lib/mt-api";
 import { mtApi } from "@/lib/mt-api";
 
 type Tab="settings"|"buzzer"|"typing";
 export default function MtHostPage() {
   const client=useQueryClient();
-  const host=useQuery({queryKey:["mt","host"],queryFn:mtApi.host,refetchInterval:1000});
+  const [visibilityPending,setVisibilityPending]=useState<"BUZZER"|"TYPING"|null>(null);
+  const host=useQuery({queryKey:["mt","host"],queryFn:mtApi.host,refetchInterval:visibilityPending?false:1000});
   const teams=useQuery({queryKey:["mt","teams"],queryFn:mtApi.teams,refetchInterval:3000});
   const questions=useQuery({queryKey:["mt","questions"],queryFn:mtApi.questions,refetchInterval:3000});
   const results=useQuery({queryKey:["mt","results"],queryFn:mtApi.results,refetchInterval:1200,enabled:Boolean(host.data?.currentRoundId)});
@@ -27,6 +29,25 @@ export default function MtHostPage() {
     catch(e){setError(errorMessage(e));}
     finally{setBusy(false);}
   }
+  async function updateVisibility(game:"BUZZER"|"TYPING",enabled:boolean) {
+    if(visibilityPending||busy)return;
+    const previous=client.getQueryData<MtHost>(["mt","host"]);
+    const field=game==="BUZZER"?"buzzerVisible":"typingVisible";
+    setVisibilityPending(game);
+    setError("");
+    await client.cancelQueries({queryKey:["mt","host"]});
+    client.setQueryData<MtHost>(["mt","host"],current=>current?{...current,[field]:enabled}:current);
+    try {
+      await mtApi.visibility(game,enabled);
+    } catch(e) {
+      client.setQueryData(["mt","host"],previous);
+      setError(errorMessage(e));
+    } finally {
+      await client.invalidateQueries({queryKey:["mt","state"]});
+      setVisibilityPending(null);
+      await client.invalidateQueries({queryKey:["mt","host"]});
+    }
+  }
   const currentQuestionId = host.data?.typingOpen ? results.data?.questionId : null;
   const displayedQuestionId = currentQuestionId ??
     (questions.data?.some(q=>q.id===selectedQuestion)?selectedQuestion:questions.data?.[0]?.id??null);
@@ -35,7 +56,7 @@ export default function MtHostPage() {
   const excluded=new Set(host.data?.excludedTeamIds??[]);
   return <MtLayout hostOnly>{user=> <>
     {error&&<div className="mb-3"><MtError message={error}/></div>}
-    {host.isPending?<p className="text-sm text-slate-500">불러오는 중...</p>:host.isError?
+    {host.isPending?<MtLoading/>:host.isError?
       <MtError message={errorMessage(host.error)}/>:
     !host.data?.exists?
       <MtCard>
@@ -59,14 +80,14 @@ export default function MtHostPage() {
             <h2 className="mb-4 font-bold text-slate-900">기능 공개</h2>
             <div className="flex items-center justify-between gap-3">
               <span className="font-semibold text-slate-800">버저비터</span>
-              <MtSwitch label="버저비터 공개" disabled={busy} checked={Boolean(host.data.buzzerVisible)}
-                onChange={enabled=>run(()=>mtApi.visibility("BUZZER",enabled))}/>
+              <MtSwitch label="버저비터 공개" disabled={busy||visibilityPending==="BUZZER"} checked={Boolean(host.data.buzzerVisible)}
+                onChange={enabled=>void updateVisibility("BUZZER",enabled)}/>
             </div>
             <div className="my-4 border-t border-slate-100"/>
             <div className="flex items-center justify-between gap-3">
               <span className="font-semibold text-slate-800">문자 빨리 보내!</span>
-              <MtSwitch label="문자 빨리 보내 공개" disabled={busy} checked={Boolean(host.data.typingVisible)}
-                onChange={enabled=>run(()=>mtApi.visibility("TYPING",enabled))}/>
+              <MtSwitch label="문자 빨리 보내 공개" disabled={busy||visibilityPending==="TYPING"} checked={Boolean(host.data.typingVisible)}
+                onChange={enabled=>void updateVisibility("TYPING",enabled)}/>
             </div>
           </MtCard>
           <MtCard className="space-y-3">

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mtApi, type MtState } from "@/lib/mt-api";
-import { MtLayout, MtGameCard } from "./mt-layout";
+import { MtLayout, MtGameCard, MtLoading } from "./mt-layout";
 vi.mock("next/navigation",()=>({usePathname:()=>"/mt/host"}));
 vi.mock("@/components/auth-gate",()=>({
   AuthGate:({children}:{children:(user:{id:number;name:string;clubId:number;loginId:string;role:"MEMBER"})=>React.ReactNode})=>
@@ -33,6 +33,10 @@ describe("MT role gate",()=>{
     expect(screen.queryByText("문자 빨리 보내!")).not.toBeInTheDocument();
     expect(document.querySelectorAll(".mt-game-tile")).toHaveLength(2);
     expect(screen.getByText("잠겨 있는 기능")).toBeInTheDocument();
+  });
+  it("renders the MT loading spinner with an accessible label",()=>{
+    render(<MtLoading/>);
+    expect(screen.getByRole("status",{name:"MT 정보를 불러오는 중"})).toBeInTheDocument();
   });
   it("blocks an unassigned member",async()=>{
     vi.spyOn(mtApi,"state").mockResolvedValue(state);

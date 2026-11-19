@@ -3,9 +3,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useRef } from "react";
 import { AppShell, roleLabel } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
 import { authApi, AuthUser, errorMessage } from "@/lib/api";
+import { mtApi } from "@/lib/mt-api";
+import { useNavigationTransition } from "@/components/navigation-transition-provider";
 
 const menuItems = [
   { href: "/my/notifications", label: "알림 설정", icon: "notification" },
@@ -31,6 +34,18 @@ export default function MyPage() {
 
 function MyContent({ user }: { user: AuthUser }) {
   const router = useRouter();
+  const { startTransition } = useNavigationTransition();
+  const mtTap = useRef({ count: 0, at: 0 });
+  function revealMt(now: number) {
+    mtTap.current.count = now - mtTap.current.at < 1500 ? mtTap.current.count + 1 : 1;
+    mtTap.current.at = now;
+    if (mtTap.current.count >= 5) {
+      mtTap.current.count = 0;
+      void queryClient.prefetchQuery({queryKey:["mt","state"],queryFn:mtApi.state,staleTime:5000});
+      startTransition("right", "/mt");
+      router.push("/mt");
+    }
+  }
   const queryClient = useQueryClient();
 
   const logoutMutation = useMutation({
@@ -47,7 +62,7 @@ function MyContent({ user }: { user: AuthUser }) {
         <dl className="space-y-4 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-slate-500">이름</dt>
-            <dd className="font-semibold text-slate-950">{user.name}</dd>
+            <dd className="font-semibold text-slate-950"><button type="button" className="text-right" onClick={event => revealMt(event.timeStamp)}>{user.name}</button></dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-slate-500">아이디</dt>

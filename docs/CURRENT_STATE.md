@@ -1,5 +1,133 @@
 # Current State
 
+## MT chat timestamps and input focus polish (2026-11-19)
+
+- Branch: `feat/mt-games-easter-egg` based on `aa1452f35de918b646375009abb515ea32001c10`. Main unmerged; operating deployment unchanged.
+- Typing round not opened: shorten disabled input placeholder to `라운드 준비 중...`. Existing MC/assigned-team gating preserved.
+- Participant chat bubbles and MC's all-submissions view now display their **server-stored** `submitted_at` in 24-hour `HH:mm` (Asia/Seoul) rather than first/last or latest/previous markers. Correct/wrong labels and latest-submission ranking behavior remain unchanged.
+- Remove the coral/red focus-visible outline from the MT messenger textarea only; normal input border and other controls' accessibility focus styles remain unchanged.
+- Add focused UI regression coverage and a timestamp formatting helper test. Source-level review only: user must rerun Vitest, lint, production build, and check on desktop browser. No database migration or backend edits.
+
+---
+
+
+## MT permission-gated typing / footer motion / header and Buzz contrast (2026-11-19)
+
+- Branch `feat/mt-games-easter-egg` based on `071eb6613de9f85055a24e219f0429b557f772f2`. User local verified 37/38 Vitest with one footer-motion test failing; ESLint and Next.js production build passed.
+- Fix stale footer `exit` by associating animations with an explicit destination path. Subsequent MT internal navigation cannot replay the earlier transition. Existing direction logic is preserved for callers without known destinations.
+- MT typing: MC must start a visible round and the participant must be assigned to a team before text input or sending is enabled. Disabled input explains the restriction: `MC가 입력을 허용하면 시작할 수 있어요`, or `조 배정 후 입력할 수 있어요`. No unauthorized drafts or submissions.
+- Hide bell notification icon on MT routes only. Ordinary rehearsal pages still display it, and MT title remains centered.
+- Buzz button active/success gradients changed to indigo and violet; header retains coral, disabled button remains neutral.
+- Regression tests added for waiting/open/team states and the footer's stale motion.
+- Not merged to main / not deployed. Source-level review only; rerun Vitest, ESLint, Next build and browser validation in the desktop environment.
+
+---
+
+
+## MT messenger full viewport and footer transitions (2026-11-19)
+
+- Branch: `feat/mt-games-easter-egg`, base `cd1eb78de5a96e76be390d33b141cd074f0e527e`. main 미병합 / 운영 미배포.
+- MT 전용 모든 페이지의 공통 헤더를 코랄 그라디언트 및 흰 글자·아이콘으로 변경. 기존 합주 페이지 헤더는 유지.
+- MT 진입 시 푸터가 아래로 내려가며 감춰짐. MT 내부 페이지에서는 푸터가 재등장하지 않음. MT→전체 등 일반 화면 복귀 시 푸터가 위로 올라옴. OS reduced-motion 설정은 존중.
+- 전체 탭에서 이름 다섯 번 터치하면 기존 MT 쿼리 프리페치 유지 + 화면 오른쪽 진입 전환 시작.
+- 문자 게임은 `mt-typing-main`·`mt-typing-layout`·`mt-chat-frame`를 전체 너비/가용 높이로 변경. 기존 가운데 좁은 컨테이너, 큰 여백 제거. 메시지 영역만 스크롤하고 하단 입력 바는 고정; 모바일 키보드 높이 대응 유지.
+- 버저는 푸터가 없는 화면의 가용 높이 기준으로 수직 중앙 정렬하고 버튼의 표시 문구를 `Buzz`로 변경. 외곽 카드 없음.
+- 네비게이션 전환 테스트(푸터 exit/enter)와 버저 텍스트 테스트 업데이트. 원격 코드 정적 검토만 완료. 로컬 Vitest/lint/build/실기기 검증 필요.
+
+---
+
+
+## My page MT easter egg lint fix (2026-11-19)
+
+- User desktop test confirmation: Vitest 14/14 suites and 36/36 tests PASS after `6e60285`.
+- ESLint `react-hooks/purity` reported `Date.now()` inside the local `revealMt` function on `/my`.
+- Fix: derive the click timestamp from the browser's event (`onClick` `event.timeStamp`), pass it to `revealMt(now)`. Maintains 5 taps with 1.5-second gap and existing MT prefetch/navigation. No other page logic, permissions, or database changes.
+- This change is source-reviewed; lint/build re-run on the user's desktop is required before marking green.
+
+---
+
+
+## MT frontend test fixes — 2026-11-18
+
+- `feat/mt-games-easter-egg` base `1859583b24816f2a809085a9082aa6301129fb3f`.
+- Local user-provided Vitest run: 11 suites passed; 1 suite failed at transform (invalid regex); 3 test cases failed across MT entry/host (25 passed of 28 executed). The user started `npm run lint`, but no lint result was included in the uploaded log.
+- Fixed duplicated regex escaping in MT route normalization. Updated `/mt` test mocks for the new loading spinner and game-card rendering. Updated visibility-pending test to assert independent controls stay enabled rather than assuming an unpublished game tab is always visible.
+- Code-level inspection only after fixes; Vitest/lint/build **not yet rerun**. Await user desktop verification. No backend, database, live MT data, main branch, or deployment changes.
+
+---
+
+
+## MT 자유형 채팅·버저, 화면 전환, 운영 메뉴, 지난 MT 삭제 (2026-11-18)
+
+- Branch: `feat/mt-games-easter-egg`, parent HEAD `bf5de0e572876351d3d2c8164635288f9e8aa02a`. main 미병합, 운영 미배포.
+- 참가자 버저: 외곽 카드를 제거하고 중앙 버튼에 `버저비터`만 표시. 실패·미개방·미배정은 버튼의 비활성화 상태로 표현.
+- 문자 게임: 대화 영역 외곽 카드와 상태·빈 메시지 문구 제거. 채팅 말풍선은 좌우 여백을 줄여 배치, 입력창/전송은 하단 고정. `전송 대기 중` 삭제.
+- 공통 MT 헤더 뒤로가기는 주소별 부모 경로를 사용(일반 페이지는 기존 기록 기반 유지). MT 하위 페이지끼리의 앞으로/뒤로 전환 애니메이션 복구.
+- MT 운영 화면: 게임 정의 목록에서 공개된 게임만 상단 진행 탭에 노출. 설정은 계속 유지. 운영 메뉴는 조 관리/문장 관리(문자 게임 공개 시)/MT 관리자 지정/지난 MT로 구성하며 화살표 제거·스타일 통일.
+- 종료된 MT 기록 영구 삭제 API/UI 추가. 행사명 입력 확인; 같은 동아리에서 종료된 행사만 삭제. 연결된 MT 문자 제출→라운드→제외 조→조원→문제→조→행사 순으로 FK를 보존하며 삭제. 활성 행사/타 동아리 기록 보호. DB 스키마·기존 합주 데이터 변경 없음. 되돌릴 수 없는 삭제이므로 운영 전 검증 필수.
+- 배경: 유광 3D 느낌의 **벡터 SVG** 스프라이트로 교체해 해상도 무관 선명도 확보, 8개→12개 배치. MT 경로에서만 적용.
+- 백엔드 삭제 격리/활성 보호 테스트, 프론트 전환·메뉴·버저·메신저 회귀 테스트 추가.
+- 이 세션은 GitHub 커밋·정적 코드 점검까지만 가능. Gradle/Testcontainers, Next/Vitest/lint/build, 브라우저/모바일 실기기 테스트는 **미실행**. 사용자가 로컬 검증한 후 병합·배포 판단.
+
+---
+
+
+## MT 3D glossy emoji + app-wide polish (2026-11-18)
+
+- Branch: `feat/mt-games-easter-egg`, base `7c5a3af21bce11ca5297997d06a74a0095237d4f`; **main 미병합, 운영 미배포**.
+- 디자인: 사용자가 참고한 유광 젤리 질감에서 영감을 받아 생성한 **오리지널** 3D 이모지 (웃음/별눈/파티콘/풍선/소주병·잔/색종이)를 투명 WebP 스프라이트로 최적화. 실제 스톡 이미지와 개별 상표/문구는 복제하지 않음.
+- MT 화면에만 흩어진 장식이 표시되도록 별도 컴포넌트 `MtPartyBackdrop`와 `.mt-app-shell` CSS로 제한. 기존의 반복 SVG 패턴은 제거. 홈/예약/공지/관리자/전체는 기존 배경으로 유지.
+- 최초 MT 진입 및 MC 권한 확인/데이터 로딩 중 즉시 코랄 스피너 렌더. /my 이스터에그 진입 시 MT 상태 쿼리 사전 요청.
+- 게임 공개 스위치: 전체 MT 쿼리 무차별 갱신·공통 busy로 인한 다른 컨트롤의 깜빡임을 줄임. 해당 스위치만 전송 중 비활성화, 호스트 데이터 낙관적 갱신 + 실패 시 롤백, 필요한 쿼리만 재확인.
+- 모든 페이지 공통 viewport의 최대 스케일 1 및 userScalable false, 헤더 제목 텍스트 선택 방지. 모바일 브라우저/접근성 설정에서 확대 제한을 무시할 수 있어 실제 iOS/Android 검증 필요.
+- 기존 MT 기능/예약/알림/DB 변경 없음. **Gradle/Next/Vitest 및 실기기 검증은 GitHub-only 세션에서 실행하지 못했으며 로컬 확인 필요.**
+
+---
+
+
+## MT 코랄·3D 파티 디자인 + 게임 상태/기록 개편 (2026-11-18)
+
+- Target branch: `feat/mt-games-easter-egg`, starting HEAD `ae13adf625f40fee446b91782e3b302d8e430235`. **Not merged or deployed.**
+- MT 전용 코랄/피치 스타일, 자체 SVG 파티 패턴 배경, 채움형 게임 카드, 같은 높이의 잠금 카드. 상태 안내/화살표 없는 간결한 선택 UI.
+- AppShell의 MT 경로별 헤더 제목 추가. MT 콘텐츠 중복 뒤로가기/제목 제거. 합주 페이지 스타일 보존.
+- MT 관리자 지정 화면 설명 제거, 메뉴/버튼 및 토글 코랄 통일.
+- 백엔드 V18 `buzzer_paused`: MC 수동 닫기 상태와 자동 선착순 성공 상태 구분, 참가자 대기/회색 버튼 반영.
+- 문자 입력·전송 고정, 메시지 영역만 스크롤; 모바일 visualViewport 대응.
+- 지난 MT 목록·제출 기록·복구 구현. 활성 행사 중 복구 금지, 복구 후 게임 공개 OFF, 기존 기록 보존.
+- 변경한 게임/기록 API에 통합 테스트, 게임 카드 UI 테스트 추가. **GitHub 코드 단계에서 Gradle/Testcontainers·Vitest·lint·Next static build 및 모바일 실측은 실행하지 못함**. 사용자 로컬 검증 뒤 병합·배포 판단.
+- 기존 합주 예약·알림·인증 권한·운영 데이터 및 기존 DB 마이그레이션 무변경.
+
+---
+
+
+## MT 관리자 지정 및 역할별 자동 진입 (2026-11-18)
+
+- Branch: `feat/mt-games-easter-egg` (`43fa66f` 기반). **main 미병합 / 운영 미배포**.
+- SUPER_ADMIN은 기본 MC이며 `/mt/host/managers`에서 활성 회원을 MT 관리자로 지정·해제한다.
+- 지정된 MT 관리자만 슈퍼관리자와 함께 MC API를 호출할 수 있다. 합주 ADMIN 권한과는 독립이며 기존 권한·예약 로직은 변경하지 않았다.
+- `/mt`는 MT 관리자를 `/mt/host`로 자동 이동시키고 일반 회원에게 참가자 화면을 표시한다. 이름 5회 터치 이스터에그 유지.
+- Flyway V17 `mt_host_managers` 테이블을 추가한다. 기존 DB 데이터 초기화 없음.
+- 백엔드 역할 허용/거부 통합 테스트 및 프론트 접근/진입 테스트 추가. 이 환경에서 실제 테스트·빌드 미실행: 로컬에서 검증 후에만 병합·배포.
+
+---
+
+## Active feature handoff — MT Easter Egg (2026-11-18)
+
+- Branch: `feat/mt-games-easter-egg` based on main `79b966690bb4144da0e9ea3ac64097fb77593495`; **not merged or deployed**.
+- Added new Flyway V16 schema and authenticated `/api/mt/**` for MT events, teams, buzzer and typing.
+- Added participant `/mt`, `/mt/buzzer`, `/mt/typing`; host `/mt/host`, `/mt/host/teams`, `/mt/host/questions`.
+- Hidden entry: tap account name 5 times on `/my`; direct `/mt` link also works. No navbar items added.
+- MC role policy is superseded by the new MT manager section above. Feature flags still default OFF.
+- Buzzer ordering is atomic at the server via PostgreSQL event row lock. Multiple members can press for one MT team.
+- Typing is messenger-style, allows re-submission, ranks only latest submission per member, preserves text and team snapshots.
+- Tests added: `MtIntegrationTests` (visibility, claim, retries, Unicode, latest submission).
+- **Verification pending:** backend full Gradle tests with Docker/Postgres, frontend Vitest/lint/static build, Android/iOS manual check. Tests have not been executed in this environment.
+- **Safety:** no modifications to reservation/notification/auth flows or existing DB migrations; only new V16 and MT endpoints. See `docs/MT_GAMES.md` for test and operation steps.
+- Continue with local validation and user review; do not merge into main or deploy until approved.
+
+---
+
+
 ## Current task
 
 Polish rehearsal booking/admin UX and fix time-sensitive notification behavior before the next server handoff.

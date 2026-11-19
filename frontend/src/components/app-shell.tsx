@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { AuthUser } from "@/lib/api";
 import { useNavigationTransition } from "@/components/navigation-transition-provider";
 import { notificationApi } from "@/lib/notification-api";
+import { MtPartyBackdrop } from "@/components/mt-party-backdrop";
+import { mtBackTarget, isMtPath } from "@/lib/mt-navigation";
 
 type NavIconName =
   | "home"
@@ -24,8 +26,11 @@ export function AppShell({
 }) {
   const rawPathname = usePathname();
   const pathname = normalizePathname(rawPathname);
+  const isMt = isMtPath(pathname);
+  const isMtTyping = pathname === "/mt/typing";
+  const isMtBuzzer = pathname === "/mt/buzzer";
   const router = useRouter();
-  const { direction, startTransition, clearTransition } =
+  const { direction, footerMotion, startTransition, clearTransition } =
     useNavigationTransition();
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const unreadCountQuery = useQuery({
@@ -76,7 +81,7 @@ export function AppShell({
       navItems.findIndex((item) => item.href === mainTabHref),
     );
     const targetIndex = navItems.findIndex((item) => item.href === targetHref);
-    startTransition(targetIndex >= currentIndex ? "right" : "left");
+    startTransition(targetIndex >= currentIndex ? "right" : "left", targetHref);
     router.replace(targetHref);
   }
 
@@ -113,25 +118,29 @@ export function AppShell({
         0,
         navItems.findIndex((item) => item.href === mainTabHref),
       );
-      startTransition(targetMainIndex >= currentIndex ? "right" : "left");
+      startTransition(targetMainIndex >= currentIndex ? "right" : "left", normalizedHref);
       router.replace(normalizedHref);
       return;
     }
 
-    if (isMainTab) {
-      startTransition("right");
+    if (isMt && isMtPath(normalizedHref)) {
+      startTransition(mtBackTarget(pathname)===normalizedHref ? "left" : "right", normalizedHref);
+    } else if (isMainTab) {
+      startTransition("right", normalizedHref);
     } else {
       clearTransition();
     }
   }
 
   function goBack() {
-    startTransition("left");
-    router.back();
+    const target = mtBackTarget(pathname);
+    startTransition("left", target ?? undefined);
+    if (target) router.push(target);
+    else router.back();
   }
 
   return (
-    <div className="min-h-dvh overflow-x-clip bg-slate-50">
+    <div className={isMt ? "mt-app-shell min-h-dvh overflow-x-clip" : "min-h-dvh overflow-x-clip bg-slate-50"}>
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto grid h-16 max-w-5xl grid-cols-[40px_1fr_40px] items-center px-5">
           {isMainTab ? (
@@ -160,13 +169,13 @@ export function AppShell({
             </button>
           )}
 
-          <div className="truncate text-center text-xl font-black tracking-tight text-slate-950">
+          <div className="select-none truncate text-center text-xl font-black tracking-tight text-slate-950" style={{ WebkitUserSelect: "none" }}>
             {headerTitleForPath(pathname)}
           </div>
 
-          <Link
+          {!isMt ? <Link
             href="/notifications"
-            onClick={() => startTransition("right")}
+            onClick={() => startTransition("right", "/notifications")}
             aria-label={
               unreadCount > 0
                 ? `알림 ${unreadCount > 99 ? "99개 이상" : `${unreadCount}개`}`
@@ -180,22 +189,23 @@ export function AppShell({
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
-          </Link>
+          </Link> : <span aria-hidden="true" className="h-10 w-10" />}
         </div>
       </header>
 
       <main
-        className="mx-auto w-full max-w-5xl px-5 py-7 pb-32"
+        className={`mx-auto w-full max-w-5xl px-5 py-7 pb-32 ${isMtTyping ? "mt-typing-main" : ""} ${isMtBuzzer ? "mt-buzzer-main" : ""}`}
         onClickCapture={captureContentNavigation}
       >
+        {isMt && <MtPartyBackdrop />}
         <div
           key={pathname}
           className={
             direction === "right"
-              ? "page-transition-surface page-enter-from-right"
+              ? `page-transition-surface page-enter-from-right ${isMtTyping ? "mt-typing-surface" : isMtBuzzer ? "mt-buzzer-surface" : ""}`
               : direction === "left"
-                ? "page-transition-surface page-enter-from-left"
-                : "page-transition-surface"
+                ? `page-transition-surface page-enter-from-left ${isMtTyping ? "mt-typing-surface" : isMtBuzzer ? "mt-buzzer-surface" : ""}`
+                : `page-transition-surface ${isMtTyping ? "mt-typing-surface" : isMtBuzzer ? "mt-buzzer-surface" : ""}`
           }
           onAnimationEnd={(event) => {
             if (event.target === event.currentTarget) {
@@ -207,7 +217,11 @@ export function AppShell({
         </div>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
+      <nav
+        aria-hidden={isMt}
+        inert={isMt}
+        className={`fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur ${footerMotion==="exit"?"mt-footer-exit":footerMotion==="enter"?"mt-footer-enter":""}`}
+      >
         <div
           className="mx-auto grid h-20 max-w-md px-3"
           style={{
@@ -289,6 +303,14 @@ function headerTitleForPath(pathname: string) {
     "/admin/swaps": "일정 교환 관리",
     "/admin/logs": "관리자 작업 이력",
     "/admin/operating-hours": "날짜별 운영시간",
+    "/mt": "MT",
+    "/mt/host": "MT 관리",
+    "/mt/host/teams": "조 관리",
+    "/mt/host/questions": "문장 관리",
+    "/mt/host/managers": "MT 관리자 지정",
+    "/mt/host/history": "지난 MT",
+    "/mt/buzzer": "버저비터",
+    "/mt/typing": "문자 빨리 보내!",
   };
 
   return titles[normalized] ?? "무혼";

@@ -15,11 +15,13 @@ export type PageTransitionDirection = "left" | "right";
 type PendingTransition = {
   direction: PageTransitionDirection;
   fromPathname: string;
+  toPathname?: string;
 };
 
 type NavigationTransitionValue = {
   direction: PageTransitionDirection | null;
-  startTransition: (direction: PageTransitionDirection) => void;
+  footerMotion: "enter" | "exit" | null;
+  startTransition: (direction: PageTransitionDirection, toPathname?: string) => void;
   clearTransition: () => void;
 };
 
@@ -52,19 +54,32 @@ export function NavigationTransitionProvider({
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const value = useMemo(
+  const value = useMemo<NavigationTransitionValue>(
     () => ({
       // Do not animate the page we are leaving while the destination loads.
       direction:
         pendingTransition &&
         pendingTransition.fromPathname !== pathname &&
-        !(isSubpage(pendingTransition.fromPathname) && isSubpage(pathname))
+        (!pendingTransition.toPathname || pendingTransition.toPathname === pathname) &&
+        (!(isSubpage(pendingTransition.fromPathname) && isSubpage(pathname)) ||
+          isMtRoute(pendingTransition.fromPathname) || isMtRoute(pathname))
           ? pendingTransition.direction
           : null,
-      startTransition: (direction: PageTransitionDirection) =>
+      // The footer motion belongs to its destination route only. It must not
+      // replay on a subsequent MT-to-MT navigation while a prior transition is pending.
+      footerMotion: pendingTransition?.toPathname === pathname &&
+        pendingTransition.fromPathname !== pathname
+        ? isMtRoute(pendingTransition.fromPathname) && !isMtRoute(pathname)
+          ? "enter"
+          : !isMtRoute(pendingTransition.fromPathname) && isMtRoute(pathname)
+            ? "exit"
+            : null
+        : null,
+      startTransition: (direction: PageTransitionDirection, toPathname?: string) =>
         setPendingTransition({
           direction,
           fromPathname: lastRenderedPathname.current,
+          toPathname,
         }),
       clearTransition: () => setPendingTransition(null),
     }),
@@ -86,6 +101,11 @@ export function useNavigationTransition() {
     );
   }
   return value;
+}
+
+function isMtRoute(pathname:string) {
+  const normalized = pathname.replace(/\/index\.html$/, "").replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+  return normalized==="/mt" || normalized.startsWith("/mt/");
 }
 
 function isSubpage(pathname: string) {

@@ -15,15 +15,37 @@ export default function MtTypingPage() {
   const [error,setError]=useState("");
   const scrollArea=useRef<HTMLDivElement>(null);
   useEffect(()=>{
+    // The visual viewport can keep a keyboard-sized height after keyboard dismissal.
+    // Use CSS 100dvh normally; override it only while the textarea is actually focused
+    // and the software keyboard has reduced the visible area.
     const viewport=window.visualViewport;
-    const update=()=>document.documentElement.style.setProperty("--mt-visual-height",`${viewport?.height??window.innerHeight}px`);
-    update();
+    const root=document.documentElement;
+    const update=()=>{
+      const active=document.activeElement;
+      const isComposing=active instanceof HTMLTextAreaElement
+        && active.closest(".mt-chat-app-shell")!==null;
+      const keyboardVisible=Boolean(isComposing&&viewport
+        && window.innerHeight-viewport.height>100);
+      if(keyboardVisible && viewport) {
+        root.style.setProperty("--mt-chat-viewport-height",`${Math.round(viewport.height)}px`);
+      } else {
+        root.style.removeProperty("--mt-chat-viewport-height");
+      }
+    };
+    const reset=()=>root.style.removeProperty("--mt-chat-viewport-height");
     viewport?.addEventListener("resize",update);
+    viewport?.addEventListener("scroll",update);
     window.addEventListener("resize",update);
+    document.addEventListener("focusin",update);
+    document.addEventListener("focusout",reset);
+    update();
     return ()=>{
       viewport?.removeEventListener("resize",update);
+      viewport?.removeEventListener("scroll",update);
       window.removeEventListener("resize",update);
-      document.documentElement.style.removeProperty("--mt-visual-height");
+      document.removeEventListener("focusin",update);
+      document.removeEventListener("focusout",reset);
+      reset();
     };
   },[]);
   const messages=status.data?.messages??[];

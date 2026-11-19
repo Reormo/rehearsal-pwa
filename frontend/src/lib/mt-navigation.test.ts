@@ -1,5 +1,5 @@
 import { describe,expect,it } from "vitest";
-import { isMtPath,mtBackTarget } from "./mt-navigation";
+import { isMtPath,mtBackTarget,normalizeAppPath } from "./mt-navigation";
 
 describe("MT navigation routes",()=>{
   it("uses a stable parent rather than arbitrary browser history",()=>{
@@ -10,6 +10,13 @@ describe("MT navigation routes",()=>{
     expect(mtBackTarget("/mt/host/teams")).toBe("/mt/host");
     expect(mtBackTarget("/mt/host/history")).toBe("/mt/host");
     expect(mtBackTarget("/schedule")).toBe(null);
+  });
+  it("normalizes static-export paths before route matching",()=>{
+    expect(normalizeAppPath("/mt/typing/")).toBe("/mt/typing");
+    expect(normalizeAppPath("/mt/typing/index.html")).toBe("/mt/typing");
+    expect(normalizeAppPath("/mt/host/?view=all")).toBe("/mt/host");
+    expect(isMtPath("/mt/typing/")).toBe(true);
+    expect(mtBackTarget("/mt/typing/")).toBe("/mt");
   });
   it("recognizes only MT route prefixes",()=>{
     expect(isMtPath("/mt/host")).toBe(true);

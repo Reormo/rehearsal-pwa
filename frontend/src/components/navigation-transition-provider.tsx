@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { isMtPath,normalizeAppPath } from "@/lib/mt-navigation";
 import {
   createContext,
   useContext,
@@ -33,7 +34,7 @@ export function NavigationTransitionProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const pathname = normalizeAppPath(usePathname());
   const lastRenderedPathname = useRef(pathname);
   const [pendingTransition, setPendingTransition] =
     useState<PendingTransition | null>(null);
@@ -79,7 +80,7 @@ export function NavigationTransitionProvider({
         setPendingTransition({
           direction,
           fromPathname: lastRenderedPathname.current,
-          toPathname,
+          toPathname:toPathname?normalizeAppPath(toPathname):undefined,
         }),
       clearTransition: () => setPendingTransition(null),
     }),
@@ -104,11 +105,9 @@ export function useNavigationTransition() {
 }
 
 function isMtRoute(pathname:string) {
-  const normalized = pathname.replace(/\/index\.html$/, "").replace(/\.html$/, "").replace(/\/+$/, "") || "/";
-  return normalized==="/mt" || normalized.startsWith("/mt/");
+  return isMtPath(pathname);
 }
 
-function isSubpage(pathname: string) {
-  const normalized = pathname.replace(/\/index\.html$/, "").replace(/\.html$/, "").replace(/\/+$/, "") || "/";
-  return !["/", "/schedule", "/announcements", "/admin", "/my"].includes(normalized);
+function isSubpage(pathname:string) {
+  return !["/","/schedule","/announcements","/admin","/my"].includes(normalizeAppPath(pathname));
 }

@@ -7,9 +7,10 @@ import { AuthGate } from "@/components/auth-gate";
 import { AppShell } from "@/components/app-shell";
 import { AuthUser, errorMessage } from "@/lib/api";
 import { mtApi } from "@/lib/mt-api";
+import { normalizeAppPath } from "@/lib/mt-navigation";
 
 export function MtLayout({children,hostOnly=false}:{children:(user:AuthUser)=>React.ReactNode;hostOnly?:boolean}) {
-  const pathname=usePathname();
+  const pathname=normalizeAppPath(usePathname());
   return (
     <AuthGate>
       {user=><AppShell user={user}>

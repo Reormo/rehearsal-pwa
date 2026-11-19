@@ -100,6 +100,18 @@ describe("NavigationTransitionProvider", () => {
     expect(screen.getByTestId("direction")).toHaveTextContent("left");
   });
 
+  it("animates trailing-slash static-export routes and prevents repeated footer exit",()=>{
+    navigation.pathname="/my/";
+    const view=render(tree());
+    fireEvent.click(screen.getByRole("button",{name:"Enter MT"}));
+    navigation.pathname="/mt/";
+    view.rerender(tree());
+    expect(screen.getByTestId("direction")).toHaveTextContent("right");
+    expect(screen.getByTestId("footer-motion")).toHaveTextContent("exit");
+    navigation.pathname="/mt/typing/";
+    view.rerender(tree());
+    expect(screen.getByTestId("footer-motion")).toHaveTextContent("none");
+  });
   it("slides the footer away only when entering MT from the regular app",()=>{
     navigation.pathname="/my";
     const view=render(tree());

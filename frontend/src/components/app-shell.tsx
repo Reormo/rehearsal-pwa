@@ -140,7 +140,7 @@ export function AppShell({
   }
 
   return (
-    <div className={isMt ? "mt-app-shell min-h-dvh overflow-x-clip" : "min-h-dvh overflow-x-clip bg-slate-50"}>
+    <div className={isMt ? `mt-app-shell min-h-dvh overflow-x-clip ${isMtTyping?"mt-chat-app-shell":""}` : "min-h-dvh overflow-x-clip bg-slate-50"}>
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto grid h-16 max-w-5xl grid-cols-[40px_1fr_40px] items-center px-5">
           {isMainTab ? (

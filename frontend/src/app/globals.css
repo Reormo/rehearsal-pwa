@@ -417,11 +417,26 @@ button:disabled {
   animation:mt-loading-spin .65s linear infinite;
 }
 @keyframes mt-loading-spin {to{transform:rotate(360deg)}}
+/* Production static export /mt/typing/ must fill the viewport independently
+   of message count, Android Chrome browser chrome, and keyboard resize. */
+.mt-app-shell.mt-chat-app-shell {
+  display:flex;
+  flex-direction:column;
+  height:var(--mt-chat-viewport-height,100dvh);
+  min-height:0;
+  overflow:hidden;
+}
+.mt-app-shell.mt-chat-app-shell > header {flex:0 0 auto}
+.mt-app-shell.mt-chat-app-shell > main.mt-typing-main {
+  flex:1 1 auto;
+  min-height:0;
+  height:auto;
+}
 /* MT full-bleed messenger. The only scrollable region is the bubble list. */
 .mt-app-shell .mt-typing-main {
   width:100%;
   max-width:none;
-  height:calc(var(--mt-visual-height,100dvh) - 64px - env(safe-area-inset-top));
+  height:auto;
   min-height:0;
   padding:0!important;
   overflow:hidden;

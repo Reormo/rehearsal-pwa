@@ -457,6 +457,11 @@ button:disabled {
   background:transparent;
   overscroll-behavior:contain;
 }
+/* The messenger input should not inherit the MT coral focus outline. */
+.mt-app-shell .mt-chat-composer textarea:focus-visible {
+  outline:none;
+  box-shadow:none;
+}
 .mt-app-shell .mt-chat-composer {
   position:relative;
   z-index:2;

@@ -42,6 +42,24 @@ describe("MT host visibility switches",()=>{
     expect(screen.queryByRole("button",{name:"문자 빨리 보내!"})).not.toBeInTheDocument();
   });
 
+  it("shows submitted time instead of latest/previous labels in MC results",async()=>{
+    vi.spyOn(mtApi,"host").mockResolvedValue({
+      exists:true,eventTitle:"무혼 MT",buzzerVisible:false,typingVisible:true,
+      buzzerOpen:false,buzzerPaused:false,typingOpen:true,currentRoundId:10,
+    });
+    vi.spyOn(mtApi,"questions").mockResolvedValue([{id:3,text:"테스트 문장",sort_order:1}]);
+    vi.spyOn(mtApi,"results").mockResolvedValue({
+      roundId:10,questionId:3,open:true,ranking:[],
+      submissions:[{id:99,user_id:1,user_name:"테스트 회원",team_name:"1조",content:"문자 제출",correct:true,latest:true,submitted_at:"2026-11-18T07:38:00Z"}],
+    });
+    render(<QueryClientProvider client={queryClient}><MtHostPage/></QueryClientProvider>);
+    fireEvent.click(await screen.findByRole("button",{name:"문자 빨리 보내!"}));
+    expect(await screen.findByText("16:38")).toBeInTheDocument();
+    expect(screen.queryByText("최신")).not.toBeInTheDocument();
+    expect(screen.queryByText("이전")).not.toBeInTheDocument();
+    expect(screen.getByText("정답")).toBeInTheDocument();
+  });
+
   it("does not disable unrelated controls while a visibility change is pending",async()=>{
     vi.spyOn(mtApi,"visibility").mockImplementation(()=>new Promise<void>(()=>{}));
     render(<QueryClientProvider client={queryClient}><MtHostPage/></QueryClientProvider>);

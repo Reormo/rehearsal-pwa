@@ -7,6 +7,7 @@ import { MtLayout, MtCard, MtError, MtSwitch, MtLoading } from "@/components/mt-
 import { errorMessage } from "@/lib/api";
 import type { MtHost } from "@/lib/mt-api";
 import { mtApi } from "@/lib/mt-api";
+import { formatMtTime } from "@/lib/mt-time";
 
 const MT_GAMES=[
   {id:"buzzer",label:"버저비터",switchLabel:"버저비터 공개",apiGame:"BUZZER",flag:"buzzerVisible"},
@@ -189,7 +190,7 @@ export default function MtHostPage() {
                     <strong className="text-sm text-slate-900">{s.user_name}</strong>
                     <span className="text-slate-500">{s.team_name}</span>
                     <span className={`ml-auto font-semibold ${s.correct?"text-green-600":"text-red-500"}`}>{s.correct?"정답":"오답"}</span>
-                    <span className="text-slate-400">{s.latest?"최신":"이전"}</span>
+                    <span className="text-slate-400" title="제출 시각">{formatMtTime(s.submitted_at)}</span>
                   </div>
                   <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{s.content}</p>
                 </article>)}

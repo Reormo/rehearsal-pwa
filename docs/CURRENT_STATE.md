@@ -1,5 +1,16 @@
 # Current State
 
+## MT chat timestamps and input focus polish (2026-11-19)
+
+- Branch: `feat/mt-games-easter-egg` based on `aa1452f35de918b646375009abb515ea32001c10`. Main unmerged; operating deployment unchanged.
+- Typing round not opened: shorten disabled input placeholder to `라운드 준비 중...`. Existing MC/assigned-team gating preserved.
+- Participant chat bubbles and MC's all-submissions view now display their **server-stored** `submitted_at` in 24-hour `HH:mm` (Asia/Seoul) rather than first/last or latest/previous markers. Correct/wrong labels and latest-submission ranking behavior remain unchanged.
+- Remove the coral/red focus-visible outline from the MT messenger textarea only; normal input border and other controls' accessibility focus styles remain unchanged.
+- Add focused UI regression coverage and a timestamp formatting helper test. Source-level review only: user must rerun Vitest, lint, production build, and check on desktop browser. No database migration or backend edits.
+
+---
+
+
 ## MT permission-gated typing / footer motion / header and Buzz contrast (2026-11-19)
 
 - Branch `feat/mt-games-easter-egg` based on `071eb6613de9f85055a24e219f0429b557f772f2`. User local verified 37/38 Vitest with one footer-motion test failing; ESLint and Next.js production build passed.

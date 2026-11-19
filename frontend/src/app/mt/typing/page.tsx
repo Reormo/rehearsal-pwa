@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MtLayout, MtError, MtLoading } from "@/components/mt-layout";
 import { errorMessage } from "@/lib/api";
 import { mtApi } from "@/lib/mt-api";
+import { formatMtTime } from "@/lib/mt-time";
 
 export default function MtTypingPage() {
   const client=useQueryClient();
@@ -30,7 +31,7 @@ export default function MtTypingPage() {
   const text=draft.roundId===status.data?.roundId?draft.text:"";
   const open=Boolean(status.data?.visible&&status.data.open&&status.data.team&&status.data.roundId);
   const placeholder=!status.data?.visible||!status.data?.open||!status.data?.roundId
-    ? "MC가 입력을 허용하면 시작할 수 있어요"
+    ? "라운드 준비 중..."
     : !status.data?.team ? "조 배정 후 입력할 수 있어요" : "메시지 입력";
 
   async function send(){
@@ -47,10 +48,10 @@ export default function MtTypingPage() {
     {status.isPending?<MtLoading/>:
       <div className="mt-chat-frame flex h-full min-h-0 flex-col overflow-hidden">
         <div ref={scrollArea} className="mt-chat-messages flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4" aria-label="내 메시지">
-          {messages.map((m,i)=><div key={m.id} className="flex justify-end">
+          {messages.map(m=><div key={m.id} className="flex justify-end">
             <div className="max-w-[93%]">
               <div className="mt-chat-bubble whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm px-3 py-2.5 text-sm leading-relaxed text-slate-900">{m.content}</div>
-              <p className="mt-1 text-right text-[11px] text-slate-400">{i===messages.length-1?"마지막 전송":`${i+1}번째 전송`}</p>
+              <p className="mt-1 text-right text-[11px] text-slate-400">{formatMtTime(m.submitted_at)}</p>
             </div>
           </div>)}
         </div>

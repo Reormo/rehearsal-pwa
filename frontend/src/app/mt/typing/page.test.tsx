@@ -25,7 +25,9 @@ describe("MT chat messenger layout",()=>{
     expect(await screen.findByText("메시지 테스트")).toBeInTheDocument();
     const textbox=screen.getByRole("textbox",{name:"메시지 입력"});
     expect(textbox).toBeDisabled();
-    expect(textbox).toHaveAttribute("placeholder","MC가 입력을 허용하면 시작할 수 있어요");
+    expect(textbox).toHaveAttribute("placeholder","라운드 준비 중...");
+    expect(screen.getByText("09:00")).toBeInTheDocument();
+    expect(screen.queryByText("마지막 전송")).not.toBeInTheDocument();
     expect(screen.getByRole("button",{name:"전송"})).toBeDisabled();
     expect(screen.queryByText("전송 대기 중")).not.toBeInTheDocument();
     expect(screen.queryByText("조 배정 필요")).not.toBeInTheDocument();

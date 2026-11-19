@@ -1,5 +1,17 @@
 # Current State
 
+## Production mobile MT chat and route transition hotfix (2026-11-19)
+
+- Base: `main` commit `0dcca50b51955506042cbfc1be381e6c02d5de09`, PR #20 merged; production operator already deployed that revision.
+- User-provided Android Chrome screenshot shows chat composer floating midway down the page instead of anchored to the bottom, plus unexpected page transitions.
+- Root cause in source: AppShell normalizes trailing slashes but MtLayout and NavigationTransitionProvider compared raw `usePathname()` values to nontrailing destinations. With `NEXT_STATIC_EXPORT=true` and `trailingSlash:true`, `/mt/typing/` skipped the `mt-typing-layout` flex class, allowing the composer to follow content height; footer/page transitions similarly missed their destinations.
+- Fix: shared route normalization for MT layout, back parent and transition provider. Add regression tests for `/mt/typing/`, `/mt/buzzer/`, and `/mt/` transitions.
+- MT messenger shell now uses a full-viewport flex height. Height defaults to `100dvh`, and visualViewport override is only active while the textarea has focus and a software keyboard shrinks the view. Removes stale keyboard-height CSS variable upon blur.
+- Production/database/backend unchanged. **Not yet deployed or verified on actual Android Chrome**; run Vitest, lint, static export build, and device checks before merging or repackaging.
+
+---
+
+
 ## MT chat timestamps and input focus polish (2026-11-19)
 
 - Branch: `feat/mt-games-easter-egg` based on `aa1452f35de918b646375009abb515ea32001c10`. Main unmerged; operating deployment unchanged.

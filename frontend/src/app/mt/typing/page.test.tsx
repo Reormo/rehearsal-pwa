@@ -29,5 +29,7 @@ describe("MT chat messenger layout",()=>{
     const frame=document.querySelector(".mt-chat-frame");
     expect(frame).not.toBeNull();
     expect(frame?.classList.contains("rounded-3xl")).toBe(false);
+    expect(screen.getByLabelText("내 메시지")).toBeInTheDocument();
+    expect(document.querySelector(".mt-chat-composer")).not.toBeNull();
   });
 });

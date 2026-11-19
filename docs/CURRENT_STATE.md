@@ -1,5 +1,18 @@
 # Current State
 
+## MT messenger full viewport and footer transitions (2026-11-19)
+
+- Branch: `feat/mt-games-easter-egg`, base `cd1eb78de5a96e76be390d33b141cd074f0e527e`. main 미병합 / 운영 미배포.
+- MT 전용 모든 페이지의 공통 헤더를 코랄 그라디언트 및 흰 글자·아이콘으로 변경. 기존 합주 페이지 헤더는 유지.
+- MT 진입 시 푸터가 아래로 내려가며 감춰짐. MT 내부 페이지에서는 푸터가 재등장하지 않음. MT→전체 등 일반 화면 복귀 시 푸터가 위로 올라옴. OS reduced-motion 설정은 존중.
+- 전체 탭에서 이름 다섯 번 터치하면 기존 MT 쿼리 프리페치 유지 + 화면 오른쪽 진입 전환 시작.
+- 문자 게임은 `mt-typing-main`·`mt-typing-layout`·`mt-chat-frame`를 전체 너비/가용 높이로 변경. 기존 가운데 좁은 컨테이너, 큰 여백 제거. 메시지 영역만 스크롤하고 하단 입력 바는 고정; 모바일 키보드 높이 대응 유지.
+- 버저는 푸터가 없는 화면의 가용 높이 기준으로 수직 중앙 정렬하고 버튼의 표시 문구를 `Buzz`로 변경. 외곽 카드 없음.
+- 네비게이션 전환 테스트(푸터 exit/enter)와 버저 텍스트 테스트 업데이트. 원격 코드 정적 검토만 완료. 로컬 Vitest/lint/build/실기기 검증 필요.
+
+---
+
+
 ## My page MT easter egg lint fix (2026-11-19)
 
 - User desktop test confirmation: Vitest 14/14 suites and 36/36 tests PASS after `6e60285`.

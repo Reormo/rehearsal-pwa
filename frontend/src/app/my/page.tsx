@@ -8,6 +8,7 @@ import { AppShell, roleLabel } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
 import { authApi, AuthUser, errorMessage } from "@/lib/api";
 import { mtApi } from "@/lib/mt-api";
+import { useNavigationTransition } from "@/components/navigation-transition-provider";
 
 const menuItems = [
   { href: "/my/notifications", label: "알림 설정", icon: "notification" },
@@ -33,6 +34,7 @@ export default function MyPage() {
 
 function MyContent({ user }: { user: AuthUser }) {
   const router = useRouter();
+  const { startTransition } = useNavigationTransition();
   const mtTap = useRef({ count: 0, at: 0 });
   function revealMt(now: number) {
     mtTap.current.count = now - mtTap.current.at < 1500 ? mtTap.current.count + 1 : 1;
@@ -40,6 +42,7 @@ function MyContent({ user }: { user: AuthUser }) {
     if (mtTap.current.count >= 5) {
       mtTap.current.count = 0;
       void queryClient.prefetchQuery({queryKey:["mt","state"],queryFn:mtApi.state,staleTime:5000});
+      startTransition("right");
       router.push("/mt");
     }
   }

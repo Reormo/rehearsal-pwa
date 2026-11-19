@@ -13,7 +13,7 @@ export function MtLayout({children,hostOnly=false}:{children:(user:AuthUser)=>Re
   return (
     <AuthGate>
       {user=><AppShell user={user}>
-        <div className={`mx-auto max-w-2xl ${pathname === "/mt/typing" ? "mt-typing-layout" : ""}`}>
+        <div className={`mx-auto max-w-2xl ${pathname === "/mt/typing" ? "mt-typing-layout" : pathname === "/mt/buzzer" ? "mt-buzzer-layout" : ""}`}>
           {hostOnly?<MtHostAccess>{children(user)}</MtHostAccess>:children(user)}
         </div>
       </AppShell>}

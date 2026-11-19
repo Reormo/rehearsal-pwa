@@ -20,7 +20,7 @@ describe("MT buzzer single-button screen",()=>{
   it("shows no surrounding card or redundant visible status",async()=>{
     render(<QueryClientProvider client={client}><MtBuzzerPage/></QueryClientProvider>);
     const button=await screen.findByRole("button",{name:"버저 대기 중"});
-    expect(button).toHaveTextContent("버저비터");
+    expect(button).toHaveTextContent("Buzz");
     expect(button).toBeDisabled();
     expect(document.querySelector(".mt-card")).toBeNull();
     expect(screen.queryByText("대기 중")).not.toBeInTheDocument();

@@ -28,8 +28,9 @@ export function AppShell({
   const pathname = normalizePathname(rawPathname);
   const isMt = isMtPath(pathname);
   const isMtTyping = pathname === "/mt/typing";
+  const isMtBuzzer = pathname === "/mt/buzzer";
   const router = useRouter();
-  const { direction, startTransition, clearTransition } =
+  const { direction, footerMotion, startTransition, clearTransition } =
     useNavigationTransition();
   const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
   const unreadCountQuery = useQuery({
@@ -193,7 +194,7 @@ export function AppShell({
       </header>
 
       <main
-        className={`mx-auto w-full max-w-5xl px-5 py-7 pb-32 ${isMtTyping ? "mt-typing-main" : ""}`}
+        className={`mx-auto w-full max-w-5xl px-5 py-7 pb-32 ${isMtTyping ? "mt-typing-main" : ""} ${isMtBuzzer ? "mt-buzzer-main" : ""}`}
         onClickCapture={captureContentNavigation}
       >
         {isMt && <MtPartyBackdrop />}
@@ -201,10 +202,10 @@ export function AppShell({
           key={pathname}
           className={
             direction === "right"
-              ? `page-transition-surface page-enter-from-right ${isMtTyping ? "mt-typing-surface" : ""}`
+              ? `page-transition-surface page-enter-from-right ${isMtTyping ? "mt-typing-surface" : isMtBuzzer ? "mt-buzzer-surface" : ""}`
               : direction === "left"
-                ? `page-transition-surface page-enter-from-left ${isMtTyping ? "mt-typing-surface" : ""}`
-                : `page-transition-surface ${isMtTyping ? "mt-typing-surface" : ""}`
+                ? `page-transition-surface page-enter-from-left ${isMtTyping ? "mt-typing-surface" : isMtBuzzer ? "mt-buzzer-surface" : ""}`
+                : `page-transition-surface ${isMtTyping ? "mt-typing-surface" : isMtBuzzer ? "mt-buzzer-surface" : ""}`
           }
           onAnimationEnd={(event) => {
             if (event.target === event.currentTarget) {
@@ -216,7 +217,11 @@ export function AppShell({
         </div>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
+      <nav
+        aria-hidden={isMt}
+        inert={isMt}
+        className={`fixed inset-x-0 bottom-0 z-30 rounded-t-[28px] border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(15,23,42,0.06)] backdrop-blur ${footerMotion==="exit"?"mt-footer-exit":footerMotion==="enter"?"mt-footer-enter":""}`}
+      >
         <div
           className="mx-auto grid h-20 max-w-md px-3"
           style={{

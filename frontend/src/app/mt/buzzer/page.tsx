@@ -58,7 +58,7 @@ export default function MtBuzzerPage() {
         <button type="button" disabled={!canPress} onClick={press}
           aria-label={won?"버저 성공":canPress?"버저 누르기":"버저 대기 중"}
           className={`flex h-56 w-56 touch-manipulation select-none items-center justify-center rounded-full text-3xl font-black text-white shadow-lg transition-transform active:scale-95 disabled:shadow-none ${won?"mt-buzz-success":canPress?"mt-buzz-active":"bg-slate-300"}`}>
-          버저비터
+          Buzz
         </button>
         {error&&<MtError message={error}/>}
       </div>}

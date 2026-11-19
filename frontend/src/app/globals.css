@@ -262,7 +262,36 @@ button:disabled {
   position:relative;
   isolation:isolate;
 }
-.mt-app-shell > header, .mt-app-shell > nav { background-color:rgba(255,255,255,.96); }
+.mt-app-shell > header {
+  background:linear-gradient(108deg,#ec5a6b,#f47e71);
+  border-color:#e86770;
+  color:#fff;
+}
+.mt-app-shell > header button,
+.mt-app-shell > header a,
+.mt-app-shell > header .select-none { color:#fff; }
+.mt-app-shell > header button:hover,
+.mt-app-shell > header a:hover { background-color:rgba(255,255,255,.13); }
+.mt-app-shell > nav {
+  transform:translateY(110%);
+  visibility:hidden;
+  pointer-events:none;
+}
+.mt-app-shell > nav.mt-footer-exit {
+  visibility:visible;
+  animation:mt-footer-slide-down 360ms cubic-bezier(.32,.02,.28,1) both;
+}
+.mt-footer-enter {
+  animation:mt-footer-slide-up 360ms cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes mt-footer-slide-down {
+  from {transform:translateY(0);opacity:1}
+  to {transform:translateY(110%);opacity:.88}
+}
+@keyframes mt-footer-slide-up {
+  from {transform:translateY(110%);opacity:.88}
+  to {transform:translateY(0);opacity:1}
+}
 .mt-app-shell > main { position:relative; z-index:1; }
 .mt-app-shell > main > .page-transition-surface { position:relative; z-index:1; }
 .mt-app-shell .mt-party-backdrop {
@@ -382,23 +411,89 @@ button:disabled {
   animation:mt-loading-spin .65s linear infinite;
 }
 @keyframes mt-loading-spin {to{transform:rotate(360deg)}}
+/* MT full-bleed messenger. The only scrollable region is the bubble list. */
 .mt-app-shell .mt-typing-main {
-  height:calc(var(--mt-visual-height,100dvh) - 64px - 80px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  width:100%;
+  max-width:none;
+  height:calc(var(--mt-visual-height,100dvh) - 64px - env(safe-area-inset-top));
   min-height:0;
-  padding-top:14px!important;
-  padding-bottom:14px!important;
+  padding:0!important;
   overflow:hidden;
   display:flex;
   flex-direction:column;
 }
 .mt-app-shell .mt-typing-surface,
-.mt-app-shell .mt-typing-layout {flex:1;display:flex;min-height:0;flex-direction:column}
-.mt-app-shell .mt-typing-layout > .mt-chat-frame {flex:1;min-height:0}
-.mt-app-shell:has(.mt-chat-composer textarea:focus) > nav {display:none}
-.mt-app-shell:has(.mt-chat-composer textarea:focus) .mt-typing-main {
-  height:calc(var(--mt-visual-height,100dvh) - 64px - env(safe-area-inset-top));
+.mt-app-shell .mt-typing-layout {
+  width:100%;
+  max-width:none;
+  min-width:0;
+  flex:1;
+  display:flex;
+  min-height:0;
+  flex-direction:column;
+}
+.mt-app-shell .mt-typing-layout {margin:0}
+.mt-app-shell .mt-typing-layout > .mt-chat-frame {
+  width:100%;
+  flex:1;
+  min-height:0;
+}
+.mt-app-shell .mt-chat-frame {
+  width:100%;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  background:transparent;
+}
+.mt-app-shell .mt-chat-messages {
+  width:100%;
+  min-height:0;
+  background:transparent;
+  overscroll-behavior:contain;
+}
+.mt-app-shell .mt-chat-composer {
+  position:relative;
+  z-index:2;
+  width:100%;
+  border-top:1px solid rgba(243,216,210,.8);
+  padding:10px max(12px,env(safe-area-inset-right))
+    max(12px,env(safe-area-inset-bottom))
+    max(12px,env(safe-area-inset-left))!important;
+}
+.mt-app-shell .mt-send-button:disabled {
+  background:#d6dce4!important;
+  color:#fff!important;
+}
+.mt-app-shell .mt-buzzer-main {
+  width:100%;
+  max-width:none;
+  min-height:calc(100dvh - 64px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  padding:0!important;
+  display:flex;
+  flex-direction:column;
+}
+.mt-app-shell .mt-buzzer-surface,
+.mt-app-shell .mt-buzzer-layout {
+  flex:1;
+  display:flex;
+  min-height:0;
+  width:100%;
+  max-width:none;
+  flex-direction:column;
+}
+.mt-app-shell .mt-buzzer-layout {margin:0}
+.mt-app-shell .mt-buzzer-stage {
+  min-height:calc(100dvh - 64px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  padding:0 12px;
+  justify-content:center;
 }
 @media(prefers-reduced-motion:reduce) {
   .mt-app-shell .mt-game-tile {transition:none}
   .mt-app-shell .mt-loading-ring {animation:none}
+  .mt-footer-enter {animation:none}
+  .mt-app-shell > nav.mt-footer-exit {
+    animation:none;
+    visibility:hidden;
+    transform:translateY(110%);
+  }
 }

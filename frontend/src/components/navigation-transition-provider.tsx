@@ -19,6 +19,7 @@ type PendingTransition = {
 
 type NavigationTransitionValue = {
   direction: PageTransitionDirection | null;
+  footerMotion: "enter" | "exit" | null;
   startTransition: (direction: PageTransitionDirection) => void;
   clearTransition: () => void;
 };
@@ -52,7 +53,7 @@ export function NavigationTransitionProvider({
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const value = useMemo(
+  const value = useMemo<NavigationTransitionValue>(
     () => ({
       // Do not animate the page we are leaving while the destination loads.
       direction:
@@ -62,6 +63,13 @@ export function NavigationTransitionProvider({
           isMtRoute(pendingTransition.fromPathname) || isMtRoute(pathname))
           ? pendingTransition.direction
           : null,
+      footerMotion: pendingTransition && pendingTransition.fromPathname !== pathname
+        ? isMtRoute(pendingTransition.fromPathname) && !isMtRoute(pathname)
+          ? "enter"
+          : !isMtRoute(pendingTransition.fromPathname) && isMtRoute(pathname)
+            ? "exit"
+            : null
+        : null,
       startTransition: (direction: PageTransitionDirection) =>
         setPendingTransition({
           direction,

@@ -81,7 +81,7 @@ export function AppShell({
       navItems.findIndex((item) => item.href === mainTabHref),
     );
     const targetIndex = navItems.findIndex((item) => item.href === targetHref);
-    startTransition(targetIndex >= currentIndex ? "right" : "left");
+    startTransition(targetIndex >= currentIndex ? "right" : "left", targetHref);
     router.replace(targetHref);
   }
 
@@ -118,15 +118,15 @@ export function AppShell({
         0,
         navItems.findIndex((item) => item.href === mainTabHref),
       );
-      startTransition(targetMainIndex >= currentIndex ? "right" : "left");
+      startTransition(targetMainIndex >= currentIndex ? "right" : "left", normalizedHref);
       router.replace(normalizedHref);
       return;
     }
 
     if (isMt && isMtPath(normalizedHref)) {
-      startTransition(mtBackTarget(pathname)===normalizedHref ? "left" : "right");
+      startTransition(mtBackTarget(pathname)===normalizedHref ? "left" : "right", normalizedHref);
     } else if (isMainTab) {
-      startTransition("right");
+      startTransition("right", normalizedHref);
     } else {
       clearTransition();
     }
@@ -134,7 +134,7 @@ export function AppShell({
 
   function goBack() {
     const target = mtBackTarget(pathname);
-    startTransition("left");
+    startTransition("left", target ?? undefined);
     if (target) router.push(target);
     else router.back();
   }
@@ -173,9 +173,9 @@ export function AppShell({
             {headerTitleForPath(pathname)}
           </div>
 
-          <Link
+          {!isMt ? <Link
             href="/notifications"
-            onClick={() => startTransition("right")}
+            onClick={() => startTransition("right", "/notifications")}
             aria-label={
               unreadCount > 0
                 ? `알림 ${unreadCount > 99 ? "99개 이상" : `${unreadCount}개`}`
@@ -189,7 +189,7 @@ export function AppShell({
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
-          </Link>
+          </Link> : <span aria-hidden="true" className="h-10 w-10" />}
         </div>
       </header>
 

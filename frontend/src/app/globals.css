@@ -386,8 +386,14 @@ button:disabled {
 }
 .mt-app-shell .mt-host-tab-active {border-color:#ec5a6b!important;background:#ec5a6b!important;color:white!important}
 .mt-app-shell .mt-host-tab-inactive {border-color:var(--mt-border)!important;background:white!important;color:#9b5b67!important}
-.mt-app-shell .mt-buzz-active,.mt-app-shell .mt-buzz-success {background:linear-gradient(140deg,#f25775,#ff9873)}
-.mt-app-shell .mt-buzz-success {box-shadow:0 12px 38px rgba(236,90,107,.28)}
+.mt-app-shell .mt-buzz-active {
+  background:linear-gradient(140deg,#5947da,#9272fa);
+  box-shadow:0 12px 34px rgba(77,65,176,.28);
+}
+.mt-app-shell .mt-buzz-success {
+  background:linear-gradient(140deg,#4b43ba,#866af0);
+  box-shadow:0 12px 38px rgba(86,66,184,.3);
+}
 .mt-app-shell .mt-chat-messages {background:rgba(255,242,237,.7);overscroll-behavior:contain}
 .mt-app-shell .mt-chat-bubble {background:linear-gradient(120deg,#ffd2c7,#ffe1d3)}
 .mt-app-shell button:focus-visible,

@@ -29,6 +29,9 @@ export default function MtTypingPage() {
   useEffect(()=>{if(scrollArea.current)scrollArea.current.scrollTop=scrollArea.current.scrollHeight},[messages.length]);
   const text=draft.roundId===status.data?.roundId?draft.text:"";
   const open=Boolean(status.data?.visible&&status.data.open&&status.data.team&&status.data.roundId);
+  const placeholder=!status.data?.visible||!status.data?.open||!status.data?.roundId
+    ? "MC가 입력을 허용하면 시작할 수 있어요"
+    : !status.data?.team ? "조 배정 후 입력할 수 있어요" : "메시지 입력";
 
   async function send(){
     if(!open||!text.trim()||sending)return;
@@ -55,7 +58,7 @@ export default function MtTypingPage() {
         <div className="mt-chat-composer shrink-0 border-t border-[#F3D8D2] bg-white/90 px-3 py-3">
           <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
             <textarea aria-label="메시지 입력" value={text} disabled={!open||sending} maxLength={500}
-              onChange={e=>setDraft({roundId:status.data?.roundId??null,text:e.target.value})} rows={1} placeholder="메시지 입력"
+              onChange={e=>setDraft({roundId:status.data?.roundId??null,text:e.target.value})} rows={1} placeholder={placeholder}
               className="max-h-28 min-h-10 min-w-0 flex-1 resize-none border-none bg-transparent px-2 py-2 text-base text-slate-900 outline-none placeholder:text-slate-400 disabled:opacity-50"/>
             <button type="button" aria-label="전송" onClick={send} disabled={!open||sending||!text.trim()}
               className="mt-send-button flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white disabled:bg-slate-300">

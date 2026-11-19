@@ -15,12 +15,13 @@ export type PageTransitionDirection = "left" | "right";
 type PendingTransition = {
   direction: PageTransitionDirection;
   fromPathname: string;
+  toPathname?: string;
 };
 
 type NavigationTransitionValue = {
   direction: PageTransitionDirection | null;
   footerMotion: "enter" | "exit" | null;
-  startTransition: (direction: PageTransitionDirection) => void;
+  startTransition: (direction: PageTransitionDirection, toPathname?: string) => void;
   clearTransition: () => void;
 };
 
@@ -59,21 +60,26 @@ export function NavigationTransitionProvider({
       direction:
         pendingTransition &&
         pendingTransition.fromPathname !== pathname &&
+        (!pendingTransition.toPathname || pendingTransition.toPathname === pathname) &&
         (!(isSubpage(pendingTransition.fromPathname) && isSubpage(pathname)) ||
           isMtRoute(pendingTransition.fromPathname) || isMtRoute(pathname))
           ? pendingTransition.direction
           : null,
-      footerMotion: pendingTransition && pendingTransition.fromPathname !== pathname
+      // The footer motion belongs to its destination route only. It must not
+      // replay on a subsequent MT-to-MT navigation while a prior transition is pending.
+      footerMotion: pendingTransition?.toPathname === pathname &&
+        pendingTransition.fromPathname !== pathname
         ? isMtRoute(pendingTransition.fromPathname) && !isMtRoute(pathname)
           ? "enter"
           : !isMtRoute(pendingTransition.fromPathname) && isMtRoute(pathname)
             ? "exit"
             : null
         : null,
-      startTransition: (direction: PageTransitionDirection) =>
+      startTransition: (direction: PageTransitionDirection, toPathname?: string) =>
         setPendingTransition({
           direction,
           fromPathname: lastRenderedPathname.current,
+          toPathname,
         }),
       clearTransition: () => setPendingTransition(null),
     }),

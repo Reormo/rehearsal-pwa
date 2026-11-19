@@ -42,7 +42,7 @@ function MyContent({ user }: { user: AuthUser }) {
     if (mtTap.current.count >= 5) {
       mtTap.current.count = 0;
       void queryClient.prefetchQuery({queryKey:["mt","state"],queryFn:mtApi.state,staleTime:5000});
-      startTransition("right");
+      startTransition("right", "/mt");
       router.push("/mt");
     }
   }

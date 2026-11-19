@@ -1,5 +1,18 @@
 # Current State
 
+## MT permission-gated typing / footer motion / header and Buzz contrast (2026-11-19)
+
+- Branch `feat/mt-games-easter-egg` based on `071eb6613de9f85055a24e219f0429b557f772f2`. User local verified 37/38 Vitest with one footer-motion test failing; ESLint and Next.js production build passed.
+- Fix stale footer `exit` by associating animations with an explicit destination path. Subsequent MT internal navigation cannot replay the earlier transition. Existing direction logic is preserved for callers without known destinations.
+- MT typing: MC must start a visible round and the participant must be assigned to a team before text input or sending is enabled. Disabled input explains the restriction: `MC가 입력을 허용하면 시작할 수 있어요`, or `조 배정 후 입력할 수 있어요`. No unauthorized drafts or submissions.
+- Hide bell notification icon on MT routes only. Ordinary rehearsal pages still display it, and MT title remains centered.
+- Buzz button active/success gradients changed to indigo and violet; header retains coral, disabled button remains neutral.
+- Regression tests added for waiting/open/team states and the footer's stale motion.
+- Not merged to main / not deployed. Source-level review only; rerun Vitest, ESLint, Next build and browser validation in the desktop environment.
+
+---
+
+
 ## MT messenger full viewport and footer transitions (2026-11-19)
 
 - Branch: `feat/mt-games-easter-egg`, base `cd1eb78de5a96e76be390d33b141cd074f0e527e`. main 미병합 / 운영 미배포.

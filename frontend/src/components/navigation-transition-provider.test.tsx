@@ -22,6 +22,8 @@ function TransitionProbe() {
       <output data-testid="direction">{direction ?? "none"}</output>
       <output data-testid="footer-motion">{footerMotion ?? "none"}</output>
       <button onClick={() => startTransition("right")}>Go right</button>
+      <button onClick={() => startTransition("right", "/mt")}>Enter MT</button>
+      <button onClick={() => startTransition("left", "/my")}>Leave MT</button>
       <button onClick={() => startTransition("left")}>Go left</button>
       <button onClick={clearTransition}>Finish animation</button>
     </>
@@ -101,7 +103,7 @@ describe("NavigationTransitionProvider", () => {
   it("slides the footer away only when entering MT from the regular app",()=>{
     navigation.pathname="/my";
     const view=render(tree());
-    fireEvent.click(screen.getByRole("button",{name:"Go right"}));
+    fireEvent.click(screen.getByRole("button",{name:"Enter MT"}));
     navigation.pathname="/mt";
     view.rerender(tree());
     expect(screen.getByTestId("footer-motion")).toHaveTextContent("exit");
@@ -113,7 +115,7 @@ describe("NavigationTransitionProvider", () => {
   it("slides the footer back when leaving MT for the full menu",()=>{
     navigation.pathname="/mt/typing";
     const view=render(tree());
-    fireEvent.click(screen.getByRole("button",{name:"Go left"}));
+    fireEvent.click(screen.getByRole("button",{name:"Leave MT"}));
     navigation.pathname="/my";
     view.rerender(tree());
     expect(screen.getByTestId("footer-motion")).toHaveTextContent("enter");

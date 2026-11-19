@@ -34,8 +34,7 @@ export default function MyPage() {
 function MyContent({ user }: { user: AuthUser }) {
   const router = useRouter();
   const mtTap = useRef({ count: 0, at: 0 });
-  function revealMt() {
-    const now = Date.now();
+  function revealMt(now: number) {
     mtTap.current.count = now - mtTap.current.at < 1500 ? mtTap.current.count + 1 : 1;
     mtTap.current.at = now;
     if (mtTap.current.count >= 5) {
@@ -60,7 +59,7 @@ function MyContent({ user }: { user: AuthUser }) {
         <dl className="space-y-4 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-slate-500">이름</dt>
-            <dd className="font-semibold text-slate-950"><button type="button" className="text-right" onClick={revealMt}>{user.name}</button></dd>
+            <dd className="font-semibold text-slate-950"><button type="button" className="text-right" onClick={event => revealMt(event.timeStamp)}>{user.name}</button></dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-slate-500">아이디</dt>

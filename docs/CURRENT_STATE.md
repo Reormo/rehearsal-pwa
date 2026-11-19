@@ -1,5 +1,15 @@
 # Current State
 
+## My page MT easter egg lint fix (2026-11-19)
+
+- User desktop test confirmation: Vitest 14/14 suites and 36/36 tests PASS after `6e60285`.
+- ESLint `react-hooks/purity` reported `Date.now()` inside the local `revealMt` function on `/my`.
+- Fix: derive the click timestamp from the browser's event (`onClick` `event.timeStamp`), pass it to `revealMt(now)`. Maintains 5 taps with 1.5-second gap and existing MT prefetch/navigation. No other page logic, permissions, or database changes.
+- This change is source-reviewed; lint/build re-run on the user's desktop is required before marking green.
+
+---
+
+
 ## MT frontend test fixes — 2026-11-18
 
 - `feat/mt-games-easter-egg` base `1859583b24816f2a809085a9082aa6301129fb3f`.
